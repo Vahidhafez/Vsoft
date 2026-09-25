@@ -1,5 +1,6 @@
 package com.vsoft.app
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,12 +13,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.NumberFormat
 import java.util.Locale
+
+private val Context.dataStore by preferencesDataStore(
+    name = "vsoft_data"
+)
+
+private val TRANSACTIONS_KEY =
+    stringPreferencesKey("transactions")
+
+private val WORK_DAYS_KEY =
+    stringPreferencesKey("work_days")
 
 data class Transaction(
     val id: Long,
@@ -50,6 +69,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun VsoftApp() {
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     var selectedPage by remember {
         mutableIntStateOf(0)
     }
@@ -60,6 +82,72 @@ fun VsoftApp() {
 
     var workDays by remember {
         mutableStateOf(emptyList<WorkDay>())
+    }
+
+    var loaded by remember {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(Unit) {
+
+        val preferences = context.dataStore.data.first()
+
+        transactions =
+            decodeTransactions(
+                preferences[TRANSACTIONS_KEY] ?: "[]"
+            )
+
+        workDays =
+            decodeWorkDays(
+                preferences[WORK_DAYS_KEY] ?: "[]"
+            )
+
+        loaded = true
+    }
+
+    fun saveTransactions(
+        newTransactions: List<Transaction>
+    ) {
+
+        transactions = newTransactions
+
+        scope.launch {
+
+            context.dataStore.edit { preferences ->
+
+                preferences[TRANSACTIONS_KEY] =
+                    encodeTransactions(newTransactions)
+            }
+        }
+    }
+
+    fun saveWorkDays(
+        newWorkDays: List<WorkDay>
+    ) {
+
+        workDays = newWorkDays
+
+        scope.launch {
+
+            context.dataStore.edit { preferences ->
+
+                preferences[WORK_DAYS_KEY] =
+                    encodeWorkDays(newWorkDays)
+            }
+        }
+    }
+
+    if (!loaded) {
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+
+            CircularProgressIndicator()
+        }
+
+        return
     }
 
     CompositionLocalProvider(
@@ -76,7 +164,9 @@ fun VsoftApp() {
 
                         NavigationBarItem(
                             selected = selectedPage == 0,
-                            onClick = { selectedPage = 0 },
+                            onClick = {
+                                selectedPage = 0
+                            },
                             icon = {
                                 Icon(
                                     Icons.Default.Home,
@@ -90,7 +180,9 @@ fun VsoftApp() {
 
                         NavigationBarItem(
                             selected = selectedPage == 1,
-                            onClick = { selectedPage = 1 },
+                            onClick = {
+                                selectedPage = 1
+                            },
                             icon = {
                                 Icon(
                                     Icons.Default.AccountBalanceWallet,
@@ -104,7 +196,9 @@ fun VsoftApp() {
 
                         NavigationBarItem(
                             selected = selectedPage == 2,
-                            onClick = { selectedPage = 2 },
+                            onClick = {
+                                selectedPage = 2
+                            },
                             icon = {
                                 Icon(
                                     Icons.Default.Work,
@@ -118,7 +212,9 @@ fun VsoftApp() {
 
                         NavigationBarItem(
                             selected = selectedPage == 3,
-                            onClick = { selectedPage = 3 },
+                            onClick = {
+                                selectedPage = 3
+                            },
                             icon = {
                                 Icon(
                                     Icons.Default.BarChart,
@@ -145,7 +241,7 @@ fun VsoftApp() {
                     1 -> FinancePage(
                         transactions = transactions,
                         onTransactionsChanged = {
-                            transactions = it
+                            saveTransactions(it)
                         },
                         modifier = Modifier.padding(paddingValues)
                     )
@@ -153,7 +249,7 @@ fun VsoftApp() {
                     2 -> WorkPage(
                         workDays = workDays,
                         onWorkDaysChanged = {
-                            workDays = it
+                            saveWorkDays(it)
                         },
                         modifier = Modifier.padding(paddingValues)
                     )
@@ -362,7 +458,9 @@ fun FinancePage(
 
                 items(
                     items = transactions.reversed(),
-                    key = { it.id }
+                    key = {
+                        it.id
+                    }
                 ) { transaction ->
 
                     TransactionItem(
@@ -384,9 +482,11 @@ fun FinancePage(
     if (showDialog) {
 
         AddTransactionDialog(
+
             onDismiss = {
                 showDialog = false
             },
+
             onSave = { title, amount, isIncome ->
 
                 val transaction = Transaction(
@@ -548,7 +648,8 @@ fun AddTransactionDialog(
             Button(
                 onClick = {
 
-                    val value = amount.toLongOrNull()
+                    val value =
+                        amount.toLongOrNull()
 
                     if (
                         title.isNotBlank() &&
@@ -650,7 +751,9 @@ fun WorkPage(
 
                 items(
                     items = workDays.reversed(),
-                    key = { it.id }
+                    key = {
+                        it.id
+                    }
                 ) { workDay ->
 
                     WorkDayItem(
@@ -672,10 +775,18 @@ fun WorkPage(
     if (showDialog) {
 
         AddWorkDayDialog(
+
             onDismiss = {
                 showDialog = false
             },
-            onSave = { place, date, start, end, income, note ->
+
+            onSave = {
+                    place,
+                    date,
+                    start,
+                    end,
+                    income,
+                    note ->
 
                 val workDay = WorkDay(
                     id = System.currentTimeMillis(),
@@ -732,7 +843,9 @@ fun WorkDayItem(
                 }
             }
 
-            Text("تاریخ: ${workDay.date}")
+            Text(
+                "تاریخ: ${workDay.date}"
+            )
 
             Text(
                 "ساعت: ${workDay.startTime} تا ${workDay.endTime}"
@@ -881,9 +994,13 @@ fun AddWorkDayDialog(
             Button(
                 onClick = {
 
-                    val value = income.toLongOrNull() ?: 0L
+                    val value =
+                        income.toLongOrNull() ?: 0L
 
-                    if (place.isNotBlank() && date.isNotBlank()) {
+                    if (
+                        place.isNotBlank() &&
+                        date.isNotBlank()
+                    ) {
 
                         onSave(
                             place,
@@ -1030,9 +1147,125 @@ fun ReportPage(
     }
 }
 
-fun money(amount: Long): String {
+fun encodeTransactions(
+    transactions: List<Transaction>
+): String {
+
+    val array = JSONArray()
+
+    transactions.forEach { transaction ->
+
+        val objectJson = JSONObject()
+
+        objectJson.put("id", transaction.id)
+        objectJson.put("title", transaction.title)
+        objectJson.put("amount", transaction.amount)
+        objectJson.put("isIncome", transaction.isIncome)
+
+        array.put(objectJson)
+    }
+
+    return array.toString()
+}
+
+fun decodeTransactions(
+    json: String
+): List<Transaction> {
+
+    return try {
+
+        val array = JSONArray(json)
+        val result = mutableListOf<Transaction>()
+
+        for (i in 0 until array.length()) {
+
+            val objectJson =
+                array.getJSONObject(i)
+
+            result.add(
+                Transaction(
+                    id = objectJson.getLong("id"),
+                    title = objectJson.getString("title"),
+                    amount = objectJson.getLong("amount"),
+                    isIncome = objectJson.getBoolean("isIncome")
+                )
+            )
+        }
+
+        result
+
+    } catch (e: Exception) {
+
+        emptyList()
+    }
+}
+
+fun encodeWorkDays(
+    workDays: List<WorkDay>
+): String {
+
+    val array = JSONArray()
+
+    workDays.forEach { workDay ->
+
+        val objectJson = JSONObject()
+
+        objectJson.put("id", workDay.id)
+        objectJson.put("place", workDay.place)
+        objectJson.put("date", workDay.date)
+        objectJson.put("startTime", workDay.startTime)
+        objectJson.put("endTime", workDay.endTime)
+        objectJson.put("income", workDay.income)
+        objectJson.put("note", workDay.note)
+
+        array.put(objectJson)
+    }
+
+    return array.toString()
+}
+
+fun decodeWorkDays(
+    json: String
+): List<WorkDay> {
+
+    return try {
+
+        val array = JSONArray(json)
+        val result = mutableListOf<WorkDay>()
+
+        for (i in 0 until array.length()) {
+
+            val objectJson =
+                array.getJSONObject(i)
+
+            result.add(
+                WorkDay(
+                    id = objectJson.getLong("id"),
+                    place = objectJson.getString("place"),
+                    date = objectJson.getString("date"),
+                    startTime = objectJson.getString("startTime"),
+                    endTime = objectJson.getString("endTime"),
+                    income = objectJson.getLong("income"),
+                    note = objectJson.getString("note")
+                )
+            )
+        }
+
+        result
+
+    } catch (e: Exception) {
+
+        emptyList()
+    }
+}
+
+fun money(
+    amount: Long
+): String {
 
     return NumberFormat
-        .getNumberInstance(Locale("fa", "IR"))
+        .getNumberInstance(
+            Locale("fa", "IR")
+        )
         .format(amount) + " تومان"
 }
