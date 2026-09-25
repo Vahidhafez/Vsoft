@@ -1,6 +1,5 @@
 package com.vsoft.app
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,6 +7,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,11 +19,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -31,53 +33,49 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
-import androidx.compose.foundation.isSystemInDarkTheme
 
-private val Context.dataStore by preferencesDataStore(
-    name = "vsoft_data"
-)
+private val android.content.Context.dataStore by preferencesDataStore("vsoft_data")
 
-private val TRANSACTIONS_KEY =
-    stringPreferencesKey("transactions")
+private val TRANSACTIONS_KEY = stringPreferencesKey("transactions")
+private val WORK_KEY = stringPreferencesKey("work_days")
+private val CARDS_KEY = stringPreferencesKey("cards")
+private val PEOPLE_KEY = stringPreferencesKey("people")
+private val LANGUAGE_KEY = stringPreferencesKey("language")
+private val THEME_KEY = stringPreferencesKey("theme")
 
-private val WORK_DAYS_KEY =
-    stringPreferencesKey("work_days")
-
-private val CARDS_KEY =
-    stringPreferencesKey("bank_cards")
-
-private val PEOPLE_KEY =
-    stringPreferencesKey("people")
-
-private val LANGUAGE_KEY =
-    stringPreferencesKey("language")
-
-private val THEME_KEY =
-    stringPreferencesKey("theme")
+// ---------------- MODELS ----------------
 
 data class Transaction(
     val id: Long,
-    val title: String,
+    val type: String,
     val amount: Long,
-    val isIncome: Boolean
+    val category: String,
+    val description: String,
+    val date: String,
+    val card: String,
+    val person: String
 )
 
 data class WorkDay(
     val id: Long,
     val place: String,
     val date: String,
-    val startTime: String,
-    val endTime: String,
+    val start: String,
+    val end: String,
     val income: Long,
-    val note: String
+    val description: String,
+    val person: String
 )
 
 data class BankCard(
     val id: Long,
+    val bank: String,
     val name: String,
-    val number: String,
-    val bank: String
+    val last4: String,
+    val balance: Long
 )
 
 data class Person(
@@ -87,98 +85,286 @@ data class Person(
     val note: String
 )
 
+// ---------------- TEXT ----------------
+
 data class AppStrings(
-    val home: String,
+    val dashboard: String,
     val finance: String,
     val work: String,
     val reports: String,
     val settings: String,
+    val balance: String,
     val income: String,
     val expense: String,
-    val balance: String,
     val add: String,
     val delete: String,
-    val cancel: String,
+    val edit: String,
     val save: String,
-    val title: String,
-    val amount: String,
-    val place: String,
-    val date: String,
-    val startTime: String,
-    val endTime: String,
-    val note: String,
-    val duration: String,
+    val cancel: String,
     val cards: String,
     val people: String,
     val language: String,
     val theme: String,
-    val system: String,
     val light: String,
     val dark: String,
-    val persian: String,
-    val english: String,
-    val arabic: String,
-    val addCard: String,
-    val cardName: String,
-    val cardNumber: String,
-    val bank: String,
-    val addPerson: String,
-    val personName: String,
-    val phone: String,
+    val system: String,
+    val search: String,
+    val category: String,
+    val description: String,
+    val date: String,
+    val amount: String,
+    val place: String,
+    val start: String,
+    val end: String,
+    val hours: String,
     val noData: String,
-    val totalIncome: String,
-    val totalExpense: String,
-    val totalWorkIncome: String,
-    val workDays: String
+    val monthlyReport: String
 )
 
 fun strings(language: String): AppStrings {
-
     return when (language) {
-
         "en" -> AppStrings(
-            "Home", "Finance", "Work", "Reports", "Settings",
-            "Income", "Expense", "Balance", "Add", "Delete",
-            "Cancel", "Save", "Title", "Amount", "Place", "Date",
-            "Start time", "End time", "Note", "Duration",
-            "Bank cards", "People", "Language", "Theme",
-            "Follow system", "Light", "Dark",
-            "Persian", "English", "Arabic",
-            "Add card", "Card name", "Card number", "Bank",
-            "Add person", "Person name", "Phone",
-            "No data", "Total income", "Total expense",
-            "Work income", "Work days"
+            "Dashboard", "Finance", "Work", "Reports", "Settings",
+            "Balance", "Income", "Expense", "Add", "Delete", "Edit",
+            "Save", "Cancel", "Bank Cards", "People", "Language",
+            "Theme", "Light", "Dark", "System", "Search", "Category",
+            "Description", "Date", "Amount", "Workplace", "Start",
+            "End", "Hours", "No data", "Monthly Report"
         )
 
         "ar" -> AppStrings(
             "الرئيسية", "المالية", "العمل", "التقارير", "الإعدادات",
-            "دخل", "مصروف", "الرصيد", "إضافة", "حذف",
-            "إلغاء", "حفظ", "العنوان", "المبلغ", "المكان", "التاريخ",
-            "وقت البدء", "وقت الانتهاء", "ملاحظة", "المدة",
-            "البطاقات البنكية", "الأشخاص", "اللغة", "المظهر",
-            "النظام", "فاتح", "داكن",
-            "الفارسية", "الإنجليزية", "العربية",
-            "إضافة بطاقة", "اسم البطاقة", "رقم البطاقة", "البنك",
-            "إضافة شخص", "اسم الشخص", "الهاتف",
-            "لا توجد بيانات", "إجمالي الدخل", "إجمالي المصروف",
-            "دخل العمل", "أيام العمل"
+            "الرصيد", "الدخل", "المصروف", "إضافة", "حذف", "تعديل",
+            "حفظ", "إلغاء", "البطاقات البنكية", "الأشخاص", "اللغة",
+            "المظهر", "فاتح", "داكن", "النظام", "بحث", "الفئة",
+            "الوصف", "التاريخ", "المبلغ", "مكان العمل", "البداية",
+            "النهاية", "الساعات", "لا توجد بيانات", "التقرير الشهري"
         )
 
         else -> AppStrings(
-            "خانه", "مالی", "کار", "گزارش", "تنظیمات",
-            "درآمد", "هزینه", "موجودی", "افزودن", "حذف",
-            "لغو", "ذخیره", "عنوان", "مبلغ", "محل", "تاریخ",
-            "ساعت شروع", "ساعت پایان", "یادداشت", "مدت کار",
-            "کارت‌های بانکی", "افراد", "زبان", "ظاهر",
-            "پیروی از سیستم", "روشن", "تاریک",
-            "فارسی", "English", "العربية",
-            "افزودن کارت", "نام کارت", "شماره کارت", "بانک",
-            "افزودن شخص", "نام شخص", "شماره تماس",
-            "اطلاعاتی وجود ندارد", "مجموع درآمد", "مجموع هزینه",
-            "درآمد کار", "روزهای کاری"
+            "داشبورد", "مالی", "کار", "گزارش‌ها", "تنظیمات",
+            "موجودی", "درآمد", "هزینه", "افزودن", "حذف", "ویرایش",
+            "ذخیره", "لغو", "کارت‌های بانکی", "اشخاص", "زبان",
+            "تم", "روشن", "تاریک", "سیستم", "جستجو", "دسته‌بندی",
+            "توضیحات", "تاریخ", "مبلغ", "محل کار", "شروع",
+            "پایان", "ساعت", "اطلاعاتی وجود ندارد", "گزارش ماهانه"
         )
     }
 }
+
+// ---------------- HELPERS ----------------
+
+fun money(value: Long): String {
+    return NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
+}
+
+fun today(): String {
+    return SimpleDateFormat("yyyy/MM/dd", Locale.US).format(Date())
+}
+
+fun calculateHours(start: String, end: String): Double {
+    return try {
+        val s = start.split(":")
+        val e = end.split(":")
+
+        val startMinutes = s[0].toInt() * 60 + s[1].toInt()
+        val endMinutes = e[0].toInt() * 60 + e[1].toInt()
+
+        var diff = endMinutes - startMinutes
+
+        if (diff < 0) diff += 24 * 60
+
+        diff / 60.0
+    } catch (_: Exception) {
+        0.0
+    }
+}
+
+// ---------------- JSON ----------------
+
+fun encodeTransactions(list: List<Transaction>): String {
+    val array = JSONArray()
+
+    list.forEach {
+        array.put(
+            JSONObject().apply {
+                put("id", it.id)
+                put("type", it.type)
+                put("amount", it.amount)
+                put("category", it.category)
+                put("description", it.description)
+                put("date", it.date)
+                put("card", it.card)
+                put("person", it.person)
+            }
+        )
+    }
+
+    return array.toString()
+}
+
+fun decodeTransactions(value: String): MutableList<Transaction> {
+    val result = mutableListOf<Transaction>()
+
+    try {
+        val array = JSONArray(value)
+
+        for (i in 0 until array.length()) {
+            val o = array.getJSONObject(i)
+
+            result.add(
+                Transaction(
+                    o.getLong("id"),
+                    o.getString("type"),
+                    o.getLong("amount"),
+                    o.getString("category"),
+                    o.getString("description"),
+                    o.getString("date"),
+                    o.getString("card"),
+                    o.getString("person")
+                )
+            )
+        }
+    } catch (_: Exception) {
+    }
+
+    return result
+}
+
+fun encodeWork(list: List<WorkDay>): String {
+    val array = JSONArray()
+
+    list.forEach {
+        array.put(
+            JSONObject().apply {
+                put("id", it.id)
+                put("place", it.place)
+                put("date", it.date)
+                put("start", it.start)
+                put("end", it.end)
+                put("income", it.income)
+                put("description", it.description)
+                put("person", it.person)
+            }
+        )
+    }
+
+    return array.toString()
+}
+
+fun decodeWork(value: String): MutableList<WorkDay> {
+    val result = mutableListOf<WorkDay>()
+
+    try {
+        val array = JSONArray(value)
+
+        for (i in 0 until array.length()) {
+            val o = array.getJSONObject(i)
+
+            result.add(
+                WorkDay(
+                    o.getLong("id"),
+                    o.getString("place"),
+                    o.getString("date"),
+                    o.getString("start"),
+                    o.getString("end"),
+                    o.getLong("income"),
+                    o.getString("description"),
+                    o.getString("person")
+                )
+            )
+        }
+    } catch (_: Exception) {
+    }
+
+    return result
+}
+
+fun encodeCards(list: List<BankCard>): String {
+    val array = JSONArray()
+
+    list.forEach {
+        array.put(
+            JSONObject().apply {
+                put("id", it.id)
+                put("bank", it.bank)
+                put("name", it.name)
+                put("last4", it.last4)
+                put("balance", it.balance)
+            }
+        )
+    }
+
+    return array.toString()
+}
+
+fun decodeCards(value: String): MutableList<BankCard> {
+    val result = mutableListOf<BankCard>()
+
+    try {
+        val array = JSONArray(value)
+
+        for (i in 0 until array.length()) {
+            val o = array.getJSONObject(i)
+
+            result.add(
+                BankCard(
+                    o.getLong("id"),
+                    o.getString("bank"),
+                    o.getString("name"),
+                    o.getString("last4"),
+                    o.getLong("balance")
+                )
+            )
+        }
+    } catch (_: Exception) {
+    }
+
+    return result
+}
+
+fun encodePeople(list: List<Person>): String {
+    val array = JSONArray()
+
+    list.forEach {
+        array.put(
+            JSONObject().apply {
+                put("id", it.id)
+                put("name", it.name)
+                put("phone", it.phone)
+                put("note", it.note)
+            }
+        )
+    }
+
+    return array.toString()
+}
+
+fun decodePeople(value: String): MutableList<Person> {
+    val result = mutableListOf<Person>()
+
+    try {
+        val array = JSONArray(value)
+
+        for (i in 0 until array.length()) {
+            val o = array.getJSONObject(i)
+
+            result.add(
+                Person(
+                    o.getLong("id"),
+                    o.getString("name"),
+                    o.getString("phone"),
+                    o.getString("note")
+                )
+            )
+        }
+    } catch (_: Exception) {
+    }
+
+    return result
+}
+
+// ---------------- ACTIVITY ----------------
 
 class MainActivity : ComponentActivity() {
 
@@ -191,38 +377,31 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// ---------------- APP ----------------
+
 @Composable
 fun VsoftApp() {
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var selectedPage by remember {
-        mutableIntStateOf(0)
-    }
+    var language by remember { mutableStateOf("fa") }
+    var theme by remember { mutableStateOf("system") }
 
     var transactions by remember {
-        mutableStateOf(emptyList<Transaction>())
+        mutableStateOf(mutableListOf<Transaction>())
     }
 
     var workDays by remember {
-        mutableStateOf(emptyList<WorkDay>())
+        mutableStateOf(mutableListOf<WorkDay>())
     }
 
     var cards by remember {
-        mutableStateOf(emptyList<BankCard>())
+        mutableStateOf(mutableListOf<BankCard>())
     }
 
     var people by remember {
-        mutableStateOf(emptyList<Person>())
-    }
-
-    var language by remember {
-        mutableStateOf("fa")
-    }
-
-    var themeMode by remember {
-        mutableStateOf("system")
+        mutableStateOf(mutableListOf<Person>())
     }
 
     var loaded by remember {
@@ -231,68 +410,53 @@ fun VsoftApp() {
 
     LaunchedEffect(Unit) {
 
-        val preferences =
-            context.dataStore.data.first()
+        val preferences = context.dataStore.data.first()
+
+        language = preferences[LANGUAGE_KEY] ?: "fa"
+        theme = preferences[THEME_KEY] ?: "system"
 
         transactions =
-            decodeTransactions(
-                preferences[TRANSACTIONS_KEY] ?: "[]"
-            )
+            decodeTransactions(preferences[TRANSACTIONS_KEY] ?: "[]")
 
         workDays =
-            decodeWorkDays(
-                preferences[WORK_DAYS_KEY] ?: "[]"
-            )
+            decodeWork(preferences[WORK_KEY] ?: "[]")
 
         cards =
-            decodeCards(
-                preferences[CARDS_KEY] ?: "[]"
-            )
+            decodeCards(preferences[CARDS_KEY] ?: "[]")
 
         people =
-            decodePeople(
-                preferences[PEOPLE_KEY] ?: "[]"
-            )
-
-        language =
-            preferences[LANGUAGE_KEY] ?: "fa"
-
-        themeMode =
-            preferences[THEME_KEY] ?: "system"
+            decodePeople(preferences[PEOPLE_KEY] ?: "[]")
 
         loaded = true
     }
 
-    val text = strings(language)
-
-    val darkTheme = when (themeMode) {
-
+    val darkTheme = when (theme) {
         "dark" -> true
-
         "light" -> false
-
         else -> isSystemInDarkTheme()
     }
 
-    if (!loaded) {
+    val appStrings = strings(language)
 
+    if (!loaded) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-
             CircularProgressIndicator()
         }
 
         return
     }
 
+    val layoutDirection =
+        if (language == "en")
+            LayoutDirection.Ltr
+        else
+            LayoutDirection.Rtl
+
     CompositionLocalProvider(
-        LocalLayoutDirection provides
-                if (language == "en")
-                    LayoutDirection.Ltr
-                else
-                    LayoutDirection.Rtl
+        LocalLayoutDirection provides layoutDirection
     ) {
 
         MaterialTheme(
@@ -303,243 +467,263 @@ fun VsoftApp() {
                     lightColorScheme(),
 
             shapes = Shapes(
-                small = RoundedCornerShape(14.dp),
-                medium = RoundedCornerShape(20.dp),
-                large = RoundedCornerShape(28.dp)
+                small = RoundedCornerShape(18.dp),
+                medium = RoundedCornerShape(24.dp),
+                large = RoundedCornerShape(30.dp)
             )
         ) {
 
-            Scaffold(
+            MainScreen(
+                strings = appStrings,
+                transactions = transactions,
+                workDays = workDays,
+                cards = cards,
+                people = people,
 
-                bottomBar = {
+                onTransactionsChange = {
+                    transactions = it
 
-                    NavigationBar {
+                    scope.launch {
+                        context.dataStore.edit { prefs ->
+                            prefs[TRANSACTIONS_KEY] =
+                                encodeTransactions(it)
+                        }
+                    }
+                },
 
-                        NavigationBarItem(
-                            selected = selectedPage == 0,
-                            onClick = { selectedPage = 0 },
-                            icon = {
-                                Icon(
-                                    Icons.Default.Home,
-                                    null
-                                )
-                            },
-                            label = {
-                                Text(text.home)
-                            }
-                        )
+                onWorkChange = {
+                    workDays = it
 
-                        NavigationBarItem(
-                            selected = selectedPage == 1,
-                            onClick = { selectedPage = 1 },
-                            icon = {
-                                Icon(
-                                    Icons.Default.AccountBalanceWallet,
-                                    null
-                                )
-                            },
-                            label = {
-                                Text(text.finance)
-                            }
-                        )
+                    scope.launch {
+                        context.dataStore.edit { prefs ->
+                            prefs[WORK_KEY] =
+                                encodeWork(it)
+                        }
+                    }
+                },
 
-                        NavigationBarItem(
-                            selected = selectedPage == 2,
-                            onClick = { selectedPage = 2 },
-                            icon = {
-                                Icon(
-                                    Icons.Default.Work,
-                                    null
-                                )
-                            },
-                            label = {
-                                Text(text.work)
-                            }
-                        )
+                onCardsChange = {
+                    cards = it
 
-                        NavigationBarItem(
-                            selected = selectedPage == 3,
-                            onClick = { selectedPage = 3 },
-                            icon = {
-                                Icon(
-                                    Icons.Default.BarChart,
-                                    null
-                                )
-                            },
-                            label = {
-                                Text(text.reports)
-                            }
-                        )
+                    scope.launch {
+                        context.dataStore.edit { prefs ->
+                            prefs[CARDS_KEY] =
+                                encodeCards(it)
+                        }
+                    }
+                },
 
-                        NavigationBarItem(
-                            selected = selectedPage == 4,
-                            onClick = { selectedPage = 4 },
-                            icon = {
-                                Icon(
-                                    Icons.Default.Settings,
-                                    null
-                                )
-                            },
-                            label = {
-                                Text(text.settings)
-                            }
-                        )
+                onPeopleChange = {
+                    people = it
+
+                    scope.launch {
+                        context.dataStore.edit { prefs ->
+                            prefs[PEOPLE_KEY] =
+                                encodePeople(it)
+                        }
+                    }
+                },
+
+                onLanguageChange = {
+                    language = it
+
+                    scope.launch {
+                        context.dataStore.edit { prefs ->
+                            prefs[LANGUAGE_KEY] = it
+                        }
+                    }
+                },
+
+                onThemeChange = {
+                    theme = it
+
+                    scope.launch {
+                        context.dataStore.edit { prefs ->
+                            prefs[THEME_KEY] = it
+                        }
                     }
                 }
+            )
+        }
+    }
+}
 
-            ) { paddingValues ->
+// ---------------- MAIN SCREEN ----------------
 
-                AnimatedContent(
-                    targetState = selectedPage,
-                    transitionSpec = {
-                        fadeIn() togetherWith fadeOut()
+@Composable
+fun MainScreen(
+    strings: AppStrings,
+    transactions: List<Transaction>,
+    workDays: List<WorkDay>,
+    cards: List<BankCard>,
+    people: List<Person>,
+    onTransactionsChange: (MutableList<Transaction>) -> Unit,
+    onWorkChange: (MutableList<WorkDay>) -> Unit,
+    onCardsChange: (MutableList<BankCard>) -> Unit,
+    onPeopleChange: (MutableList<Person>) -> Unit,
+    onLanguageChange: (String) -> Unit,
+    onThemeChange: (String) -> Unit
+) {
+
+    var selectedPage by remember { mutableStateOf(0) }
+
+    val pages = listOf(
+        strings.dashboard,
+        strings.finance,
+        strings.work,
+        strings.reports,
+        strings.settings
+    )
+
+    Scaffold(
+
+        bottomBar = {
+
+            NavigationBar {
+
+                NavigationBarItem(
+                    selected = selectedPage == 0,
+                    onClick = { selectedPage = 0 },
+                    icon = {
+                        Icon(Icons.Default.Home, null)
                     },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    label = "page_transition"
-                ) { page ->
-
-                    when (page) {
-
-                        0 -> HomePage(
-                            transactions = transactions,
-                            workDays = workDays,
-                            text = text
-                        )
-
-                        1 -> FinancePage(
-                            transactions = transactions,
-                            text = text,
-                            onTransactionsChanged = {
-
-                                transactions = it
-
-                                scope.launch {
-
-                                    context.dataStore.edit { preferences ->
-
-                                        preferences[TRANSACTIONS_KEY] =
-                                            encodeTransactions(it)
-                                    }
-                                }
-                            }
-                        )
-
-                        2 -> WorkPage(
-                            workDays = workDays,
-                            text = text,
-                            onWorkDaysChanged = {
-
-                                workDays = it
-
-                                scope.launch {
-
-                                    context.dataStore.edit { preferences ->
-
-                                        preferences[WORK_DAYS_KEY] =
-                                            encodeWorkDays(it)
-                                    }
-                                }
-                            }
-                        )
-
-                        3 -> ReportPage(
-                            transactions = transactions,
-                            workDays = workDays,
-                            text = text
-                        )
-
-                        4 -> SettingsPage(
-                            language = language,
-                            themeMode = themeMode,
-                            cards = cards,
-                            people = people,
-                            text = text,
-
-                            onLanguageChanged = {
-
-                                language = it
-
-                                scope.launch {
-
-                                    context.dataStore.edit { preferences ->
-
-                                        preferences[LANGUAGE_KEY] = it
-                                    }
-                                }
-                            },
-
-                            onThemeChanged = {
-
-                                themeMode = it
-
-                                scope.launch {
-
-                                    context.dataStore.edit { preferences ->
-
-                                        preferences[THEME_KEY] = it
-                                    }
-                                }
-                            },
-
-                            onCardsChanged = {
-
-                                cards = it
-
-                                scope.launch {
-
-                                    context.dataStore.edit { preferences ->
-
-                                        preferences[CARDS_KEY] =
-                                            encodeCards(it)
-                                    }
-                                }
-                            },
-
-                            onPeopleChanged = {
-
-                                people = it
-
-                                scope.launch {
-
-                                    context.dataStore.edit { preferences ->
-
-                                        preferences[PEOPLE_KEY] =
-                                            encodePeople(it)
-                                    }
-                                }
-                            }
-                        )
+                    label = {
+                        Text(strings.dashboard)
                     }
-                }
+                )
+
+                NavigationBarItem(
+                    selected = selectedPage == 1,
+                    onClick = { selectedPage = 1 },
+                    icon = {
+                        Icon(Icons.Default.AccountBalanceWallet, null)
+                    },
+                    label = {
+                        Text(strings.finance)
+                    }
+                )
+
+                NavigationBarItem(
+                    selected = selectedPage == 2,
+                    onClick = { selectedPage = 2 },
+                    icon = {
+                        Icon(Icons.Default.Work, null)
+                    },
+                    label = {
+                        Text(strings.work)
+                    }
+                )
+
+                NavigationBarItem(
+                    selected = selectedPage == 3,
+                    onClick = { selectedPage = 3 },
+                    icon = {
+                        Icon(Icons.Default.BarChart, null)
+                    },
+                    label = {
+                        Text(strings.reports)
+                    }
+                )
+
+                NavigationBarItem(
+                    selected = selectedPage == 4,
+                    onClick = { selectedPage = 4 },
+                    icon = {
+                        Icon(Icons.Default.Settings, null)
+                    },
+                    label = {
+                        Text(strings.settings)
+                    }
+                )
+            }
+        }
+    ) { padding ->
+
+        AnimatedContent(
+            targetState = selectedPage,
+            transitionSpec = {
+                fadeIn() togetherWith fadeOut()
+            },
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize(),
+            label = "page"
+        ) { page ->
+
+            when (page) {
+
+                0 -> DashboardPage(
+                    strings,
+                    transactions,
+                    workDays,
+                    cards
+                )
+
+                1 -> FinancePage(
+                    strings,
+                    transactions,
+                    cards,
+                    people,
+                    onTransactionsChange
+                )
+
+                2 -> WorkPage(
+                    strings,
+                    workDays,
+                    people,
+                    onWorkChange
+                )
+
+                3 -> ReportsPage(
+                    strings,
+                    transactions,
+                    workDays
+                )
+
+                4 -> SettingsPage(
+                    strings,
+                    cards,
+                    people,
+                    onCardsChange,
+                    onPeopleChange,
+                    onLanguageChange,
+                    onThemeChange
+                )
             }
         }
     }
 }
 
+// ---------------- DASHBOARD ----------------
+
 @Composable
-fun HomePage(
+fun DashboardPage(
+    strings: AppStrings,
     transactions: List<Transaction>,
     workDays: List<WorkDay>,
-    text: AppStrings
+    cards: List<BankCard>
 ) {
 
     val income =
         transactions
-            .filter { it.isIncome }
+            .filter { it.type == "income" }
             .sumOf { it.amount }
 
     val expense =
         transactions
-            .filter { !it.isIncome }
+            .filter { it.type == "expense" }
             .sumOf { it.amount }
 
     val workIncome =
         workDays.sumOf { it.income }
 
     val balance =
-        income - expense
+        income + workIncome - expense
+
+    val totalHours =
+        workDays.sumOf {
+            calculateHours(it.start, it.end)
+        }
 
     LazyColumn(
         modifier = Modifier
@@ -551,137 +735,174 @@ fun HomePage(
         item {
 
             Text(
-                text = "Vsoft",
-                fontSize = 30.sp
+                "Vsoft",
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                strings.dashboard,
+                fontSize = 16.sp
             )
         }
 
         item {
 
-            SummaryCard(
-                title = text.balance,
-                value = money(balance)
+            InfoCard(
+                title = strings.balance,
+                value = money(balance),
+                icon = Icons.Default.AccountBalance
             )
         }
 
         item {
 
-            SummaryCard(
-                title = text.income,
-                value = money(income)
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+
+                SmallInfoCard(
+                    modifier = Modifier.weight(1f),
+                    title = strings.income,
+                    value = money(income + workIncome),
+                    icon = Icons.Default.TrendingUp
+                )
+
+                SmallInfoCard(
+                    modifier = Modifier.weight(1f),
+                    title = strings.expense,
+                    value = money(expense),
+                    icon = Icons.Default.TrendingDown
+                )
+            }
         }
 
         item {
 
-            SummaryCard(
-                title = text.expense,
-                value = money(expense)
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+
+                SmallInfoCard(
+                    modifier = Modifier.weight(1f),
+                    title = strings.hours,
+                    value = String.format(
+                        Locale.US,
+                        "%.1f ساعت",
+                        totalHours
+                    ),
+                    icon = Icons.Default.AccessTime
+                )
+
+                SmallInfoCard(
+                    modifier = Modifier.weight(1f),
+                    title = strings.cards,
+                    value = cards.size.toString(),
+                    icon = Icons.Default.CreditCard
+                )
+            }
         }
 
         item {
 
-            SummaryCard(
-                title = text.totalWorkIncome,
-                value = money(workIncome)
-            )
+            SectionTitle("آخرین تراکنش‌ها")
         }
 
-        item {
-
-            SummaryCard(
-                title = text.workDays,
-                value = workDays.size.toString()
-            )
-        }
-    }
-}
-
-@Composable
-fun SummaryCard(
-    title: String,
-    value: String
-) {
-
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-
-        Column(
-            modifier = Modifier.padding(20.dp)
+        items(
+            transactions
+                .sortedByDescending { it.id }
+                .take(5)
         ) {
 
-            Text(
-                text = title,
-                fontSize = 15.sp
-            )
-
-            Spacer(
-                modifier = Modifier.height(6.dp)
-            )
-
-            Text(
-                text = value,
-                fontSize = 23.sp
+            TransactionCard(
+                transaction = it,
+                onDelete = {}
             )
         }
     }
 }
+
+// ---------------- FINANCE ----------------
 
 @Composable
 fun FinancePage(
+    strings: AppStrings,
     transactions: List<Transaction>,
-    text: AppStrings,
-    onTransactionsChanged: (List<Transaction>) -> Unit
+    cards: List<BankCard>,
+    people: List<Person>,
+    onTransactionsChange: (MutableList<Transaction>) -> Unit
 ) {
 
-    var showDialog by remember {
-        mutableStateOf(false)
-    }
+    var showAdd by remember { mutableStateOf(false) }
+    var search by remember { mutableStateOf("") }
+
+    val filtered =
+        transactions
+            .filter {
+                search.isBlank() ||
+                        it.description.contains(search, true) ||
+                        it.category.contains(search, true) ||
+                        it.person.contains(search, true)
+            }
+            .sortedByDescending { it.id }
 
     Column(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
             Text(
-                text = text.finance,
-                fontSize = 27.sp
+                strings.finance,
+                fontSize = 27.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
             )
 
             FloatingActionButton(
                 onClick = {
-                    showDialog = true
+                    showAdd = true
                 }
             ) {
-
-                Icon(
-                    Icons.Default.Add,
-                    null
-                )
+                Icon(Icons.Default.Add, null)
             }
         }
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = search,
+            onValueChange = {
+                search = it
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(22.dp),
+            leadingIcon = {
+                Icon(Icons.Default.Search, null)
+            },
+            label = {
+                Text(strings.search)
+            }
         )
 
-        if (transactions.isEmpty()) {
+        Spacer(Modifier.height(12.dp))
+
+        if (filtered.isEmpty()) {
 
             Box(
-                modifier = Modifier.fillMaxSize(),
+                Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
 
-                Text(text.noData)
+                Text(strings.noData)
             }
 
         } else {
@@ -691,170 +912,148 @@ fun FinancePage(
             ) {
 
                 items(
-                    transactions,
+                    filtered,
                     key = { it.id }
                 ) { transaction ->
 
-                    Card {
+                    TransactionCard(
+                        transaction = transaction,
+                        onDelete = {
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement =
-                                Arrangement.SpaceBetween,
-                            verticalAlignment =
-                                Alignment.CenterVertically
-                        ) {
+                            val list =
+                                transactions.toMutableList()
 
-                            Column {
-
-                                Text(
-                                    transaction.title,
-                                    fontSize = 18.sp
-                                )
-
-                                Text(
-                                    if (transaction.isIncome)
-                                        text.income
-                                    else
-                                        text.expense
-                                )
-
-                                Text(
-                                    money(transaction.amount)
-                                )
+                            list.removeAll {
+                                it.id == transaction.id
                             }
 
-                            IconButton(
-                                onClick = {
-
-                                    onTransactionsChanged(
-                                        transactions.filter {
-                                            it.id != transaction.id
-                                        }
-                                    )
-                                }
-                            ) {
-
-                                Icon(
-                                    Icons.Default.Delete,
-                                    text.delete
-                                )
-                            }
+                            onTransactionsChange(list)
                         }
-                    }
+                    )
                 }
             }
         }
     }
 
-    if (showDialog) {
+    if (showAdd) {
 
         AddTransactionDialog(
-            text = text,
+            strings = strings,
+            cards = cards,
+            people = people,
             onDismiss = {
-                showDialog = false
+                showAdd = false
             },
             onSave = { transaction ->
 
-                onTransactionsChanged(
-                    transactions + transaction
-                )
+                val list =
+                    transactions.toMutableList()
 
-                showDialog = false
+                list.add(transaction)
+
+                onTransactionsChange(list)
+
+                showAdd = false
             }
         )
     }
 }
 
+// ---------------- TRANSACTION CARD ----------------
+
+@Composable
+fun TransactionCard(
+    transaction: Transaction,
+    onDelete: () -> Unit
+) {
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Icon(
+                if (transaction.type == "income")
+                    Icons.Default.TrendingUp
+                else
+                    Icons.Default.TrendingDown,
+                null,
+                modifier = Modifier.size(34.dp)
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(
+                Modifier.weight(1f)
+            ) {
+
+                Text(
+                    transaction.category,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (transaction.description.isNotBlank()) {
+
+                    Text(
+                        transaction.description,
+                        fontSize = 13.sp
+                    )
+                }
+
+                Text(
+                    transaction.date,
+                    fontSize = 12.sp
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+
+                Text(
+                    money(transaction.amount),
+                    fontWeight = FontWeight.Bold
+                )
+
+                IconButton(
+                    onClick = onDelete
+                ) {
+                    Icon(Icons.Default.Delete, null)
+                }
+            }
+        }
+    }
+}
+
+// ---------------- ADD TRANSACTION ----------------
+
 @Composable
 fun AddTransactionDialog(
-    text: AppStrings,
+    strings: AppStrings,
+    cards: List<BankCard>,
+    people: List<Person>,
     onDismiss: () -> Unit,
     onSave: (Transaction) -> Unit
 ) {
 
-    var title by remember {
-        mutableStateOf("")
-    }
-
-    var amount by remember {
-        mutableStateOf("")
-    }
-
-    var isIncome by remember {
-        mutableStateOf(true)
-    }
+    var type by remember { mutableStateOf("expense") }
+    var amount by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf(today()) }
+    var card by remember { mutableStateOf("") }
+    var person by remember { mutableStateOf("") }
 
     AlertDialog(
+
         onDismissRequest = onDismiss,
-
-        title = {
-            Text(text.add)
-        },
-
-        text = {
-
-            Column {
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = {
-                        title = it
-                    },
-                    label = {
-                        Text(text.title)
-                    },
-                    singleLine = true
-                )
-
-                Spacer(
-                    modifier = Modifier.height(8.dp)
-                )
-
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = {
-                        amount = it.filter { c ->
-                            c.isDigit()
-                        }
-                    },
-                    label = {
-                        Text(text.amount)
-                    },
-                    singleLine = true
-                )
-
-                Spacer(
-                    modifier = Modifier.height(8.dp)
-                )
-
-                Row(
-                    verticalAlignment =
-                        Alignment.CenterVertically
-                ) {
-
-                    RadioButton(
-                        selected = isIncome,
-                        onClick = {
-                            isIncome = true
-                        }
-                    )
-
-                    Text(text.income)
-
-                    RadioButton(
-                        selected = !isIncome,
-                        onClick = {
-                            isIncome = false
-                        }
-                    )
-
-                    Text(text.expense)
-                }
-            }
-        },
 
         confirmButton = {
 
@@ -862,27 +1061,26 @@ fun AddTransactionDialog(
                 onClick = {
 
                     val value =
-                        amount.toLongOrNull()
+                        amount.toLongOrNull() ?: 0L
 
-                    if (
-                        title.isNotBlank() &&
-                        value != null &&
-                        value > 0
-                    ) {
+                    if (value > 0 && category.isNotBlank()) {
 
                         onSave(
                             Transaction(
                                 id = System.currentTimeMillis(),
-                                title = title,
+                                type = type,
                                 amount = value,
-                                isIncome = isIncome
+                                category = category,
+                                description = description,
+                                date = date,
+                                card = card,
+                                person = person
                             )
                         )
                     }
                 }
             ) {
-
-                Text(text.save)
+                Text(strings.save)
             }
         },
 
@@ -891,276 +1089,294 @@ fun AddTransactionDialog(
             TextButton(
                 onClick = onDismiss
             ) {
+                Text(strings.cancel)
+            }
+        },
 
-                Text(text.cancel)
+        title = {
+            Text("تراکنش جدید")
+        },
+
+        text = {
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                Row {
+
+                    FilterChip(
+                        selected = type == "expense",
+                        onClick = {
+                            type = "expense"
+                        },
+                        label = {
+                            Text(strings.expense)
+                        }
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    FilterChip(
+                        selected = type == "income",
+                        onClick = {
+                            type = "income"
+                        },
+                        label = {
+                            Text(strings.income)
+                        }
+                    )
+                }
+
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = {
+                        amount = it.filter(Char::isDigit)
+                    },
+                    label = {
+                        Text(strings.amount)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = {
+                        category = it
+                    },
+                    label = {
+                        Text(strings.category)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = {
+                        description = it
+                    },
+                    label = {
+                        Text(strings.description)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = {
+                        date = it
+                    },
+                    label = {
+                        Text(strings.date)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (cards.isNotEmpty()) {
+
+                    Text("کارت: ${cards.joinToString { it.name }}")
+                }
+
+                if (people.isNotEmpty()) {
+
+                    Text("اشخاص: ${people.joinToString { it.name }}")
+                }
             }
         }
     )
 }
 
+// ---------------- WORK ----------------
+
 @Composable
 fun WorkPage(
+    strings: AppStrings,
     workDays: List<WorkDay>,
-    text: AppStrings,
-    onWorkDaysChanged: (List<WorkDay>) -> Unit
+    people: List<Person>,
+    onWorkChange: (MutableList<WorkDay>) -> Unit
 ) {
 
-    var showDialog by remember {
-        mutableStateOf(false)
-    }
+    var showAdd by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement =
-                Arrangement.SpaceBetween,
-            verticalAlignment =
-                Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
 
             Text(
-                text.work,
-                fontSize = 27.sp
+                strings.work,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
             )
 
             FloatingActionButton(
                 onClick = {
-                    showDialog = true
+                    showAdd = true
                 }
             ) {
-
-                Icon(
-                    Icons.Default.Add,
-                    null
-                )
+                Icon(Icons.Default.Add, null)
             }
         }
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+        Spacer(Modifier.height(12.dp))
 
-        if (workDays.isEmpty()) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
 
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            items(
+                workDays.sortedByDescending { it.id },
+                key = { it.id }
+            ) { work ->
 
-                Text(text.noData)
-            }
+                WorkCard(
+                    work = work,
+                    onDelete = {
 
-        } else {
+                        val list =
+                            workDays.toMutableList()
 
-            LazyColumn(
-                verticalArrangement =
-                    Arrangement.spacedBy(10.dp)
-            ) {
-
-                items(
-                    workDays,
-                    key = { it.id }
-                ) { day ->
-
-                    Card {
-
-                        Column(
-                            modifier =
-                                Modifier.padding(16.dp)
-                        ) {
-
-                            Text(
-                                day.place,
-                                fontSize = 19.sp
-                            )
-
-                            Text(day.date)
-
-                            Text(
-                                "${day.startTime} → ${day.endTime}"
-                            )
-
-                            Text(
-                                "${text.duration}: ${
-                                    calculateWorkDuration(
-                                        day.startTime,
-                                        day.endTime
-                                    )
-                                }"
-                            )
-
-                            Text(
-                                money(day.income)
-                            )
-
-                            if (day.note.isNotBlank()) {
-
-                                Text(day.note)
-                            }
-
-                            IconButton(
-                                onClick = {
-
-                                    onWorkDaysChanged(
-                                        workDays.filter {
-                                            it.id != day.id
-                                        }
-                                    )
-                                }
-                            ) {
-
-                                Icon(
-                                    Icons.Default.Delete,
-                                    text.delete
-                                )
-                            }
+                        list.removeAll {
+                            it.id == work.id
                         }
+
+                        onWorkChange(list)
                     }
-                }
+                )
             }
         }
     }
 
-    if (showDialog) {
+    if (showAdd) {
 
-        AddWorkDayDialog(
-            text = text,
+        AddWorkDialog(
+            strings = strings,
+            people = people,
             onDismiss = {
-                showDialog = false
+                showAdd = false
             },
-            onSave = { day ->
+            onSave = {
 
-                onWorkDaysChanged(
-                    workDays + day
-                )
+                val list =
+                    workDays.toMutableList()
 
-                showDialog = false
+                list.add(it)
+
+                onWorkChange(list)
+
+                showAdd = false
             }
         )
     }
 }
 
+// ---------------- WORK CARD ----------------
+
 @Composable
-fun AddWorkDayDialog(
-    text: AppStrings,
+fun WorkCard(
+    work: WorkDay,
+    onDelete: () -> Unit
+) {
+
+    val hours =
+        calculateHours(work.start, work.end)
+
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+
+        Column(
+            Modifier.padding(16.dp)
+        ) {
+
+            Row {
+
+                Column(
+                    Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        work.place,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(work.date)
+
+                    Text(
+                        "${work.start} → ${work.end}"
+                    )
+
+                    Text(
+                        String.format(
+                            Locale.US,
+                            "%.1f ساعت",
+                            hours
+                        )
+                    )
+                }
+
+                IconButton(
+                    onClick = onDelete
+                ) {
+                    Icon(Icons.Default.Delete, null)
+                }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
+            Text(
+                money(work.income),
+                fontWeight = FontWeight.Bold
+            )
+
+            if (work.person.isNotBlank()) {
+                Text(work.person)
+            }
+
+            if (work.description.isNotBlank()) {
+                Text(work.description)
+            }
+        }
+    }
+}
+
+// ---------------- ADD WORK ----------------
+
+@Composable
+fun AddWorkDialog(
+    strings: AppStrings,
+    people: List<Person>,
     onDismiss: () -> Unit,
     onSave: (WorkDay) -> Unit
 ) {
 
-    var place by remember {
-        mutableStateOf("")
-    }
-
-    var date by remember {
-        mutableStateOf("")
-    }
-
-    var start by remember {
-        mutableStateOf("")
-    }
-
-    var end by remember {
-        mutableStateOf("")
-    }
-
-    var income by remember {
-        mutableStateOf("")
-    }
-
-    var note by remember {
-        mutableStateOf("")
-    }
+    var place by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf(today()) }
+    var start by remember { mutableStateOf("08:00") }
+    var end by remember { mutableStateOf("16:00") }
+    var income by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var person by remember { mutableStateOf("") }
 
     AlertDialog(
+
         onDismissRequest = onDismiss,
-
-        title = {
-            Text(text.add)
-        },
-
-        text = {
-
-            LazyColumn {
-
-                item {
-
-                    OutlinedTextField(
-                        value = place,
-                        onValueChange = {
-                            place = it
-                        },
-                        label = {
-                            Text(text.place)
-                        }
-                    )
-
-                    OutlinedTextField(
-                        value = date,
-                        onValueChange = {
-                            date = it
-                        },
-                        label = {
-                            Text(text.date)
-                        }
-                    )
-
-                    OutlinedTextField(
-                        value = start,
-                        onValueChange = {
-                            start = it
-                        },
-                        label = {
-                            Text(text.startTime)
-                        }
-                    )
-
-                    OutlinedTextField(
-                        value = end,
-                        onValueChange = {
-                            end = it
-                        },
-                        label = {
-                            Text(text.endTime)
-                        }
-                    )
-
-                    OutlinedTextField(
-                        value = income,
-                        onValueChange = {
-                            income = it.filter { c ->
-                                c.isDigit()
-                            }
-                        },
-                        label = {
-                            Text(text.amount)
-                        }
-                    )
-
-                    OutlinedTextField(
-                        value = note,
-                        onValueChange = {
-                            note = it
-                        },
-                        label = {
-                            Text(text.note)
-                        }
-                    )
-                }
-            }
-        },
 
         confirmButton = {
 
             TextButton(
                 onClick = {
 
-                    val value =
-                        income.toLongOrNull() ?: 0
+                    val amount =
+                        income.toLongOrNull() ?: 0L
 
                     if (place.isNotBlank()) {
 
@@ -1169,17 +1385,17 @@ fun AddWorkDayDialog(
                                 id = System.currentTimeMillis(),
                                 place = place,
                                 date = date,
-                                startTime = start,
-                                endTime = end,
-                                income = value,
-                                note = note
+                                start = start,
+                                end = end,
+                                income = amount,
+                                description = description,
+                                person = person
                             )
                         )
                     }
                 }
             ) {
-
-                Text(text.save)
+                Text(strings.save)
             }
         },
 
@@ -1188,403 +1404,462 @@ fun AddWorkDayDialog(
             TextButton(
                 onClick = onDismiss
             ) {
+                Text(strings.cancel)
+            }
+        },
 
-                Text(text.cancel)
+        title = {
+            Text("روز کاری جدید")
+        },
+
+        text = {
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                OutlinedTextField(
+                    place,
+                    { place = it },
+                    label = {
+                        Text(strings.place)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    date,
+                    { date = it },
+                    label = {
+                        Text(strings.date)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    start,
+                    { start = it },
+                    label = {
+                        Text(strings.start)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    end,
+                    { end = it },
+                    label = {
+                        Text(strings.end)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    income,
+                    {
+                        income = it.filter(Char::isDigit)
+                    },
+                    label = {
+                        Text(strings.income)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    person,
+                    { person = it },
+                    label = {
+                        Text("شخص / کارفرما")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    description,
+                    { description = it },
+                    label = {
+                        Text(strings.description)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     )
 }
 
+// ---------------- REPORTS ----------------
+
 @Composable
-fun ReportPage(
+fun ReportsPage(
+    strings: AppStrings,
     transactions: List<Transaction>,
-    workDays: List<WorkDay>,
-    text: AppStrings
+    workDays: List<WorkDay>
 ) {
 
     val income =
         transactions
-            .filter { it.isIncome }
+            .filter { it.type == "income" }
             .sumOf { it.amount }
 
     val expense =
         transactions
-            .filter { !it.isIncome }
+            .filter { it.type == "expense" }
             .sumOf { it.amount }
 
     val workIncome =
         workDays.sumOf { it.income }
 
+    val hours =
+        workDays.sumOf {
+            calculateHours(it.start, it.end)
+        }
+
     LazyColumn(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement =
-            Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
         item {
 
             Text(
-                text.reports,
-                fontSize = 28.sp
+                strings.monthlyReport,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
             )
         }
 
         item {
 
-            SummaryCard(
-                text.totalIncome,
-                money(income)
+            InfoCard(
+                strings.income,
+                money(income + workIncome),
+                Icons.Default.TrendingUp
             )
         }
 
         item {
 
-            SummaryCard(
-                text.totalExpense,
-                money(expense)
+            InfoCard(
+                strings.expense,
+                money(expense),
+                Icons.Default.TrendingDown
             )
         }
 
         item {
 
-            SummaryCard(
-                text.totalWorkIncome,
-                money(workIncome)
+            InfoCard(
+                "درآمد کاری",
+                money(workIncome),
+                Icons.Default.Work
             )
         }
 
         item {
 
-            SummaryCard(
-                text.balance,
-                money(income - expense)
+            InfoCard(
+                strings.hours,
+                String.format(
+                    Locale.US,
+                    "%.1f ساعت",
+                    hours
+                ),
+                Icons.Default.AccessTime
             )
+        }
+
+        item {
+
+            InfoCard(
+                "تعداد روزهای کاری",
+                workDays.size.toString(),
+                Icons.Default.CalendarMonth
+            )
+        }
+
+        item {
+
+            Text(
+                "دسته‌بندی هزینه‌ها",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        val categories =
+            transactions
+                .filter { it.type == "expense" }
+                .groupBy { it.category }
+
+        items(categories.entries.toList()) { entry ->
+
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+
+                    Text(
+                        entry.key,
+                        Modifier.weight(1f)
+                    )
+
+                    Text(
+                        money(
+                            entry.value.sumOf {
+                                it.amount
+                            }
+                        ),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }
 
+// ---------------- SETTINGS ----------------
+
 @Composable
 fun SettingsPage(
-    language: String,
-    themeMode: String,
+    strings: AppStrings,
     cards: List<BankCard>,
     people: List<Person>,
-    text: AppStrings,
-    onLanguageChanged: (String) -> Unit,
-    onThemeChanged: (String) -> Unit,
-    onCardsChanged: (List<BankCard>) -> Unit,
-    onPeopleChanged: (List<Person>) -> Unit
+    onCardsChange: (MutableList<BankCard>) -> Unit,
+    onPeopleChange: (MutableList<Person>) -> Unit,
+    onLanguageChange: (String) -> Unit,
+    onThemeChange: (String) -> Unit
 ) {
 
-    var showCardDialog by remember {
-        mutableStateOf(false)
-    }
-
-    var showPersonDialog by remember {
-        mutableStateOf(false)
-    }
+    var showCard by remember { mutableStateOf(false) }
+    var showPerson by remember { mutableStateOf(false) }
 
     LazyColumn(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement =
-            Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
 
         item {
 
             Text(
-                text.settings,
-                fontSize = 29.sp
+                strings.settings,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold
             )
         }
 
         item {
 
-            Card {
+            SettingsSection(strings.language) {
 
-                Column(
-                    modifier =
-                        Modifier.padding(18.dp)
-                ) {
+                LanguageOption(
+                    "فارسی",
+                    "fa",
+                    onLanguageChange
+                )
 
-                    Text(
-                        text.language,
-                        fontSize = 19.sp
-                    )
+                LanguageOption(
+                    "English",
+                    "en",
+                    onLanguageChange
+                )
 
-                    LanguageOption(
-                        text.persian,
-                        language == "fa"
-                    ) {
-                        onLanguageChanged("fa")
-                    }
-
-                    LanguageOption(
-                        text.english,
-                        language == "en"
-                    ) {
-                        onLanguageChanged("en")
-                    }
-
-                    LanguageOption(
-                        text.arabic,
-                        language == "ar"
-                    ) {
-                        onLanguageChanged("ar")
-                    }
-                }
+                LanguageOption(
+                    "العربية",
+                    "ar",
+                    onLanguageChange
+                )
             }
         }
 
         item {
 
-            Card {
+            SettingsSection(strings.theme) {
 
-                Column(
-                    modifier =
-                        Modifier.padding(18.dp)
-                ) {
+                ThemeOption(
+                    strings.light,
+                    "light",
+                    onThemeChange
+                )
 
-                    Text(
-                        text.theme,
-                        fontSize = 19.sp
-                    )
+                ThemeOption(
+                    strings.dark,
+                    "dark",
+                    onThemeChange
+                )
 
-                    LanguageOption(
-                        text.system,
-                        themeMode == "system"
-                    ) {
-                        onThemeChanged("system")
-                    }
-
-                    LanguageOption(
-                        text.light,
-                        themeMode == "light"
-                    ) {
-                        onThemeChanged("light")
-                    }
-
-                    LanguageOption(
-                        text.dark,
-                        themeMode == "dark"
-                    ) {
-                        onThemeChanged("dark")
-                    }
-                }
+                ThemeOption(
+                    strings.system,
+                    "system",
+                    onThemeChange
+                )
             }
         }
 
         item {
 
-            Card {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
 
-                Column(
-                    modifier =
-                        Modifier.padding(18.dp)
+                Text(
+                    strings.cards,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                IconButton(
+                    onClick = {
+                        showCard = true
+                    }
                 ) {
-
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-                        horizontalArrangement =
-                            Arrangement.SpaceBetween,
-                        verticalAlignment =
-                            Alignment.CenterVertically
-                    ) {
-
-                        Text(
-                            text.cards,
-                            fontSize = 19.sp
-                        )
-
-                        IconButton(
-                            onClick = {
-                                showCardDialog = true
-                            }
-                        ) {
-
-                            Icon(
-                                Icons.Default.Add,
-                                null
-                            )
-                        }
-                    }
-
-                    if (cards.isEmpty()) {
-
-                        Text(text.noData)
-
-                    } else {
-
-                        cards.forEach { card ->
-
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 7.dp),
-                                horizontalArrangement =
-                                    Arrangement.SpaceBetween
-                            ) {
-
-                                Column {
-
-                                    Text(card.name)
-
-                                    Text(
-                                        "${card.bank} • ${card.number}"
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = {
-
-                                        onCardsChanged(
-                                            cards.filter {
-                                                it.id != card.id
-                                            }
-                                        )
-                                    }
-                                ) {
-
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        null
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Icon(Icons.Default.Add, null)
                 }
             }
         }
 
+        items(
+            cards,
+            key = { it.id }
+        ) { card ->
+
+            CardItem(
+                card = card,
+                onDelete = {
+
+                    val list =
+                        cards.toMutableList()
+
+                    list.removeAll {
+                        it.id == card.id
+                    }
+
+                    onCardsChange(list)
+                }
+            )
+        }
+
         item {
 
-            Card {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
 
-                Column(
-                    modifier =
-                        Modifier.padding(18.dp)
+                Text(
+                    strings.people,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                IconButton(
+                    onClick = {
+                        showPerson = true
+                    }
                 ) {
-
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth(),
-                        horizontalArrangement =
-                            Arrangement.SpaceBetween,
-                        verticalAlignment =
-                            Alignment.CenterVertically
-                    ) {
-
-                        Text(
-                            text.people,
-                            fontSize = 19.sp
-                        )
-
-                        IconButton(
-                            onClick = {
-                                showPersonDialog = true
-                            }
-                        ) {
-
-                            Icon(
-                                Icons.Default.Add,
-                                null
-                            )
-                        }
-                    }
-
-                    if (people.isEmpty()) {
-
-                        Text(text.noData)
-
-                    } else {
-
-                        people.forEach { person ->
-
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 7.dp),
-                                horizontalArrangement =
-                                    Arrangement.SpaceBetween
-                            ) {
-
-                                Column {
-
-                                    Text(person.name)
-
-                                    if (person.phone.isNotBlank()) {
-                                        Text(person.phone)
-                                    }
-
-                                    if (person.note.isNotBlank()) {
-                                        Text(person.note)
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = {
-
-                                        onPeopleChanged(
-                                            people.filter {
-                                                it.id != person.id
-                                            }
-                                        )
-                                    }
-                                ) {
-
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        null
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Icon(Icons.Default.Add, null)
                 }
             }
+        }
+
+        items(
+            people,
+            key = { it.id }
+        ) { person ->
+
+            PersonItem(
+                person = person,
+                onDelete = {
+
+                    val list =
+                        people.toMutableList()
+
+                    list.removeAll {
+                        it.id == person.id
+                    }
+
+                    onPeopleChange(list)
+                }
+            )
         }
     }
 
-    if (showCardDialog) {
+    if (showCard) {
 
         AddCardDialog(
-            text = text,
             onDismiss = {
-                showCardDialog = false
+                showCard = false
             },
             onSave = {
 
-                onCardsChanged(
-                    cards + it
-                )
+                val list =
+                    cards.toMutableList()
 
-                showCardDialog = false
+                list.add(it)
+
+                onCardsChange(list)
+
+                showCard = false
             }
         )
     }
 
-    if (showPersonDialog) {
+    if (showPerson) {
 
         AddPersonDialog(
-            text = text,
             onDismiss = {
-                showPersonDialog = false
+                showPerson = false
             },
             onSave = {
 
-                onPeopleChanged(
-                    people + it
+                val list =
+                    people.toMutableList()
+
+                list.add(it)
+
+                onPeopleChange(list)
+
+                showPerson = false
+            }
+        )
+    }
+}
+
+// ---------------- SETTINGS COMPONENTS ----------------
+
+@Composable
+fun SettingsSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+
+        Column(
+            Modifier.padding(16.dp),
+            content = {
+                Text(
+                    title,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
 
-                showPersonDialog = false
+                Spacer(Modifier.height(8.dp))
+
+                content()
             }
         )
     }
@@ -1593,117 +1868,135 @@ fun SettingsPage(
 @Composable
 fun LanguageOption(
     title: String,
-    selected: Boolean,
-    onClick: () -> Unit
+    value: String,
+    onChange: (String) -> Unit
 ) {
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment =
-            Alignment.CenterVertically
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
 
         RadioButton(
-            selected = selected,
-            onClick = onClick
+            selected = false,
+            onClick = {
+                onChange(value)
+            }
         )
 
-        Text(
-            title,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
+        Text(title)
+    }
+}
+
+@Composable
+fun ThemeOption(
+    title: String,
+    value: String,
+    onChange: (String) -> Unit
+) {
+
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        RadioButton(
+            selected = false,
+            onClick = {
+                onChange(value)
+            }
         )
+
+        Text(title)
+    }
+}
+
+// ---------------- CARDS ----------------
+
+@Composable
+fun CardItem(
+    card: BankCard,
+    onDelete: () -> Unit
+) {
+
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(25.dp)
+    ) {
+
+        Column(
+            Modifier.padding(18.dp)
+        ) {
+
+            Row {
+
+                Column(
+                    Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        card.bank,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(card.name)
+
+                    Text(
+                        "•••• ${card.last4}"
+                    )
+
+                    Spacer(Modifier.height(5.dp))
+
+                    Text(
+                        money(card.balance),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                IconButton(
+                    onClick = onDelete
+                ) {
+                    Icon(Icons.Default.Delete, null)
+                }
+            }
+        }
     }
 }
 
 @Composable
 fun AddCardDialog(
-    text: AppStrings,
     onDismiss: () -> Unit,
     onSave: (BankCard) -> Unit
 ) {
 
-    var name by remember {
-        mutableStateOf("")
-    }
-
-    var number by remember {
-        mutableStateOf("")
-    }
-
-    var bank by remember {
-        mutableStateOf("")
-    }
+    var bank by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var last4 by remember { mutableStateOf("") }
+    var balance by remember { mutableStateOf("") }
 
     AlertDialog(
+
         onDismissRequest = onDismiss,
-
-        title = {
-            Text(text.addCard)
-        },
-
-        text = {
-
-            Column {
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = {
-                        name = it
-                    },
-                    label = {
-                        Text(text.cardName)
-                    }
-                )
-
-                OutlinedTextField(
-                    value = number,
-                    onValueChange = {
-                        number = it.filter { c ->
-                            c.isDigit()
-                        }
-                    },
-                    label = {
-                        Text(text.cardNumber)
-                    }
-                )
-
-                OutlinedTextField(
-                    value = bank,
-                    onValueChange = {
-                        bank = it
-                    },
-                    label = {
-                        Text(text.bank)
-                    }
-                )
-            }
-        },
 
         confirmButton = {
 
             TextButton(
                 onClick = {
 
-                    if (
-                        name.isNotBlank() ||
-                        number.isNotBlank()
-                    ) {
-
-                        onSave(
-                            BankCard(
-                                id = System.currentTimeMillis(),
-                                name = name,
-                                number = number,
-                                bank = bank
-                            )
+                    onSave(
+                        BankCard(
+                            id = System.currentTimeMillis(),
+                            bank = bank,
+                            name = name,
+                            last4 = last4.takeLast(4),
+                            balance =
+                                balance.toLongOrNull() ?: 0L
                         )
-                    }
+                    )
                 }
             ) {
-
-                Text(text.save)
+                Text("ذخیره")
             }
         },
 
@@ -1712,74 +2005,130 @@ fun AddCardDialog(
             TextButton(
                 onClick = onDismiss
             ) {
+                Text("لغو")
+            }
+        },
 
-                Text(text.cancel)
+        title = {
+            Text("کارت بانکی جدید")
+        },
+
+        text = {
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                OutlinedTextField(
+                    bank,
+                    { bank = it },
+                    label = {
+                        Text("بانک")
+                    }
+                )
+
+                OutlinedTextField(
+                    name,
+                    { name = it },
+                    label = {
+                        Text("نام کارت")
+                    }
+                )
+
+                OutlinedTextField(
+                    last4,
+                    {
+                        last4 =
+                            it.filter(Char::isDigit)
+                                .take(4)
+                    },
+                    label = {
+                        Text("۴ رقم آخر کارت")
+                    }
+                )
+
+                OutlinedTextField(
+                    balance,
+                    {
+                        balance =
+                            it.filter(Char::isDigit)
+                    },
+                    label = {
+                        Text("موجودی")
+                    }
+                )
             }
         }
     )
 }
 
+// ---------------- PEOPLE ----------------
+
+@Composable
+fun PersonItem(
+    person: Person,
+    onDelete: () -> Unit
+) {
+
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp)
+    ) {
+
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Icon(
+                Icons.Default.Person,
+                null,
+                modifier = Modifier.size(35.dp)
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(
+                Modifier.weight(1f)
+            ) {
+
+                Text(
+                    person.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+
+                if (person.phone.isNotBlank()) {
+                    Text(person.phone)
+                }
+
+                if (person.note.isNotBlank()) {
+                    Text(person.note)
+                }
+            }
+
+            IconButton(
+                onClick = onDelete
+            ) {
+                Icon(Icons.Default.Delete, null)
+            }
+        }
+    }
+}
+
 @Composable
 fun AddPersonDialog(
-    text: AppStrings,
     onDismiss: () -> Unit,
     onSave: (Person) -> Unit
 ) {
 
-    var name by remember {
-        mutableStateOf("")
-    }
-
-    var phone by remember {
-        mutableStateOf("")
-    }
-
-    var note by remember {
-        mutableStateOf("")
-    }
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
 
     AlertDialog(
+
         onDismissRequest = onDismiss,
-
-        title = {
-            Text(text.addPerson)
-        },
-
-        text = {
-
-            Column {
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = {
-                        name = it
-                    },
-                    label = {
-                        Text(text.personName)
-                    }
-                )
-
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = {
-                        phone = it
-                    },
-                    label = {
-                        Text(text.phone)
-                    }
-                )
-
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = {
-                        note = it
-                    },
-                    label = {
-                        Text(text.note)
-                    }
-                )
-            }
-        },
 
         confirmButton = {
 
@@ -1799,8 +2148,7 @@ fun AddPersonDialog(
                     }
                 }
             ) {
-
-                Text(text.save)
+                Text("ذخیره")
             }
         },
 
@@ -1809,268 +2157,136 @@ fun AddPersonDialog(
             TextButton(
                 onClick = onDismiss
             ) {
+                Text("لغو")
+            }
+        },
 
-                Text(text.cancel)
+        title = {
+            Text("شخص جدید")
+        },
+
+        text = {
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                OutlinedTextField(
+                    name,
+                    { name = it },
+                    label = {
+                        Text("نام")
+                    }
+                )
+
+                OutlinedTextField(
+                    phone,
+                    { phone = it },
+                    label = {
+                        Text("شماره تماس")
+                    }
+                )
+
+                OutlinedTextField(
+                    note,
+                    { note = it },
+                    label = {
+                        Text("توضیحات")
+                    }
+                )
             }
         }
     )
 }
 
-fun encodeTransactions(
-    list: List<Transaction>
-): String {
+// ---------------- COMMON UI ----------------
 
-    val array = JSONArray()
+@Composable
+fun InfoCard(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
 
-    list.forEach {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp)
+    ) {
 
-        array.put(
-            JSONObject().apply {
-
-                put("id", it.id)
-                put("title", it.title)
-                put("amount", it.amount)
-                put("income", it.isIncome)
-            }
-        )
-    }
-
-    return array.toString()
-}
-
-fun decodeTransactions(
-    json: String
-): List<Transaction> {
-
-    val array = JSONArray(json)
-
-    return List(array.length()) { index ->
-
-        val item = array.getJSONObject(index)
-
-        Transaction(
-            item.getLong("id"),
-            item.getString("title"),
-            item.getLong("amount"),
-            item.getBoolean("income")
-        )
-    }
-}
-
-fun encodeWorkDays(
-    list: List<WorkDay>
-): String {
-
-    val array = JSONArray()
-
-    list.forEach {
-
-        array.put(
-            JSONObject().apply {
-
-                put("id", it.id)
-                put("place", it.place)
-                put("date", it.date)
-                put("start", it.startTime)
-                put("end", it.endTime)
-                put("income", it.income)
-                put("note", it.note)
-            }
-        )
-    }
-
-    return array.toString()
-}
-
-fun decodeWorkDays(
-    json: String
-): List<WorkDay> {
-
-    val array = JSONArray(json)
-
-    return List(array.length()) { index ->
-
-        val item = array.getJSONObject(index)
-
-        WorkDay(
-            item.getLong("id"),
-            item.getString("place"),
-            item.getString("date"),
-            item.getString("start"),
-            item.getString("end"),
-            item.getLong("income"),
-            item.getString("note")
-        )
-    }
-}
-
-fun encodeCards(
-    list: List<BankCard>
-): String {
-
-    val array = JSONArray()
-
-    list.forEach {
-
-        array.put(
-            JSONObject().apply {
-
-                put("id", it.id)
-                put("name", it.name)
-                put("number", it.number)
-                put("bank", it.bank)
-            }
-        )
-    }
-
-    return array.toString()
-}
-
-fun decodeCards(
-    json: String
-): List<BankCard> {
-
-    val array = JSONArray(json)
-
-    return List(array.length()) { index ->
-
-        val item = array.getJSONObject(index)
-
-        BankCard(
-            item.getLong("id"),
-            item.getString("name"),
-            item.getString("number"),
-            item.getString("bank")
-        )
-    }
-}
-
-fun encodePeople(
-    list: List<Person>
-): String {
-
-    val array = JSONArray()
-
-    list.forEach {
-
-        array.put(
-            JSONObject().apply {
-
-                put("id", it.id)
-                put("name", it.name)
-                put("phone", it.phone)
-                put("note", it.note)
-            }
-        )
-    }
-
-    return array.toString()
-}
-
-fun decodePeople(
-    json: String
-): List<Person> {
-
-    val array = JSONArray(json)
-
-    return List(array.length()) { index ->
-
-        val item = array.getJSONObject(index)
-
-        Person(
-            item.getLong("id"),
-            item.getString("name"),
-            item.getString("phone"),
-            item.getString("note")
-        )
-    }
-}
-
-fun calculateWorkDuration(
-    startTime: String,
-    endTime: String
-): String {
-
-    return try {
-
-        val startParts = startTime.split(":")
-        val endParts = endTime.split(":")
-
-        if (
-            startParts.size != 2 ||
-            endParts.size != 2
+        Row(
+            Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            return ""
+
+            Icon(
+                icon,
+                null,
+                modifier = Modifier.size(40.dp)
+            )
+
+            Spacer(Modifier.width(15.dp))
+
+            Column {
+
+                Text(
+                    title,
+                    fontSize = 14.sp
+                )
+
+                Text(
+                    value,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
-
-        val startHour =
-            startParts[0].toInt()
-
-        val startMinute =
-            startParts[1].toInt()
-
-        val endHour =
-            endParts[0].toInt()
-
-        val endMinute =
-            endParts[1].toInt()
-
-        if (
-            startHour !in 0..23 ||
-            endHour !in 0..23 ||
-            startMinute !in 0..59 ||
-            endMinute !in 0..59
-        ) {
-            return ""
-        }
-
-        val startTotal =
-            startHour * 60 + startMinute
-
-        var endTotal =
-            endHour * 60 + endMinute
-
-        if (endTotal < startTotal) {
-            endTotal += 24 * 60
-        }
-
-        val duration =
-            endTotal - startTotal
-
-        val hours =
-            duration / 60
-
-        val minutes =
-            duration % 60
-
-        when {
-
-            hours > 0 && minutes > 0 ->
-                "$hours ساعت و $minutes دقیقه"
-
-            hours > 0 ->
-                "$hours ساعت"
-
-            minutes > 0 ->
-                "$minutes دقیقه"
-
-            else ->
-                "۰ دقیقه"
-        }
-
-    } catch (e: Exception) {
-
-        ""
     }
 }
 
-fun money(
-    amount: Long
-): String {
+@Composable
+fun SmallInfoCard(
+    modifier: Modifier,
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
 
-    return NumberFormat
-        .getNumberInstance(
-            Locale("fa", "IR")
-        )
-        .format(amount) + " تومان"
+    Card(
+        modifier,
+        shape = RoundedCornerShape(24.dp)
+    ) {
+
+        Column(
+            Modifier.padding(15.dp)
+        ) {
+
+            Icon(
+                icon,
+                null,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(title)
+
+            Text(
+                value,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun SectionTitle(
+    text: String
+) {
+
+    Text(
+        text,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold
+    )
 }
