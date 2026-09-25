@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -38,6 +39,12 @@ private val TRANSACTIONS_KEY =
 private val WORK_DAYS_KEY =
     stringPreferencesKey("work_days")
 
+private val LANGUAGE_KEY =
+    stringPreferencesKey("language")
+
+private val THEME_KEY =
+    stringPreferencesKey("theme")
+
 data class Transaction(
     val id: Long,
     val title: String,
@@ -54,6 +61,18 @@ data class WorkDay(
     val income: Long,
     val note: String
 )
+
+enum class AppLanguage {
+    PERSIAN,
+    ENGLISH,
+    ARABIC
+}
+
+enum class AppTheme {
+    LIGHT,
+    DARK,
+    SYSTEM
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -84,6 +103,14 @@ fun VsoftApp() {
         mutableStateOf(emptyList<WorkDay>())
     }
 
+    var language by remember {
+        mutableStateOf(AppLanguage.PERSIAN)
+    }
+
+    var theme by remember {
+        mutableStateOf(AppTheme.SYSTEM)
+    }
+
     var loaded by remember {
         mutableStateOf(false)
     }
@@ -101,6 +128,20 @@ fun VsoftApp() {
             decodeWorkDays(
                 preferences[WORK_DAYS_KEY] ?: "[]"
             )
+
+        language =
+            when (preferences[LANGUAGE_KEY]) {
+                "english" -> AppLanguage.ENGLISH
+                "arabic" -> AppLanguage.ARABIC
+                else -> AppLanguage.PERSIAN
+            }
+
+        theme =
+            when (preferences[THEME_KEY]) {
+                "light" -> AppTheme.LIGHT
+                "dark" -> AppTheme.DARK
+                else -> AppTheme.SYSTEM
+            }
 
         loaded = true
     }
@@ -137,6 +178,58 @@ fun VsoftApp() {
         }
     }
 
+    fun saveLanguage(
+        newLanguage: AppLanguage
+    ) {
+
+        language = newLanguage
+
+        scope.launch {
+
+            context.dataStore.edit { preferences ->
+
+                preferences[LANGUAGE_KEY] =
+                    when (newLanguage) {
+
+                        AppLanguage.PERSIAN ->
+                            "persian"
+
+                        AppLanguage.ENGLISH ->
+                            "english"
+
+                        AppLanguage.ARABIC ->
+                            "arabic"
+                    }
+            }
+        }
+    }
+
+    fun saveTheme(
+        newTheme: AppTheme
+    ) {
+
+        theme = newTheme
+
+        scope.launch {
+
+            context.dataStore.edit { preferences ->
+
+                preferences[THEME_KEY] =
+                    when (newTheme) {
+
+                        AppTheme.LIGHT ->
+                            "light"
+
+                        AppTheme.DARK ->
+                            "dark"
+
+                        AppTheme.SYSTEM ->
+                            "system"
+                    }
+            }
+        }
+    }
+
     if (!loaded) {
 
         Box(
@@ -150,11 +243,44 @@ fun VsoftApp() {
         return
     }
 
+    val systemDark = isSystemInDarkTheme()
+
+    val darkTheme =
+        when (theme) {
+
+            AppTheme.LIGHT ->
+                false
+
+            AppTheme.DARK ->
+                true
+
+            AppTheme.SYSTEM ->
+                systemDark
+        }
+
+    val layoutDirection =
+        when (language) {
+
+            AppLanguage.ENGLISH ->
+                LayoutDirection.Ltr
+
+            AppLanguage.PERSIAN,
+            AppLanguage.ARABIC ->
+                LayoutDirection.Rtl
+        }
+
     CompositionLocalProvider(
-        LocalLayoutDirection provides LayoutDirection.Rtl
+        LocalLayoutDirection provides layoutDirection
     ) {
 
-        MaterialTheme {
+        MaterialTheme(
+            colorScheme =
+                if (darkTheme) {
+                    darkColorScheme()
+                } else {
+                    lightColorScheme()
+                }
+        ) {
 
             Scaffold(
 
@@ -170,11 +296,11 @@ fun VsoftApp() {
                             icon = {
                                 Icon(
                                     Icons.Default.Home,
-                                    contentDescription = "خانه"
+                                    contentDescription = textHome(language)
                                 )
                             },
                             label = {
-                                Text("خانه")
+                                Text(textHome(language))
                             }
                         )
 
@@ -186,11 +312,12 @@ fun VsoftApp() {
                             icon = {
                                 Icon(
                                     Icons.Default.AccountBalanceWallet,
-                                    contentDescription = "مالی"
+                                    contentDescription =
+                                        textFinance(language)
                                 )
                             },
                             label = {
-                                Text("مالی")
+                                Text(textFinance(language))
                             }
                         )
 
@@ -202,11 +329,12 @@ fun VsoftApp() {
                             icon = {
                                 Icon(
                                     Icons.Default.Work,
-                                    contentDescription = "کار"
+                                    contentDescription =
+                                        textWork(language)
                                 )
                             },
                             label = {
-                                Text("کار")
+                                Text(textWork(language))
                             }
                         )
 
@@ -218,11 +346,29 @@ fun VsoftApp() {
                             icon = {
                                 Icon(
                                     Icons.Default.BarChart,
-                                    contentDescription = "گزارش"
+                                    contentDescription =
+                                        textReports(language)
                                 )
                             },
                             label = {
-                                Text("گزارش")
+                                Text(textReports(language))
+                            }
+                        )
+
+                        NavigationBarItem(
+                            selected = selectedPage == 4,
+                            onClick = {
+                                selectedPage = 4
+                            },
+                            icon = {
+                                Icon(
+                                    Icons.Default.Settings,
+                                    contentDescription =
+                                        textSettings(language)
+                                )
+                            },
+                            label = {
+                                Text(textSettings(language))
                             }
                         )
                     }
@@ -235,6 +381,7 @@ fun VsoftApp() {
                     0 -> HomePage(
                         transactions = transactions,
                         workDays = workDays,
+                        language = language,
                         modifier = Modifier.padding(paddingValues)
                     )
 
@@ -243,6 +390,7 @@ fun VsoftApp() {
                         onTransactionsChanged = {
                             saveTransactions(it)
                         },
+                        language = language,
                         modifier = Modifier.padding(paddingValues)
                     )
 
@@ -251,12 +399,26 @@ fun VsoftApp() {
                         onWorkDaysChanged = {
                             saveWorkDays(it)
                         },
+                        language = language,
                         modifier = Modifier.padding(paddingValues)
                     )
 
                     3 -> ReportPage(
                         transactions = transactions,
                         workDays = workDays,
+                        language = language,
+                        modifier = Modifier.padding(paddingValues)
+                    )
+
+                    4 -> SettingsPage(
+                        language = language,
+                        theme = theme,
+                        onLanguageChanged = {
+                            saveLanguage(it)
+                        },
+                        onThemeChanged = {
+                            saveTheme(it)
+                        },
                         modifier = Modifier.padding(paddingValues)
                     )
                 }
@@ -265,10 +427,46 @@ fun VsoftApp() {
     }
 }
 
+fun textHome(language: AppLanguage): String =
+    when (language) {
+        AppLanguage.PERSIAN -> "خانه"
+        AppLanguage.ENGLISH -> "Home"
+        AppLanguage.ARABIC -> "الرئيسية"
+    }
+
+fun textFinance(language: AppLanguage): String =
+    when (language) {
+        AppLanguage.PERSIAN -> "مالی"
+        AppLanguage.ENGLISH -> "Finance"
+        AppLanguage.ARABIC -> "المالية"
+    }
+
+fun textWork(language: AppLanguage): String =
+    when (language) {
+        AppLanguage.PERSIAN -> "کار"
+        AppLanguage.ENGLISH -> "Work"
+        AppLanguage.ARABIC -> "العمل"
+    }
+
+fun textReports(language: AppLanguage): String =
+    when (language) {
+        AppLanguage.PERSIAN -> "گزارش"
+        AppLanguage.ENGLISH -> "Reports"
+        AppLanguage.ARABIC -> "التقارير"
+    }
+
+fun textSettings(language: AppLanguage): String =
+    when (language) {
+        AppLanguage.PERSIAN -> "تنظیمات"
+        AppLanguage.ENGLISH -> "Settings"
+        AppLanguage.ARABIC -> "الإعدادات"
+    }
+
 @Composable
 fun HomePage(
     transactions: List<Transaction>,
     workDays: List<WorkDay>,
+    language: AppLanguage,
     modifier: Modifier = Modifier
 ) {
 
@@ -295,7 +493,17 @@ fun HomePage(
         )
 
         Text(
-            text = "مدیریت مالی و کاری",
+            text = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "مدیریت مالی و کاری"
+
+                AppLanguage.ENGLISH ->
+                    "Financial and Work Management"
+
+                AppLanguage.ARABIC ->
+                    "إدارة المال والعمل"
+            },
             fontSize = 16.sp
         )
 
@@ -307,14 +515,26 @@ fun HomePage(
                 modifier = Modifier.padding(20.dp)
             ) {
 
-                Text("موجودی")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "موجودی"
+
+                        AppLanguage.ENGLISH ->
+                            "Balance"
+
+                        AppLanguage.ARABIC ->
+                            "الرصيد"
+                    }
+                )
 
                 Spacer(
                     modifier = Modifier.height(8.dp)
                 )
 
                 Text(
-                    text = money(balance),
+                    text = money(balance, language),
                     fontSize = 26.sp
                 )
             }
@@ -333,14 +553,26 @@ fun HomePage(
                     modifier = Modifier.padding(16.dp)
                 ) {
 
-                    Text("درآمد")
+                    Text(
+                        when (language) {
+
+                            AppLanguage.PERSIAN ->
+                                "درآمد"
+
+                            AppLanguage.ENGLISH ->
+                                "Income"
+
+                            AppLanguage.ARABIC ->
+                                "الدخل"
+                        }
+                    )
 
                     Spacer(
                         modifier = Modifier.height(6.dp)
                     )
 
                     Text(
-                        money(income)
+                        money(income, language)
                     )
                 }
             }
@@ -353,14 +585,26 @@ fun HomePage(
                     modifier = Modifier.padding(16.dp)
                 ) {
 
-                    Text("هزینه")
+                    Text(
+                        when (language) {
+
+                            AppLanguage.PERSIAN ->
+                                "هزینه"
+
+                            AppLanguage.ENGLISH ->
+                                "Expense"
+
+                            AppLanguage.ARABIC ->
+                                "المصروفات"
+                        }
+                    )
 
                     Spacer(
                         modifier = Modifier.height(6.dp)
                     )
 
                     Text(
-                        money(expense)
+                        money(expense, language)
                     )
                 }
             }
@@ -374,14 +618,38 @@ fun HomePage(
                 modifier = Modifier.padding(20.dp)
             ) {
 
-                Text("روزهای کاری")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "روزهای کاری"
+
+                        AppLanguage.ENGLISH ->
+                            "Work Days"
+
+                        AppLanguage.ARABIC ->
+                            "أيام العمل"
+                    }
+                )
 
                 Spacer(
                     modifier = Modifier.height(8.dp)
                 )
 
                 Text(
-                    text = "${workDays.size} روز",
+                    text = "${workDays.size} ${
+                        when (language) {
+
+                            AppLanguage.PERSIAN ->
+                                "روز"
+
+                            AppLanguage.ENGLISH ->
+                                "days"
+
+                            AppLanguage.ARABIC ->
+                                "أيام"
+                        }
+                    }",
                     fontSize = 24.sp
                 )
             }
@@ -393,6 +661,7 @@ fun HomePage(
 fun FinancePage(
     transactions: List<Transaction>,
     onTransactionsChanged: (List<Transaction>) -> Unit,
+    language: AppLanguage,
     modifier: Modifier = Modifier
 ) {
 
@@ -413,7 +682,17 @@ fun FinancePage(
         ) {
 
             Text(
-                text = "مدیریت مالی",
+                text = when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "مدیریت مالی"
+
+                    AppLanguage.ENGLISH ->
+                        "Finance"
+
+                    AppLanguage.ARABIC ->
+                        "الإدارة المالية"
+                },
                 fontSize = 28.sp
             )
 
@@ -432,7 +711,19 @@ fun FinancePage(
                     modifier = Modifier.width(4.dp)
                 )
 
-                Text("افزودن")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "افزودن"
+
+                        AppLanguage.ENGLISH ->
+                            "Add"
+
+                        AppLanguage.ARABIC ->
+                            "إضافة"
+                    }
+                )
             }
         }
 
@@ -447,7 +738,19 @@ fun FinancePage(
                 contentAlignment = Alignment.Center
             ) {
 
-                Text("هنوز تراکنشی ثبت نشده است")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "هنوز تراکنشی ثبت نشده است"
+
+                        AppLanguage.ENGLISH ->
+                            "No transactions yet"
+
+                        AppLanguage.ARABIC ->
+                            "لا توجد معاملات بعد"
+                    }
+                )
             }
 
         } else {
@@ -465,6 +768,7 @@ fun FinancePage(
 
                     TransactionItem(
                         transaction = transaction,
+                        language = language,
                         onDelete = {
 
                             onTransactionsChanged(
@@ -482,6 +786,8 @@ fun FinancePage(
     if (showDialog) {
 
         AddTransactionDialog(
+
+            language = language,
 
             onDismiss = {
                 showDialog = false
@@ -509,6 +815,7 @@ fun FinancePage(
 @Composable
 fun TransactionItem(
     transaction: Transaction,
+    language: AppLanguage,
     onDelete: () -> Unit
 ) {
 
@@ -533,19 +840,38 @@ fun TransactionItem(
                 )
 
                 Text(
-                    if (transaction.isIncome) {
-                        "درآمد"
-                    } else {
-                        "هزینه"
+                    when {
+
+                        transaction.isIncome &&
+                            language == AppLanguage.PERSIAN ->
+                            "درآمد"
+
+                        !transaction.isIncome &&
+                            language == AppLanguage.PERSIAN ->
+                            "هزینه"
+
+                        transaction.isIncome &&
+                            language == AppLanguage.ENGLISH ->
+                            "Income"
+
+                        !transaction.isIncome &&
+                            language == AppLanguage.ENGLISH ->
+                            "Expense"
+
+                        transaction.isIncome ->
+                            "الدخل"
+
+                        else ->
+                            "المصروفات"
                     }
                 )
             }
 
             Text(
                 text = if (transaction.isIncome) {
-                    "+${money(transaction.amount)}"
+                    "+${money(transaction.amount, language)}"
                 } else {
-                    "-${money(transaction.amount)}"
+                    "-${money(transaction.amount, language)}"
                 }
             )
 
@@ -555,7 +881,17 @@ fun TransactionItem(
 
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "حذف"
+                    contentDescription = when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "حذف"
+
+                        AppLanguage.ENGLISH ->
+                            "Delete"
+
+                        AppLanguage.ARABIC ->
+                            "حذف"
+                    }
                 )
             }
         }
@@ -564,6 +900,7 @@ fun TransactionItem(
 
 @Composable
 fun AddTransactionDialog(
+    language: AppLanguage,
     onDismiss: () -> Unit,
     onSave: (String, Long, Boolean) -> Unit
 ) {
@@ -585,7 +922,19 @@ fun AddTransactionDialog(
         onDismissRequest = onDismiss,
 
         title = {
-            Text("ثبت تراکنش")
+            Text(
+                when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "ثبت تراکنش"
+
+                    AppLanguage.ENGLISH ->
+                        "Add Transaction"
+
+                    AppLanguage.ARABIC ->
+                        "إضافة معاملة"
+                }
+            )
         },
 
         text = {
@@ -600,7 +949,19 @@ fun AddTransactionDialog(
                         title = it
                     },
                     label = {
-                        Text("عنوان")
+                        Text(
+                            when (language) {
+
+                                AppLanguage.PERSIAN ->
+                                    "عنوان"
+
+                                AppLanguage.ENGLISH ->
+                                    "Title"
+
+                                AppLanguage.ARABIC ->
+                                    "العنوان"
+                            }
+                        )
                     },
                     singleLine = true
                 )
@@ -613,7 +974,19 @@ fun AddTransactionDialog(
                         }
                     },
                     label = {
-                        Text("مبلغ")
+                        Text(
+                            when (language) {
+
+                                AppLanguage.PERSIAN ->
+                                    "مبلغ"
+
+                                AppLanguage.ENGLISH ->
+                                    "Amount"
+
+                                AppLanguage.ARABIC ->
+                                    "المبلغ"
+                            }
+                        )
                     },
                     singleLine = true
                 )
@@ -629,7 +1002,19 @@ fun AddTransactionDialog(
                         }
                     )
 
-                    Text("درآمد")
+                    Text(
+                        when (language) {
+
+                            AppLanguage.PERSIAN ->
+                                "درآمد"
+
+                            AppLanguage.ENGLISH ->
+                                "Income"
+
+                            AppLanguage.ARABIC ->
+                                "الدخل"
+                        }
+                    )
 
                     RadioButton(
                         selected = !isIncome,
@@ -638,7 +1023,19 @@ fun AddTransactionDialog(
                         }
                     )
 
-                    Text("هزینه")
+                    Text(
+                        when (language) {
+
+                            AppLanguage.PERSIAN ->
+                                "هزینه"
+
+                            AppLanguage.ENGLISH ->
+                                "Expense"
+
+                            AppLanguage.ARABIC ->
+                                "المصروفات"
+                        }
+                    )
                 }
             }
         },
@@ -666,7 +1063,19 @@ fun AddTransactionDialog(
                 }
             ) {
 
-                Text("ذخیره")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "ذخیره"
+
+                        AppLanguage.ENGLISH ->
+                            "Save"
+
+                        AppLanguage.ARABIC ->
+                            "حفظ"
+                    }
+                )
             }
         },
 
@@ -676,7 +1085,19 @@ fun AddTransactionDialog(
                 onClick = onDismiss
             ) {
 
-                Text("لغو")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "لغو"
+
+                        AppLanguage.ENGLISH ->
+                            "Cancel"
+
+                        AppLanguage.ARABIC ->
+                            "إلغاء"
+                    }
+                )
             }
         }
     )
@@ -686,6 +1107,7 @@ fun AddTransactionDialog(
 fun WorkPage(
     workDays: List<WorkDay>,
     onWorkDaysChanged: (List<WorkDay>) -> Unit,
+    language: AppLanguage,
     modifier: Modifier = Modifier
 ) {
 
@@ -706,7 +1128,17 @@ fun WorkPage(
         ) {
 
             Text(
-                text = "روزهای کاری",
+                text = when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "روزهای کاری"
+
+                    AppLanguage.ENGLISH ->
+                        "Work Days"
+
+                    AppLanguage.ARABIC ->
+                        "أيام العمل"
+                },
                 fontSize = 28.sp
             )
 
@@ -725,7 +1157,19 @@ fun WorkPage(
                     modifier = Modifier.width(4.dp)
                 )
 
-                Text("ثبت روز")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "ثبت روز"
+
+                        AppLanguage.ENGLISH ->
+                            "Add Day"
+
+                        AppLanguage.ARABIC ->
+                            "إضافة يوم"
+                    }
+                )
             }
         }
 
@@ -740,7 +1184,19 @@ fun WorkPage(
                 contentAlignment = Alignment.Center
             ) {
 
-                Text("هنوز روز کاری ثبت نشده است")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "هنوز روز کاری ثبت نشده است"
+
+                        AppLanguage.ENGLISH ->
+                            "No work days yet"
+
+                        AppLanguage.ARABIC ->
+                            "لا توجد أيام عمل بعد"
+                    }
+                )
             }
 
         } else {
@@ -758,6 +1214,7 @@ fun WorkPage(
 
                     WorkDayItem(
                         workDay = workDay,
+                        language = language,
                         onDelete = {
 
                             onWorkDaysChanged(
@@ -775,6 +1232,8 @@ fun WorkPage(
     if (showDialog) {
 
         AddWorkDayDialog(
+
+            language = language,
 
             onDismiss = {
                 showDialog = false
@@ -811,6 +1270,7 @@ fun WorkPage(
 @Composable
 fun WorkDayItem(
     workDay: WorkDay,
+    language: AppLanguage,
     onDelete: () -> Unit
 ) {
 
@@ -838,30 +1298,90 @@ fun WorkDayItem(
 
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "حذف"
+                        contentDescription = when (language) {
+
+                            AppLanguage.PERSIAN ->
+                                "حذف"
+
+                            AppLanguage.ENGLISH ->
+                                "Delete"
+
+                            AppLanguage.ARABIC ->
+                                "حذف"
+                        }
                     )
                 }
             }
 
             Text(
-                "تاریخ: ${workDay.date}"
+                when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "تاریخ: ${workDay.date}"
+
+                    AppLanguage.ENGLISH ->
+                        "Date: ${workDay.date}"
+
+                    AppLanguage.ARABIC ->
+                        "التاريخ: ${workDay.date}"
+                }
             )
 
             Text(
-                "ساعت: ${workDay.startTime} تا ${workDay.endTime}"
+                when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "ساعت: ${workDay.startTime} تا ${workDay.endTime}"
+
+                    AppLanguage.ENGLISH ->
+                        "Time: ${workDay.startTime} - ${workDay.endTime}"
+
+                    AppLanguage.ARABIC ->
+                        "الوقت: ${workDay.startTime} - ${workDay.endTime}"
+                }
             )
 
             Text(
-                "مدت کار: ${
-                    calculateWorkDuration(
-                        workDay.startTime,
-                        workDay.endTime
-                    )
-                }"
+                when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "مدت کار: ${
+                            calculateWorkDuration(
+                                workDay.startTime,
+                                workDay.endTime
+                            )
+                        }"
+
+                    AppLanguage.ENGLISH ->
+                        "Duration: ${
+                            calculateWorkDurationEnglish(
+                                workDay.startTime,
+                                workDay.endTime
+                            )
+                        }"
+
+                    AppLanguage.ARABIC ->
+                        "مدة العمل: ${
+                            calculateWorkDurationArabic(
+                                workDay.startTime,
+                                workDay.endTime
+                            )
+                        }"
+                }
             )
 
             Text(
-                "دریافتی: ${money(workDay.income)}"
+                when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "دریافتی: ${money(workDay.income, language)}"
+
+                    AppLanguage.ENGLISH ->
+                        "Income: ${money(workDay.income, language)}"
+
+                    AppLanguage.ARABIC ->
+                        "الدخل: ${money(workDay.income, language)}"
+                }
             )
 
             if (workDay.note.isNotBlank()) {
@@ -871,7 +1391,17 @@ fun WorkDayItem(
                 )
 
                 Text(
-                    "یادداشت: ${workDay.note}"
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "یادداشت: ${workDay.note}"
+
+                        AppLanguage.ENGLISH ->
+                            "Note: ${workDay.note}"
+
+                        AppLanguage.ARABIC ->
+                            "ملاحظة: ${workDay.note}"
+                    }
                 )
             }
         }
@@ -880,6 +1410,7 @@ fun WorkDayItem(
 
 @Composable
 fun AddWorkDayDialog(
+    language: AppLanguage,
     onDismiss: () -> Unit,
     onSave: (
         String,
@@ -920,7 +1451,19 @@ fun AddWorkDayDialog(
         onDismissRequest = onDismiss,
 
         title = {
-            Text("ثبت روز کاری")
+            Text(
+                when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "ثبت روز کاری"
+
+                    AppLanguage.ENGLISH ->
+                        "Add Work Day"
+
+                    AppLanguage.ARABIC ->
+                        "إضافة يوم عمل"
+                }
+            )
         },
 
         text = {
@@ -935,7 +1478,19 @@ fun AddWorkDayDialog(
                         place = it
                     },
                     label = {
-                        Text("محل کار")
+                        Text(
+                            when (language) {
+
+                                AppLanguage.PERSIAN ->
+                                    "محل کار"
+
+                                AppLanguage.ENGLISH ->
+                                    "Workplace"
+
+                                AppLanguage.ARABIC ->
+                                    "مكان العمل"
+                            }
+                        )
                     },
                     singleLine = true
                 )
@@ -946,7 +1501,19 @@ fun AddWorkDayDialog(
                         date = it
                     },
                     label = {
-                        Text("تاریخ")
+                        Text(
+                            when (language) {
+
+                                AppLanguage.PERSIAN ->
+                                    "تاریخ"
+
+                                AppLanguage.ENGLISH ->
+                                    "Date"
+
+                                AppLanguage.ARABIC ->
+                                    "التاريخ"
+                            }
+                        )
                     },
                     singleLine = true
                 )
@@ -957,7 +1524,19 @@ fun AddWorkDayDialog(
                         start = it
                     },
                     label = {
-                        Text("ساعت شروع")
+                        Text(
+                            when (language) {
+
+                                AppLanguage.PERSIAN ->
+                                    "ساعت شروع"
+
+                                AppLanguage.ENGLISH ->
+                                    "Start Time"
+
+                                AppLanguage.ARABIC ->
+                                    "وقت البدء"
+                            }
+                        )
                     },
                     singleLine = true
                 )
@@ -968,7 +1547,19 @@ fun AddWorkDayDialog(
                         end = it
                     },
                     label = {
-                        Text("ساعت پایان")
+                        Text(
+                            when (language) {
+
+                                AppLanguage.PERSIAN ->
+                                    "ساعت پایان"
+
+                                AppLanguage.ENGLISH ->
+                                    "End Time"
+
+                                AppLanguage.ARABIC ->
+                                    "وقت الانتهاء"
+                            }
+                        )
                     },
                     singleLine = true
                 )
@@ -981,7 +1572,19 @@ fun AddWorkDayDialog(
                         }
                     },
                     label = {
-                        Text("مبلغ دریافتی")
+                        Text(
+                            when (language) {
+
+                                AppLanguage.PERSIAN ->
+                                    "مبلغ دریافتی"
+
+                                AppLanguage.ENGLISH ->
+                                    "Income"
+
+                                AppLanguage.ARABIC ->
+                                    "المبلغ المستلم"
+                            }
+                        )
                     },
                     singleLine = true
                 )
@@ -992,7 +1595,19 @@ fun AddWorkDayDialog(
                         note = it
                     },
                     label = {
-                        Text("یادداشت")
+                        Text(
+                            when (language) {
+
+                                AppLanguage.PERSIAN ->
+                                    "یادداشت"
+
+                                AppLanguage.ENGLISH ->
+                                    "Note"
+
+                                AppLanguage.ARABIC ->
+                                    "ملاحظة"
+                            }
+                        )
                     }
                 )
             }
@@ -1023,7 +1638,19 @@ fun AddWorkDayDialog(
                 }
             ) {
 
-                Text("ذخیره")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "ذخیره"
+
+                        AppLanguage.ENGLISH ->
+                            "Save"
+
+                        AppLanguage.ARABIC ->
+                            "حفظ"
+                    }
+                )
             }
         },
 
@@ -1033,7 +1660,19 @@ fun AddWorkDayDialog(
                 onClick = onDismiss
             ) {
 
-                Text("لغو")
+                Text(
+                    when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "لغو"
+
+                        AppLanguage.ENGLISH ->
+                            "Cancel"
+
+                        AppLanguage.ARABIC ->
+                            "إلغاء"
+                    }
+                )
             }
         }
     )
@@ -1043,6 +1682,7 @@ fun AddWorkDayDialog(
 fun ReportPage(
     transactions: List<Transaction>,
     workDays: List<WorkDay>,
+    language: AppLanguage,
     modifier: Modifier = Modifier
 ) {
 
@@ -1066,93 +1706,348 @@ fun ReportPage(
     ) {
 
         Text(
-            text = "گزارش‌ها",
+            text = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "گزارش‌ها"
+
+                AppLanguage.ENGLISH ->
+                    "Reports"
+
+                AppLanguage.ARABIC ->
+                    "التقارير"
+            },
             fontSize = 28.sp
+        )
+
+        ReportCard(
+            title = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "مجموع درآمد"
+
+                AppLanguage.ENGLISH ->
+                    "Total Income"
+
+                AppLanguage.ARABIC ->
+                    "إجمالي الدخل"
+            },
+            value = money(income, language)
+        )
+
+        ReportCard(
+            title = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "مجموع هزینه"
+
+                AppLanguage.ENGLISH ->
+                    "Total Expense"
+
+                AppLanguage.ARABIC ->
+                    "إجمالي المصروفات"
+            },
+            value = money(expense, language)
+        )
+
+        ReportCard(
+            title = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "دریافتی از روزهای کاری"
+
+                AppLanguage.ENGLISH ->
+                    "Work Income"
+
+                AppLanguage.ARABIC ->
+                    "دخل أيام العمل"
+            },
+            value = money(workIncome, language)
+        )
+
+        ReportCard(
+            title = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "تعداد روزهای کاری"
+
+                AppLanguage.ENGLISH ->
+                    "Work Days"
+
+                AppLanguage.ARABIC ->
+                    "أيام العمل"
+            },
+            value = "${workDays.size} ${
+                when (language) {
+
+                    AppLanguage.PERSIAN ->
+                        "روز"
+
+                    AppLanguage.ENGLISH ->
+                        "days"
+
+                    AppLanguage.ARABIC ->
+                        "أيام"
+                }
+            }"
+        )
+    }
+}
+
+@Composable
+fun ReportCard(
+    title: String,
+    value: String
+) {
+
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        Column(
+            modifier = Modifier.padding(18.dp)
+        ) {
+
+            Text(title)
+
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
+            Text(
+                value,
+                fontSize = 20.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsPage(
+    language: AppLanguage,
+    theme: AppTheme,
+    onLanguageChanged: (AppLanguage) -> Unit,
+    onThemeChanged: (AppTheme) -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(20.dp)
+    ) {
+
+        Text(
+            text = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "تنظیمات"
+
+                AppLanguage.ENGLISH ->
+                    "Settings"
+
+                AppLanguage.ARABIC ->
+                    "الإعدادات"
+            },
+            fontSize = 28.sp
+        )
+
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
+
+        Text(
+            text = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "زبان برنامه"
+
+                AppLanguage.ENGLISH ->
+                    "App Language"
+
+                AppLanguage.ARABIC ->
+                    "لغة التطبيق"
+            },
+            fontSize = 19.sp
+        )
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
         )
 
         Card(
             modifier = Modifier.fillMaxWidth()
         ) {
 
-            Column(
-                modifier = Modifier.padding(18.dp)
-            ) {
+            Column {
 
-                Text("مجموع درآمد")
-
-                Spacer(
-                    modifier = Modifier.height(6.dp)
+                SettingsRadioItem(
+                    title = "فارسی",
+                    selected = language == AppLanguage.PERSIAN,
+                    onClick = {
+                        onLanguageChanged(
+                            AppLanguage.PERSIAN
+                        )
+                    }
                 )
 
-                Text(
-                    money(income),
-                    fontSize = 20.sp
+                SettingsRadioItem(
+                    title = "English",
+                    selected = language == AppLanguage.ENGLISH,
+                    onClick = {
+                        onLanguageChanged(
+                            AppLanguage.ENGLISH
+                        )
+                    }
+                )
+
+                SettingsRadioItem(
+                    title = "العربية",
+                    selected = language == AppLanguage.ARABIC,
+                    onClick = {
+                        onLanguageChanged(
+                            AppLanguage.ARABIC
+                        )
+                    }
                 )
             }
         }
+
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
+
+        Text(
+            text = when (language) {
+
+                AppLanguage.PERSIAN ->
+                    "ظاهر برنامه"
+
+                AppLanguage.ENGLISH ->
+                    "Appearance"
+
+                AppLanguage.ARABIC ->
+                    "المظهر"
+            },
+            fontSize = 19.sp
+        )
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
 
         Card(
             modifier = Modifier.fillMaxWidth()
         ) {
 
-            Column(
-                modifier = Modifier.padding(18.dp)
-            ) {
+            Column {
 
-                Text("مجموع هزینه")
+                SettingsRadioItem(
+                    title = when (language) {
 
-                Spacer(
-                    modifier = Modifier.height(6.dp)
+                        AppLanguage.PERSIAN ->
+                            "روشن"
+
+                        AppLanguage.ENGLISH ->
+                            "Light"
+
+                        AppLanguage.ARABIC ->
+                            "فاتح"
+                    },
+                    selected = theme == AppTheme.LIGHT,
+                    onClick = {
+                        onThemeChanged(
+                            AppTheme.LIGHT
+                        )
+                    }
                 )
 
-                Text(
-                    money(expense),
-                    fontSize = 20.sp
+                SettingsRadioItem(
+                    title = when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "تاریک"
+
+                        AppLanguage.ENGLISH ->
+                            "Dark"
+
+                        AppLanguage.ARABIC ->
+                            "داكن"
+                    },
+                    selected = theme == AppTheme.DARK,
+                    onClick = {
+                        onThemeChanged(
+                            AppTheme.DARK
+                        )
+                    }
+                )
+
+                SettingsRadioItem(
+                    title = when (language) {
+
+                        AppLanguage.PERSIAN ->
+                            "مطابق تنظیمات گوشی"
+
+                        AppLanguage.ENGLISH ->
+                            "Follow System"
+
+                        AppLanguage.ARABIC ->
+                            "حسب إعدادات الهاتف"
+                    },
+                    selected = theme == AppTheme.SYSTEM,
+                    onClick = {
+                        onThemeChanged(
+                            AppTheme.SYSTEM
+                        )
+                    }
                 )
             }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
 
-            Column(
-                modifier = Modifier.padding(18.dp)
-            ) {
+        Text(
+            text = "Vsoft",
+            fontSize = 18.sp
+        )
 
-                Text("دریافتی از روزهای کاری")
+        Text(
+            text = "Version 1.0",
+            fontSize = 13.sp
+        )
+    }
+}
 
-                Spacer(
-                    modifier = Modifier.height(6.dp)
-                )
+@Composable
+fun SettingsRadioItem(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
 
-                Text(
-                    money(workIncome),
-                    fontSize = 20.sp
-                )
-            }
-        }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 8.dp,
+                vertical = 4.dp
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        RadioButton(
+            selected = selected,
+            onClick = onClick
+        )
 
-            Column(
-                modifier = Modifier.padding(18.dp)
-            ) {
-
-                Text("تعداد روزهای کاری")
-
-                Spacer(
-                    modifier = Modifier.height(6.dp)
-                )
-
-                Text(
-                    "${workDays.size} روز",
-                    fontSize = 20.sp
-                )
-            }
-        }
+        Text(
+            text = title,
+            modifier = Modifier.padding(
+                start = 4.dp
+            )
+        )
     }
 }
 
@@ -1340,13 +2235,166 @@ fun calculateWorkDuration(
     }
 }
 
-fun money(
-    amount: Long
+fun calculateWorkDurationEnglish(
+    startTime: String,
+    endTime: String
 ): String {
 
+    return try {
+
+        val startParts = startTime.split(":")
+        val endParts = endTime.split(":")
+
+        if (
+            startParts.size != 2 ||
+            endParts.size != 2
+        ) {
+            return ""
+        }
+
+        val startHour = startParts[0].toInt()
+        val startMinute = startParts[1].toInt()
+
+        val endHour = endParts[0].toInt()
+        val endMinute = endParts[1].toInt()
+
+        var startTotal =
+            startHour * 60 + startMinute
+
+        var endTotal =
+            endHour * 60 + endMinute
+
+        if (endTotal < startTotal) {
+            endTotal += 24 * 60
+        }
+
+        val duration =
+            endTotal - startTotal
+
+        val hours =
+            duration / 60
+
+        val minutes =
+            duration % 60
+
+        when {
+
+            hours > 0 && minutes > 0 ->
+                "$hours h $minutes min"
+
+            hours > 0 ->
+                "$hours h"
+
+            minutes > 0 ->
+                "$minutes min"
+
+            else ->
+                "0 min"
+        }
+
+    } catch (e: Exception) {
+
+        ""
+    }
+}
+
+fun calculateWorkDurationArabic(
+    startTime: String,
+    endTime: String
+): String {
+
+    return try {
+
+        val startParts = startTime.split(":")
+        val endParts = endTime.split(":")
+
+        if (
+            startParts.size != 2 ||
+            endParts.size != 2
+        ) {
+            return ""
+        }
+
+        val startHour = startParts[0].toInt()
+        val startMinute = startParts[1].toInt()
+
+        val endHour = endParts[0].toInt()
+        val endMinute = endParts[1].toInt()
+
+        val startTotal =
+            startHour * 60 + startMinute
+
+        var endTotal =
+            endHour * 60 + endMinute
+
+        if (endTotal < startTotal) {
+            endTotal += 24 * 60
+        }
+
+        val duration =
+            endTotal - startTotal
+
+        val hours =
+            duration / 60
+
+        val minutes =
+            duration % 60
+
+        when {
+
+            hours > 0 && minutes > 0 ->
+                "$hours ساعة و $minutes دقيقة"
+
+            hours > 0 ->
+                "$hours ساعة"
+
+            minutes > 0 ->
+                "$minutes دقيقة"
+
+            else ->
+                "0 دقيقة"
+        }
+
+    } catch (e: Exception) {
+
+        ""
+    }
+}
+
+fun money(
+    amount: Long,
+    language: AppLanguage = AppLanguage.PERSIAN
+): String {
+
+    val locale =
+        when (language) {
+
+            AppLanguage.PERSIAN ->
+                Locale("fa", "IR")
+
+            AppLanguage.ENGLISH ->
+                Locale.US
+
+            AppLanguage.ARABIC ->
+                Locale("ar")
+        }
+
+    val currency =
+        when (language) {
+
+            AppLanguage.PERSIAN ->
+                "تومان"
+
+            AppLanguage.ENGLISH ->
+                "Toman"
+
+            AppLanguage.ARABIC ->
+                "تومان"
+        }
+
     return NumberFormat
-        .getNumberInstance(
-            Locale("fa", "IR")
-        )
-        .format(amount) + " تومان"
+        .getNumberInstance(locale)
+        .format(amount) +
+            " " +
+            currency
 }
