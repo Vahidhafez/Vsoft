@@ -852,6 +852,15 @@ fun WorkDayItem(
             )
 
             Text(
+                "مدت کار: ${
+                    calculateWorkDuration(
+                        workDay.startTime,
+                        workDay.endTime
+                    )
+                }"
+            )
+
+            Text(
                 "دریافتی: ${money(workDay.income)}"
             )
 
@@ -1256,6 +1265,78 @@ fun decodeWorkDays(
     } catch (e: Exception) {
 
         emptyList()
+    }
+}
+
+fun calculateWorkDuration(
+    startTime: String,
+    endTime: String
+): String {
+
+    return try {
+
+        val startParts = startTime.split(":")
+        val endParts = endTime.split(":")
+
+        if (
+            startParts.size != 2 ||
+            endParts.size != 2
+        ) {
+            return ""
+        }
+
+        val startHour = startParts[0].toInt()
+        val startMinute = startParts[1].toInt()
+
+        val endHour = endParts[0].toInt()
+        val endMinute = endParts[1].toInt()
+
+        if (
+            startHour !in 0..23 ||
+            endHour !in 0..23 ||
+            startMinute !in 0..59 ||
+            endMinute !in 0..59
+        ) {
+            return ""
+        }
+
+        val startTotal =
+            startHour * 60 + startMinute
+
+        var endTotal =
+            endHour * 60 + endMinute
+
+        if (endTotal < startTotal) {
+            endTotal += 24 * 60
+        }
+
+        val duration =
+            endTotal - startTotal
+
+        val hours =
+            duration / 60
+
+        val minutes =
+            duration % 60
+
+        when {
+
+            hours > 0 && minutes > 0 ->
+                "$hours ساعت و $minutes دقیقه"
+
+            hours > 0 ->
+                "$hours ساعت"
+
+            minutes > 0 ->
+                "$minutes دقیقه"
+
+            else ->
+                "۰ دقیقه"
+        }
+
+    } catch (e: Exception) {
+
+        ""
     }
 }
 
