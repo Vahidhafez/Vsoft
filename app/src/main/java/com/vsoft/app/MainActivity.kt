@@ -3,34 +3,28 @@ package com.vsoft.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Work
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.text.NumberFormat
 import java.util.Locale
+
+data class Transaction(
+    val id: Long,
+    val title: String,
+    val amount: Long,
+    val isIncome: Boolean
+)
 
 class MainActivity : ComponentActivity() {
 
@@ -50,6 +44,10 @@ fun VsoftApp() {
         mutableIntStateOf(0)
     }
 
+    var transactions by remember {
+        mutableStateOf(emptyList<Transaction>())
+    }
+
     CompositionLocalProvider(
         LocalLayoutDirection provides LayoutDirection.Rtl
     ) {
@@ -66,7 +64,7 @@ fun VsoftApp() {
                             selected = selectedPage == 0,
                             onClick = { selectedPage = 0 },
                             icon = {
-                                androidx.compose.material3.Icon(
+                                Icon(
                                     Icons.Default.Home,
                                     contentDescription = "خانه"
                                 )
@@ -80,7 +78,7 @@ fun VsoftApp() {
                             selected = selectedPage == 1,
                             onClick = { selectedPage = 1 },
                             icon = {
-                                androidx.compose.material3.Icon(
+                                Icon(
                                     Icons.Default.AccountBalanceWallet,
                                     contentDescription = "مالی"
                                 )
@@ -94,7 +92,7 @@ fun VsoftApp() {
                             selected = selectedPage == 2,
                             onClick = { selectedPage = 2 },
                             icon = {
-                                androidx.compose.material3.Icon(
+                                Icon(
                                     Icons.Default.Work,
                                     contentDescription = "کار"
                                 )
@@ -108,13 +106,14 @@ fun VsoftApp() {
                             selected = selectedPage == 3,
                             onClick = { selectedPage = 3 },
                             icon = {
-                                androidx.compose.material3.Icon(
+                                Icon(
                                     Icons.Default.BarChart,
                                     contentDescription = "گزارش"
                                 )
                             },
                             label = {
-                                Text("گزارش")
+                                Text("گزارش"
+                                )
                             }
                         )
                     }
@@ -125,12 +124,16 @@ fun VsoftApp() {
                 when (selectedPage) {
 
                     0 -> HomePage(
-                        Modifier.padding(paddingValues)
+                        transactions = transactions,
+                        modifier = Modifier.padding(paddingValues)
                     )
 
-                    1 -> SimplePage(
-                        "مدیریت مالی",
-                        Modifier.padding(paddingValues)
+                    1 -> FinancePage(
+                        transactions = transactions,
+                        onTransactionsChanged = {
+                            transactions = it
+                        },
+                        modifier = Modifier.padding(paddingValues)
                     )
 
                     2 -> SimplePage(
@@ -149,7 +152,20 @@ fun VsoftApp() {
 }
 
 @Composable
-fun HomePage(modifier: Modifier = Modifier) {
+fun HomePage(
+    transactions: List<Transaction>,
+    modifier: Modifier = Modifier
+) {
+
+    val income = transactions
+        .filter { it.isIncome }
+        .sumOf { it.amount }
+
+    val expense = transactions
+        .filter { !it.isIncome }
+        .sumOf { it.amount }
+
+    val balance = income - expense
 
     Column(
         modifier = modifier
@@ -160,17 +176,12 @@ fun HomePage(modifier: Modifier = Modifier) {
 
         Text(
             text = "Vsoft",
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 30.sp
         )
 
         Text(
             text = "مدیریت مالی و کاری",
             fontSize = 16.sp
-        )
-
-        Spacer(
-            modifier = Modifier.height(8.dp)
         )
 
         Card(
@@ -181,19 +192,15 @@ fun HomePage(modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(20.dp)
             ) {
 
-                Text(
-                    text = "موجودی",
-                    fontSize = 16.sp
-                )
+                Text("موجودی")
 
                 Spacer(
                     modifier = Modifier.height(8.dp)
                 )
 
                 Text(
-                    text = money(0),
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold
+                    text = money(balance),
+                    fontSize = 26.sp
                 )
             }
         }
@@ -218,8 +225,7 @@ fun HomePage(modifier: Modifier = Modifier) {
                     )
 
                     Text(
-                        money(0),
-                        fontWeight = FontWeight.Bold
+                        money(income)
                     )
                 }
             }
@@ -239,35 +245,303 @@ fun HomePage(modifier: Modifier = Modifier) {
                     )
 
                     Text(
-                        money(0),
-                        fontWeight = FontWeight.Bold
+                        money(expense)
                     )
                 }
             }
         }
+    }
+}
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
+@Composable
+fun FinancePage(
+    transactions: List<Transaction>,
+    onTransactionsChanged: (List<Transaction>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    var showDialog by remember {
+        mutableStateOf(false)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Text(
+                text = "مدیریت مالی",
+                fontSize = 28.sp
+            )
+
+            Button(
+                onClick = {
+                    showDialog = true
+                }
+            ) {
+
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null
+                )
+
+                Spacer(
+                    modifier = Modifier.width(4.dp)
+                )
+
+                Text("افزودن")
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(16.dp)
+        )
+
+        if (transactions.isEmpty()) {
+
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Text(
+                    text = "هنوز تراکنشی ثبت نشده است"
+                )
+            }
+
+        } else {
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                items(
+                    items = transactions.reversed(),
+                    key = { it.id }
+                ) { transaction ->
+
+                    TransactionItem(
+                        transaction = transaction,
+                        onDelete = {
+
+                            onTransactionsChanged(
+                                transactions.filter {
+                                    it.id != transaction.id
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showDialog) {
+
+        AddTransactionDialog(
+            onDismiss = {
+                showDialog = false
+            },
+            onSave = { title, amount, isIncome ->
+
+                val transaction = Transaction(
+                    id = System.currentTimeMillis(),
+                    title = title,
+                    amount = amount,
+                    isIncome = isIncome
+                )
+
+                onTransactionsChanged(
+                    transactions + transaction
+                )
+
+                showDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun TransactionItem(
+    transaction: Transaction,
+    onDelete: () -> Unit
+) {
+
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
 
             Column(
-                modifier = Modifier.padding(20.dp)
+                modifier = Modifier.weight(1f)
             ) {
 
-                Text("روزهای کاری")
-
-                Spacer(
-                    modifier = Modifier.height(8.dp)
+                Text(
+                    text = transaction.title,
+                    fontSize = 17.sp
                 )
 
                 Text(
-                    "۰ روز",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    text = if (transaction.isIncome) {
+                        "درآمد"
+                    } else {
+                        "هزینه"
+                    }
+                )
+            }
+
+            Text(
+                text = if (transaction.isIncome) {
+                    "+${money(transaction.amount)}"
+                } else {
+                    "-${money(transaction.amount)}"
+                },
+                fontSize = 16.sp
+            )
+
+            IconButton(
+                onClick = onDelete
+            ) {
+
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "حذف"
                 )
             }
         }
     }
+}
+
+@Composable
+fun AddTransactionDialog(
+    onDismiss: () -> Unit,
+    onSave: (String, Long, Boolean) -> Unit
+) {
+
+    var title by remember {
+        mutableStateOf("")
+    }
+
+    var amount by remember {
+        mutableStateOf("")
+    }
+
+    var isIncome by remember {
+        mutableStateOf(true)
+    }
+
+    AlertDialog(
+
+        onDismissRequest = onDismiss,
+
+        title = {
+            Text("ثبت تراکنش")
+        },
+
+        text = {
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = {
+                        title = it
+                    },
+                    label = {
+                        Text("عنوان")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = {
+                        amount = it.filter { char ->
+                            char.isDigit()
+                        }
+                    },
+                    label = {
+                        Text("مبلغ")
+                    },
+                    singleLine = true
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    RadioButton(
+                        selected = isIncome,
+                        onClick = {
+                            isIncome = true
+                        }
+                    )
+
+                    Text("درآمد")
+
+                    RadioButton(
+                        selected = !isIncome,
+                        onClick = {
+                            isIncome = false
+                        }
+                    )
+
+                    Text("هزینه")
+                }
+            }
+        },
+
+        confirmButton = {
+
+            Button(
+                onClick = {
+
+                    val value = amount.toLongOrNull()
+
+                    if (
+                        title.isNotBlank() &&
+                        value != null &&
+                        value > 0
+                    ) {
+
+                        onSave(
+                            title,
+                            value,
+                            isIncome
+                        )
+                    }
+                }
+            ) {
+
+                Text("ذخیره")
+            }
+        },
+
+        dismissButton = {
+
+            TextButton(
+                onClick = onDismiss
+            ) {
+
+                Text("لغو")
+            }
+        }
+    )
 }
 
 @Composable
@@ -284,8 +558,7 @@ fun SimplePage(
 
         Text(
             text = title,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 28.sp
         )
     }
 }
