@@ -26,6 +26,16 @@ data class Transaction(
     val isIncome: Boolean
 )
 
+data class WorkDay(
+    val id: Long,
+    val place: String,
+    val date: String,
+    val startTime: String,
+    val endTime: String,
+    val income: Long,
+    val note: String
+)
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +56,10 @@ fun VsoftApp() {
 
     var transactions by remember {
         mutableStateOf(emptyList<Transaction>())
+    }
+
+    var workDays by remember {
+        mutableStateOf(emptyList<WorkDay>())
     }
 
     CompositionLocalProvider(
@@ -112,8 +126,7 @@ fun VsoftApp() {
                                 )
                             },
                             label = {
-                                Text("گزارش"
-                                )
+                                Text("گزارش")
                             }
                         )
                     }
@@ -125,6 +138,7 @@ fun VsoftApp() {
 
                     0 -> HomePage(
                         transactions = transactions,
+                        workDays = workDays,
                         modifier = Modifier.padding(paddingValues)
                     )
 
@@ -136,14 +150,18 @@ fun VsoftApp() {
                         modifier = Modifier.padding(paddingValues)
                     )
 
-                    2 -> SimplePage(
-                        "روزهای کاری",
-                        Modifier.padding(paddingValues)
+                    2 -> WorkPage(
+                        workDays = workDays,
+                        onWorkDaysChanged = {
+                            workDays = it
+                        },
+                        modifier = Modifier.padding(paddingValues)
                     )
 
-                    3 -> SimplePage(
-                        "گزارش‌ها",
-                        Modifier.padding(paddingValues)
+                    3 -> ReportPage(
+                        transactions = transactions,
+                        workDays = workDays,
+                        modifier = Modifier.padding(paddingValues)
                     )
                 }
             }
@@ -154,6 +172,7 @@ fun VsoftApp() {
 @Composable
 fun HomePage(
     transactions: List<Transaction>,
+    workDays: List<WorkDay>,
     modifier: Modifier = Modifier
 ) {
 
@@ -250,6 +269,27 @@ fun HomePage(
                 }
             }
         }
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+            Column(
+                modifier = Modifier.padding(20.dp)
+            ) {
+
+                Text("روزهای کاری")
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
+                Text(
+                    text = "${workDays.size} روز",
+                    fontSize = 24.sp
+                )
+            }
+        }
     }
 }
 
@@ -311,9 +351,7 @@ fun FinancePage(
                 contentAlignment = Alignment.Center
             ) {
 
-                Text(
-                    text = "هنوز تراکنشی ثبت نشده است"
-                )
+                Text("هنوز تراکنشی ثبت نشده است")
             }
 
         } else {
@@ -395,7 +433,7 @@ fun TransactionItem(
                 )
 
                 Text(
-                    text = if (transaction.isIncome) {
+                    if (transaction.isIncome) {
                         "درآمد"
                     } else {
                         "هزینه"
@@ -408,8 +446,7 @@ fun TransactionItem(
                     "+${money(transaction.amount)}"
                 } else {
                     "-${money(transaction.amount)}"
-                },
-                fontSize = 16.sp
+                }
             )
 
             IconButton(
@@ -545,21 +582,451 @@ fun AddTransactionDialog(
 }
 
 @Composable
-fun SimplePage(
-    title: String,
+fun WorkPage(
+    workDays: List<WorkDay>,
+    onWorkDaysChanged: (List<WorkDay>) -> Unit,
     modifier: Modifier = Modifier
 ) {
+
+    var showDialog by remember {
+        mutableStateOf(false)
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(20.dp)
+            .padding(16.dp)
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Text(
+                text = "روزهای کاری",
+                fontSize = 28.sp
+            )
+
+            Button(
+                onClick = {
+                    showDialog = true
+                }
+            ) {
+
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null
+                )
+
+                Spacer(
+                    modifier = Modifier.width(4.dp)
+                )
+
+                Text("ثبت روز")
+            }
+        }
+
+        Spacer(
+            modifier = Modifier.height(16.dp)
+        )
+
+        if (workDays.isEmpty()) {
+
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Text("هنوز روز کاری ثبت نشده است")
+            }
+
+        } else {
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                items(
+                    items = workDays.reversed(),
+                    key = { it.id }
+                ) { workDay ->
+
+                    WorkDayItem(
+                        workDay = workDay,
+                        onDelete = {
+
+                            onWorkDaysChanged(
+                                workDays.filter {
+                                    it.id != workDay.id
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showDialog) {
+
+        AddWorkDayDialog(
+            onDismiss = {
+                showDialog = false
+            },
+            onSave = { place, date, start, end, income, note ->
+
+                val workDay = WorkDay(
+                    id = System.currentTimeMillis(),
+                    place = place,
+                    date = date,
+                    startTime = start,
+                    endTime = end,
+                    income = income,
+                    note = note
+                )
+
+                onWorkDaysChanged(
+                    workDays + workDay
+                )
+
+                showDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun WorkDayItem(
+    workDay: WorkDay,
+    onDelete: () -> Unit
+) {
+
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+
+                Text(
+                    text = workDay.place,
+                    fontSize = 18.sp
+                )
+
+                IconButton(
+                    onClick = onDelete
+                ) {
+
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "حذف"
+                    )
+                }
+            }
+
+            Text("تاریخ: ${workDay.date}")
+
+            Text(
+                "ساعت: ${workDay.startTime} تا ${workDay.endTime}"
+            )
+
+            Text(
+                "دریافتی: ${money(workDay.income)}"
+            )
+
+            if (workDay.note.isNotBlank()) {
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    "یادداشت: ${workDay.note}"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AddWorkDayDialog(
+    onDismiss: () -> Unit,
+    onSave: (
+        String,
+        String,
+        String,
+        String,
+        Long,
+        String
+    ) -> Unit
+) {
+
+    var place by remember {
+        mutableStateOf("")
+    }
+
+    var date by remember {
+        mutableStateOf("")
+    }
+
+    var start by remember {
+        mutableStateOf("")
+    }
+
+    var end by remember {
+        mutableStateOf("")
+    }
+
+    var income by remember {
+        mutableStateOf("")
+    }
+
+    var note by remember {
+        mutableStateOf("")
+    }
+
+    AlertDialog(
+
+        onDismissRequest = onDismiss,
+
+        title = {
+            Text("ثبت روز کاری")
+        },
+
+        text = {
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                OutlinedTextField(
+                    value = place,
+                    onValueChange = {
+                        place = it
+                    },
+                    label = {
+                        Text("محل کار")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = {
+                        date = it
+                    },
+                    label = {
+                        Text("تاریخ")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = start,
+                    onValueChange = {
+                        start = it
+                    },
+                    label = {
+                        Text("ساعت شروع")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = end,
+                    onValueChange = {
+                        end = it
+                    },
+                    label = {
+                        Text("ساعت پایان")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = income,
+                    onValueChange = {
+                        income = it.filter { char ->
+                            char.isDigit()
+                        }
+                    },
+                    label = {
+                        Text("مبلغ دریافتی")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = {
+                        note = it
+                    },
+                    label = {
+                        Text("یادداشت")
+                    }
+                )
+            }
+        },
+
+        confirmButton = {
+
+            Button(
+                onClick = {
+
+                    val value = income.toLongOrNull() ?: 0L
+
+                    if (place.isNotBlank() && date.isNotBlank()) {
+
+                        onSave(
+                            place,
+                            date,
+                            start,
+                            end,
+                            value,
+                            note
+                        )
+                    }
+                }
+            ) {
+
+                Text("ذخیره")
+            }
+        },
+
+        dismissButton = {
+
+            TextButton(
+                onClick = onDismiss
+            ) {
+
+                Text("لغو")
+            }
+        }
+    )
+}
+
+@Composable
+fun ReportPage(
+    transactions: List<Transaction>,
+    workDays: List<WorkDay>,
+    modifier: Modifier = Modifier
+) {
+
+    val income = transactions
+        .filter { it.isIncome }
+        .sumOf { it.amount }
+
+    val expense = transactions
+        .filter { !it.isIncome }
+        .sumOf { it.amount }
+
+    val workIncome = workDays.sumOf {
+        it.income
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
 
         Text(
-            text = title,
+            text = "گزارش‌ها",
             fontSize = 28.sp
         )
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+            Column(
+                modifier = Modifier.padding(18.dp)
+            ) {
+
+                Text("مجموع درآمد")
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    money(income),
+                    fontSize = 20.sp
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+            Column(
+                modifier = Modifier.padding(18.dp)
+            ) {
+
+                Text("مجموع هزینه")
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    money(expense),
+                    fontSize = 20.sp
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+            Column(
+                modifier = Modifier.padding(18.dp)
+            ) {
+
+                Text("دریافتی از روزهای کاری")
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    money(workIncome),
+                    fontSize = 20.sp
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+            Column(
+                modifier = Modifier.padding(18.dp)
+            ) {
+
+                Text("تعداد روزهای کاری")
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    "${workDays.size} روز",
+                    fontSize = 20.sp
+                )
+            }
+        }
     }
 }
 
