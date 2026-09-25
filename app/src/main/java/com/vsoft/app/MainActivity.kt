@@ -32,6 +32,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.foundation.isSystemInDarkTheme
 
 private val Context.dataStore by preferencesDataStore(
     name = "vsoft_data"
