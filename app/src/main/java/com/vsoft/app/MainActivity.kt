@@ -82,6 +82,7 @@ data class BankCard(
     val id: Long,
     val bank: String,
     val name: String,
+    val cardNumber: String,
     val last4: String,
     val balance: Long
 )
@@ -351,6 +352,7 @@ fun encodeCards(list: List<BankCard>): String {
                 put("id", it.id)
                 put("bank", it.bank)
                 put("name", it.name)
+                put("cardNumber", it.cardNumber)
                 put("last4", it.last4)
                 put("balance", it.balance)
             }
@@ -374,7 +376,8 @@ fun decodeCards(value: String): MutableList<BankCard> {
                     o.getLong("id"),
                     o.getString("bank"),
                     o.getString("name"),
-                    o.getString("last4"),
+                    o.optString("cardNumber", o.optString("last4", "")),
+                    o.optString("last4", "").takeLast(4),
                     o.getLong("balance")
                 )
             )
@@ -523,11 +526,11 @@ fun VsoftApp() {
 
         if (cards.isEmpty()) {
             cards = mutableListOf(
-                BankCard(1L, "بانک ملی", "بانک ملی", "", 0L),
-                BankCard(2L, "بانک مسکن", "بانک مسکن", "", 0L),
-                BankCard(3L, "بلو بانک", "بلو بانک", "", 0L),
-                BankCard(4L, "رد بانک", "رد بانک", "", 0L),
-                BankCard(5L, "بانک مهر", "بانک مهر", "", 0L)
+                BankCard(1L, "بانک ملی", "بانک ملی", "", "", 0L),
+                BankCard(2L, "بانک مسکن", "بانک مسکن", "", "", 0L),
+                BankCard(3L, "بلو بانک", "بلو بانک", "", "", 0L),
+                BankCard(4L, "رد بانک", "رد بانک", "", "", 0L),
+                BankCard(5L, "بانک مهر", "بانک مهر", "", "", 0L)
             )
         }
 
@@ -579,6 +582,8 @@ fun VsoftApp() {
 
             MainScreen(
                 strings = appStrings,
+                language = language,
+                theme = theme,
                 transactions = transactions,
                 workDays = workDays,
                 cards = cards,
@@ -668,6 +673,8 @@ fun VsoftApp() {
 @Composable
 fun MainScreen(
     strings: AppStrings,
+    language: String,
+    theme: String,
     transactions: List<Transaction>,
     workDays: List<WorkDay>,
     cards: List<BankCard>,
@@ -799,6 +806,8 @@ fun MainScreen(
 
                 4 -> SettingsPage(
                     strings,
+                    language,
+                    theme,
                     cards,
                     people,
                     workplaces,
@@ -1339,6 +1348,8 @@ fun ReportsPage(
 @Composable
 fun SettingsPage(
     strings: AppStrings,
+    language: String,
+    theme: String,
     cards: List<BankCard>,
     people: List<Person>,
     workplaces: List<Workplace>,
@@ -1351,6 +1362,7 @@ fun SettingsPage(
 ) {
 
     var showCard by remember { mutableStateOf(false) }
+    var editingCard by remember { mutableStateOf<BankCard?>(null) }
     var showPerson by remember { mutableStateOf(false) }
     var showWorkplace by remember { mutableStateOf(false) }
 
@@ -1377,18 +1389,21 @@ fun SettingsPage(
                 LanguageOption(
                     "فارسی",
                     "fa",
+                    language,
                     onLanguageChange
                 )
 
                 LanguageOption(
                     "English",
                     "en",
+                    language,
                     onLanguageChange
                 )
 
                 LanguageOption(
                     "العربية",
                     "ar",
+                    language,
                     onLanguageChange
                 )
             }
@@ -1401,18 +1416,21 @@ fun SettingsPage(
                 ThemeOption(
                     strings.light,
                     "light",
+                    theme,
                     onThemeChange
                 )
 
                 ThemeOption(
                     strings.dark,
                     "dark",
+                    theme,
                     onThemeChange
                 )
 
                 ThemeOption(
                     strings.system,
                     "system",
+                    theme,
                     onThemeChange
                 )
             }
@@ -1449,6 +1467,7 @@ fun SettingsPage(
             CardItem(
                 card = card,
                 currentBalance = cardCurrentBalance(card, transactions),
+                onEdit = { editingCard = card },
                 onDelete = {
 
                     val list =
@@ -1554,6 +1573,20 @@ fun SettingsPage(
         )
     }
 
+    if (editingCard != null) {
+        EditCardDialog(
+            card = editingCard!!,
+            onDismiss = { editingCard = null },
+            onSave = { updated ->
+                val list = cards.toMutableList()
+                val index = list.indexOfFirst { it.id == updated.id }
+                if (index >= 0) list[index] = updated
+                onCardsChange(list)
+                editingCard = null
+            }
+        )
+    }
+
     if (showWorkplace) {
         AddWorkplaceDialog(
             onDismiss = { showWorkplace = false },
@@ -1621,6 +1654,7 @@ fun SettingsSection(
 fun LanguageOption(
     title: String,
     value: String,
+    currentValue: String,
     onChange: (String) -> Unit
 ) {
 
@@ -1630,7 +1664,7 @@ fun LanguageOption(
     ) {
 
         RadioButton(
-            selected = false,
+            selected = value == currentValue,
             onClick = {
                 onChange(value)
             }
@@ -1644,6 +1678,7 @@ fun LanguageOption(
 fun ThemeOption(
     title: String,
     value: String,
+    currentValue: String,
     onChange: (String) -> Unit
 ) {
 
@@ -1653,7 +1688,7 @@ fun ThemeOption(
     ) {
 
         RadioButton(
-            selected = false,
+            selected = value == currentValue,
             onClick = {
                 onChange(value)
             }
@@ -1669,47 +1704,35 @@ fun ThemeOption(
 fun CardItem(
     card: BankCard,
     currentBalance: Long,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-
     Card(
-        Modifier.fillMaxWidth(),
+        Modifier
+            .fillMaxWidth()
+            .clickable { onEdit() },
         shape = RoundedCornerShape(25.dp)
     ) {
-
-        Column(
-            Modifier.padding(18.dp)
-        ) {
-
-            Row {
-
-                Column(
-                    Modifier.weight(1f)
-                ) {
-
-                    Text(
-                        card.bank,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
+        Column(Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(card.bank, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(card.name)
-
-                    Text(
-                        "•••• ${card.last4}"
-                    )
-
+                    if (card.cardNumber.isNotBlank()) {
+                        Text(
+                            card.cardNumber.filter(Char::isDigit).chunked(4).joinToString("  "),
+                            fontSize = 16.sp
+                        )
+                    } else if (card.last4.isNotBlank()) {
+                        Text("•••• •••• •••• " + card.last4)
+                    } else {
+                        Text("شماره کارت ثبت نشده", fontSize = 13.sp)
+                    }
                     Spacer(Modifier.height(5.dp))
-
-                    Text(
-                        money(currentBalance),
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(money(currentBalance), fontWeight = FontWeight.Bold)
+                    Text("برای ویرایش کارت ضربه بزنید", fontSize = 12.sp)
                 }
-
-                IconButton(
-                    onClick = onDelete
-                ) {
+                IconButton(onClick = onDelete) {
                     Icon(Icons.Default.Delete, null)
                 }
             }
@@ -1722,93 +1745,95 @@ fun AddCardDialog(
     onDismiss: () -> Unit,
     onSave: (BankCard) -> Unit
 ) {
-
     var bank by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
-    var last4 by remember { mutableStateOf("") }
+    var cardNumber by remember { mutableStateOf("") }
     var balance by remember { mutableStateOf("") }
 
     AlertDialog(
-
         onDismissRequest = onDismiss,
-
         confirmButton = {
-
-            TextButton(
-                onClick = {
-
-                    onSave(
-                        BankCard(
-                            id = System.currentTimeMillis(),
-                            bank = bank,
-                            name = name,
-                            last4 = last4.takeLast(4),
-                            balance =
-                                balance.toLongOrNull() ?: 0L
-                        )
+            TextButton(onClick = {
+                val normalized = normalizeDigits(cardNumber).filter(Char::isDigit).take(16)
+                onSave(
+                    BankCard(
+                        id = System.currentTimeMillis(),
+                        bank = bank,
+                        name = name,
+                        cardNumber = normalized,
+                        last4 = normalized.takeLast(4),
+                        balance = normalizeDigits(balance).toLongOrNull() ?: 0L
                     )
-                }
-            ) {
-                Text("ذخیره")
-            }
+                )
+            }) { Text("ذخیره") }
         },
-
-        dismissButton = {
-
-            TextButton(
-                onClick = onDismiss
-            ) {
-                Text("لغو")
-            }
-        },
-
-        title = {
-            Text("کارت بانکی جدید")
-        },
-
+        dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
+        title = { Text("کارت بانکی جدید") },
         text = {
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(bank, { bank = it }, label = { Text("بانک") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text("نام کارت") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
-                    bank,
-                    { bank = it },
-                    label = {
-                        Text("بانک")
-                    }
+                    cardNumber,
+                    { cardNumber = normalizeDigits(it).filter(Char::isDigit).take(16) },
+                    label = { Text("شماره کامل کارت") },
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-                OutlinedTextField(
-                    name,
-                    { name = it },
-                    label = {
-                        Text("نام کارت")
-                    }
-                )
-
-                OutlinedTextField(
-                    last4,
-                    {
-                        last4 =
-                            it.filter(Char::isDigit)
-                                .take(4)
-                    },
-                    label = {
-                        Text("۴ رقم آخر کارت")
-                    }
-                )
-
                 OutlinedTextField(
                     balance,
-                    {
-                        balance =
-                            it.filter(Char::isDigit)
-                    },
-                    label = {
-                        Text("موجودی")
-                    }
+                    { balance = formatNumberInput(it) },
+                    label = { Text("موجودی اولیه") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    )
+}
+
+@Composable
+fun EditCardDialog(
+    card: BankCard,
+    onDismiss: () -> Unit,
+    onSave: (BankCard) -> Unit
+) {
+    var bank by remember { mutableStateOf(card.bank) }
+    var name by remember { mutableStateOf(card.name) }
+    var cardNumber by remember { mutableStateOf(card.cardNumber) }
+    var balance by remember { mutableStateOf(formatNumberInput(card.balance.toString())) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                val normalized = normalizeDigits(cardNumber).filter(Char::isDigit).take(16)
+                onSave(
+                    card.copy(
+                        bank = bank,
+                        name = name,
+                        cardNumber = normalized,
+                        last4 = normalized.takeLast(4),
+                        balance = normalizeDigits(balance).toLongOrNull() ?: 0L
+                    )
+                )
+            }) { Text("ذخیره") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
+        title = { Text("ویرایش کارت") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(bank, { bank = it }, label = { Text("بانک") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text("نام کارت") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    cardNumber,
+                    { cardNumber = normalizeDigits(it).filter(Char::isDigit).take(16) },
+                    label = { Text("شماره کامل کارت") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    balance,
+                    { balance = formatNumberInput(it) },
+                    label = { Text("موجودی اولیه") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
