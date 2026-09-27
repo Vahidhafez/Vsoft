@@ -867,7 +867,8 @@ fun FinancePage(strings: AppStrings,transactions: List<Transaction>,cards: List<
 @Composable
 fun TransactionCard(
     transaction: Transaction,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit = {}
 ) {
 
     Card(
@@ -925,10 +926,13 @@ fun TransactionCard(
                     fontWeight = FontWeight.Bold
                 )
 
-                IconButton(
-                    onClick = onDelete
-                ) {
-                    Icon(Icons.Default.Delete, null)
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, null)
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, null)
+                    }
                 }
             }
         }
@@ -958,7 +962,8 @@ fun WorkPage(strings:AppStrings,workDays:List<WorkDay>,people:List<Person>,onWor
 @Composable
 fun WorkCard(
     work: WorkDay,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit = {}
 ) {
 
     val hours =
@@ -1000,10 +1005,13 @@ fun WorkCard(
                     )
                 }
 
-                IconButton(
-                    onClick = onDelete
-                ) {
-                    Icon(Icons.Default.Delete, null)
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, null)
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, null)
+                    }
                 }
             }
 
@@ -1747,10 +1755,85 @@ fun AddPersonDialog(
 }
 
 @Composable
-fun JalaliDatePickerDialog(initial:String,onDismiss:()->Unit,onSelected:(String)->Unit){
- val p=initial.split("/").mapNotNull{it.toIntOrNull()};var y by remember{mutableStateOf(p.getOrNull(0)?:1405)};var m by remember{mutableStateOf(p.getOrNull(1)?:1)};var d by remember{mutableStateOf(p.getOrNull(2)?:1)}
- AlertDialog(onDismissRequest=onDismiss,confirmButton={TextButton(onClick={onSelected("%04d/%02d/%02d".format(Locale.US,y,m,d))}){Text("انتخاب")}},dismissButton={TextButton(onClick=onDismiss){Text("لغو")}},title={Text(jalaliMonthName(m)+" "+y)},text={Column{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){TextButton(onClick={m--;if(m<1){m=12;y--}}){Text("‹")};Text(jalaliMonthName(m)+" "+y,fontWeight=FontWeight.Bold);TextButton(onClick={m++;if(m>12){m=1;y++}}){Text("›")}};val gg=jalaliToGregorian(y,m,1);val cal=java.util.Calendar.getInstance().apply{set(gg[0],gg[1]-1,gg[2])};val off=(cal.get(java.util.Calendar.DAY_OF_WEEK)+5)%7;val cells=mutableListOf<Int?>();repeat(off){cells.add(null)};for(i in 1..jalaliMonthDays(m))cells.add(i);while(cells.size%7!=0)cells.add(null);cells.chunked(7).forEach{row->Row(Modifier.fillMaxWidth()){row.forEach{v->Box(Modifier.weight(1f),contentAlignment=Alignment.Center){if(v==null)Spacer(Modifier.size(40.dp))else TextButton(onClick={d=v}){Text(v.toString(),fontWeight=if(v==d)FontWeight.Bold else FontWeight.Normal)}}}}}}}})
+fun JalaliDatePickerDialog(
+    initial: String,
+    onDismiss: () -> Unit,
+    onSelected: (String) -> Unit
+) {
+    val parts = initial.split("/").mapNotNull { it.toIntOrNull() }
+    var year by remember { mutableStateOf(parts.getOrNull(0) ?: 1405) }
+    var month by remember { mutableStateOf(parts.getOrNull(1) ?: 1) }
+    var day by remember { mutableStateOf(parts.getOrNull(2) ?: 1) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                onSelected("%04d/%02d/%02d".format(Locale.US, year, month, day))
+            }) { Text("انتخاب") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("لغو") }
+        },
+        title = { Text("${jalaliMonthName(month)} $year") },
+        text = {
+            Column {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(onClick = {
+                        month--
+                        if (month < 1) { month = 12; year-- }
+                    }) { Text("‹") }
+
+                    Text("${jalaliMonthName(month)} $year", fontWeight = FontWeight.Bold)
+
+                    TextButton(onClick = {
+                        month++
+                        if (month > 12) { month = 1; year++ }
+                    }) { Text("›") }
+                }
+
+                val gregorian = jalaliToGregorian(year, month, 1)
+                val calendar = java.util.Calendar.getInstance().apply {
+                    set(gregorian[0], gregorian[1] - 1, gregorian[2])
+                }
+                val offset = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+
+                val cells = mutableListOf<Int?>()
+                repeat(offset) { cells.add(null) }
+                for (i in 1..jalaliMonthDays(month)) cells.add(i)
+                while (cells.size % 7 != 0) cells.add(null)
+
+                cells.chunked(7).forEach { row ->
+                    Row(Modifier.fillMaxWidth()) {
+                        row.forEach { value ->
+                            Box(
+                                Modifier.weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (value == null) {
+                                    Spacer(Modifier.size(40.dp))
+                                } else {
+                                    TextButton(onClick = { day = value }) {
+                                        Text(
+                                            value.toString(),
+                                            fontWeight =
+                                                if (value == day) FontWeight.Bold
+                                                else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
 }
+
 // ---------------- COMMON UI ----------------
 
 @Composable
