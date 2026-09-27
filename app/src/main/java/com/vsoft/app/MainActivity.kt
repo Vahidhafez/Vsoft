@@ -664,6 +664,7 @@ fun VsoftApp() {
 
 // ---------------- MAIN SCREEN ----------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     strings: AppStrings,
