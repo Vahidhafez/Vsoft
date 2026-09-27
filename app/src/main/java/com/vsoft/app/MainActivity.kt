@@ -43,6 +43,7 @@ private val TRANSACTIONS_KEY = stringPreferencesKey("transactions")
 private val WORK_KEY = stringPreferencesKey("work_days")
 private val CARDS_KEY = stringPreferencesKey("cards")
 private val PEOPLE_KEY = stringPreferencesKey("people")
+private val WORKPLACES_KEY = stringPreferencesKey("workplaces")
 private val LANGUAGE_KEY = stringPreferencesKey("language")
 private val THEME_KEY = stringPreferencesKey("theme")
 
@@ -67,7 +68,14 @@ data class WorkDay(
     val end: String,
     val income: Long,
     val description: String,
-    val person: String
+    val person: String,
+    val startDate: String = "",
+    val endDate: String = ""
+)
+
+data class Workplace(
+    val id: Long,
+    val name: String
 )
 
 data class BankCard(
@@ -82,7 +90,8 @@ data class Person(
     val id: Long,
     val name: String,
     val phone: String,
-    val note: String
+    val note: String,
+    val job: String = ""
 )
 
 // ---------------- TEXT ----------------
@@ -154,8 +163,29 @@ fun strings(language: String): AppStrings {
 
 // ---------------- HELPERS ----------------
 
+fun normalizeDigits(value: String): String {
+    return value
+        .replace('۰','0').replace('۱','1').replace('۲','2').replace('۳','3')
+        .replace('۴','4').replace('۵','5').replace('۶','6').replace('۷','7')
+        .replace('۸','8').replace('۹','9')
+        .replace(",", "").replace("٬", "").replace(" ", "")
+}
+
+fun formatNumberInput(value: String): String {
+    val digits = normalizeDigits(value).filter(Char::isDigit)
+    if (digits.isBlank()) return ""
+    return NumberFormat.getNumberInstance(Locale.US).format(digits.toLongOrNull() ?: 0L)
+}
+
 fun money(value: Long): String {
     return NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
+}
+
+fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>): Long {
+    val movement = transactions.filter { it.card == card.name }.sumOf {
+        if (it.type == "income") it.amount else -it.amount
+    }
+    return card.balance + movement
 }
 
 fun today(): String {
@@ -273,6 +303,8 @@ fun encodeWork(list: List<WorkDay>): String {
                 put("income", it.income)
                 put("description", it.description)
                 put("person", it.person)
+                put("startDate", it.startDate)
+                put("endDate", it.endDate)
             }
         )
     }
@@ -298,7 +330,9 @@ fun decodeWork(value: String): MutableList<WorkDay> {
                     o.getString("end"),
                     o.getLong("income"),
                     o.getString("description"),
-                    o.getString("person")
+                    o.getString("person"),
+                    o.optString("startDate", o.getString("date")),
+                    o.optString("endDate", o.getString("date"))
                 )
             )
         }
@@ -361,6 +395,7 @@ fun encodePeople(list: List<Person>): String {
                 put("name", it.name)
                 put("phone", it.phone)
                 put("note", it.note)
+                put("job", it.job)
             }
         )
     }
@@ -382,13 +417,37 @@ fun decodePeople(value: String): MutableList<Person> {
                     o.getLong("id"),
                     o.getString("name"),
                     o.getString("phone"),
-                    o.getString("note")
+                    o.getString("note"),
+                    o.optString("job", "")
                 )
             )
         }
     } catch (_: Exception) {
     }
 
+    return result
+}
+
+fun encodeWorkplaces(list: List<Workplace>): String {
+    val array = JSONArray()
+    list.forEach {
+        array.put(JSONObject().apply {
+            put("id", it.id)
+            put("name", it.name)
+        })
+    }
+    return array.toString()
+}
+
+fun decodeWorkplaces(value: String): MutableList<Workplace> {
+    val result = mutableListOf<Workplace>()
+    try {
+        val array = JSONArray(value)
+        for (i in 0 until array.length()) {
+            val o = array.getJSONObject(i)
+            result.add(Workplace(o.getLong("id"), o.getString("name")))
+        }
+    } catch (_: Exception) {}
     return result
 }
 
@@ -432,6 +491,10 @@ fun VsoftApp() {
         mutableStateOf(mutableListOf<Person>())
     }
 
+    var workplaces by remember {
+        mutableStateOf(mutableListOf<Workplace>())
+    }
+
     var loaded by remember {
         mutableStateOf(false)
     }
@@ -454,6 +517,19 @@ fun VsoftApp() {
 
         people =
             decodePeople(preferences[PEOPLE_KEY] ?: "[]")
+
+        workplaces =
+            decodeWorkplaces(preferences[WORKPLACES_KEY] ?: "[]")
+
+        if (cards.isEmpty()) {
+            cards = mutableListOf(
+                BankCard(1L, "بانک ملی", "بانک ملی", "", 0L),
+                BankCard(2L, "بانک مسکن", "بانک مسکن", "", 0L),
+                BankCard(3L, "بلو بانک", "بلو بانک", "", 0L),
+                BankCard(4L, "رد بانک", "رد بانک", "", 0L),
+                BankCard(5L, "بانک مهر", "بانک مهر", "", 0L)
+            )
+        }
 
         loaded = true
     }
@@ -507,6 +583,7 @@ fun VsoftApp() {
                 workDays = workDays,
                 cards = cards,
                 people = people,
+                workplaces = workplaces,
 
                 onTransactionsChange = {
                     transactions = it
@@ -552,6 +629,15 @@ fun VsoftApp() {
                     }
                 },
 
+                onWorkplacesChange = {
+                    workplaces = it
+                    scope.launch {
+                        context.dataStore.edit { prefs ->
+                            prefs[WORKPLACES_KEY] = encodeWorkplaces(it)
+                        }
+                    }
+                },
+
                 onLanguageChange = {
                     language = it
 
@@ -589,6 +675,8 @@ fun MainScreen(
     onWorkChange: (MutableList<WorkDay>) -> Unit,
     onCardsChange: (MutableList<BankCard>) -> Unit,
     onPeopleChange: (MutableList<Person>) -> Unit,
+    workplaces: List<Workplace>,
+    onWorkplacesChange: (MutableList<Workplace>) -> Unit,
     onLanguageChange: (String) -> Unit,
     onThemeChange: (String) -> Unit
 ) {
@@ -604,7 +692,16 @@ fun MainScreen(
     )
 
     Scaffold(
-
+        topBar = {
+            TopAppBar(
+                title = { Text(pages[selectedPage]) },
+                navigationIcon = {
+                    IconButton(onClick = { selectedPage = 4 }) {
+                        Icon(Icons.Default.Settings, contentDescription = strings.settings)
+                    }
+                }
+            )
+        },
         bottomBar = {
 
             NavigationBar {
@@ -653,16 +750,6 @@ fun MainScreen(
                     }
                 )
 
-                NavigationBarItem(
-                    selected = selectedPage == 4,
-                    onClick = { selectedPage = 4 },
-                    icon = {
-                        Icon(Icons.Default.Settings, null)
-                    },
-                    label = {
-                        Text(strings.settings)
-                    }
-                )
             }
         }
     ) { padding ->
@@ -699,6 +786,7 @@ fun MainScreen(
                     strings,
                     workDays,
                     people,
+                    workplaces,
                     onWorkChange
                 )
 
@@ -712,8 +800,11 @@ fun MainScreen(
                     strings,
                     cards,
                     people,
+                    workplaces,
+                    transactions,
                     onCardsChange,
                     onPeopleChange,
+                    onWorkplacesChange,
                     onLanguageChange,
                     onThemeChange
                 )
@@ -943,18 +1034,18 @@ fun TransactionCard(
 
 @Composable
 fun AddTransactionDialog(strings:AppStrings,cards:List<BankCard>,people:List<Person>,existing:Transaction?,onDismiss:()->Unit,onSave:(Transaction)->Unit){
- var type by remember{mutableStateOf(existing?.type?:"expense")};var amount by remember{mutableStateOf(existing?.amount?.toString()?:"")};var category by remember{mutableStateOf(existing?.category?:"")};var description by remember{mutableStateOf(existing?.description?:"")};var date by remember{mutableStateOf(existing?.date?:today())};var card by remember{mutableStateOf(existing?.card?:"")};var person by remember{mutableStateOf(existing?.person?:"")};var dateOpen by remember{mutableStateOf(false)};var cardOpen by remember{mutableStateOf(false)};var personOpen by remember{mutableStateOf(false)}
- AlertDialog(onDismissRequest=onDismiss,confirmButton={TextButton(onClick={val v=amount.toLongOrNull()?:0L;if(v>0&&category.isNotBlank())onSave(Transaction(existing?.id?:System.currentTimeMillis(),type,v,category,description,date,card,person))}){Text(strings.save)}},dismissButton={TextButton(onClick=onDismiss){Text(strings.cancel)}},title={Text(if(existing==null)"تراکنش جدید" else "ویرایش تراکنش")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Row{FilterChip(type=="expense",{type="expense"},{Text(strings.expense)});Spacer(Modifier.width(8.dp));FilterChip(type=="income",{type="income"},{Text(strings.income)})};OutlinedTextField(amount,{amount=it.filter(Char::isDigit)},label={Text(strings.amount)},modifier=Modifier.fillMaxWidth());OutlinedTextField(category,{category=it},label={Text(strings.category)},modifier=Modifier.fillMaxWidth());OutlinedTextField(description,{description=it},label={Text(strings.description)},modifier=Modifier.fillMaxWidth());OutlinedButton(onClick={dateOpen=true},modifier=Modifier.fillMaxWidth()){Text(strings.date+" : "+date)};Box{OutlinedButton(onClick={cardOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(card.isBlank())"انتخاب کارت" else "کارت: "+card)};DropdownMenu(cardOpen,{cardOpen=false}){DropdownMenuItem(text={Text("بدون کارت")},onClick={cardOpen=false;card=""});cards.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={cardOpen=false;card=q.name})}}};Box{OutlinedButton(onClick={personOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(person.isBlank())"انتخاب شخص" else "شخص: "+person)};DropdownMenu(personOpen,{personOpen=false}){DropdownMenuItem(text={Text("بدون شخص")},onClick={personOpen=false;person=""});people.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={personOpen=false;person=q.name})}}}}})
+ var type by remember{mutableStateOf(existing?.type?:"expense")};var amount by remember{mutableStateOf(existing?.amount?.let(::formatNumberInput)?:"")};var category by remember{mutableStateOf(existing?.category?:"")};var description by remember{mutableStateOf(existing?.description?:"")};var date by remember{mutableStateOf(existing?.date?:today())};var card by remember{mutableStateOf(existing?.card?:"")};var person by remember{mutableStateOf(existing?.person?:"")};var dateOpen by remember{mutableStateOf(false)};var cardOpen by remember{mutableStateOf(false)};var personOpen by remember{mutableStateOf(false)}
+ AlertDialog(onDismissRequest=onDismiss,confirmButton={TextButton(onClick={val v=normalizeDigits(amount).toLongOrNull()?:0L;if(v>0&&category.isNotBlank())onSave(Transaction(existing?.id?:System.currentTimeMillis(),type,v,category,description,date,card,person))}){Text(strings.save)}},dismissButton={TextButton(onClick=onDismiss){Text(strings.cancel)}},title={Text(if(existing==null)"تراکنش جدید" else "ویرایش تراکنش")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Row{FilterChip(type=="expense",{type="expense"},{Text(strings.expense)});Spacer(Modifier.width(8.dp));FilterChip(type=="income",{type="income"},{Text(strings.income)})};OutlinedTextField(amount,{amount=formatNumberInput(it)},label={Text(strings.amount)},modifier=Modifier.fillMaxWidth());OutlinedTextField(category,{category=it},label={Text(strings.category)},modifier=Modifier.fillMaxWidth());OutlinedTextField(description,{description=it},label={Text(strings.description)},modifier=Modifier.fillMaxWidth());OutlinedButton(onClick={dateOpen=true},modifier=Modifier.fillMaxWidth()){Text(strings.date+" : "+date)};Box{OutlinedButton(onClick={cardOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(card.isBlank())"انتخاب کارت" else "کارت: "+card)};DropdownMenu(cardOpen,{cardOpen=false}){DropdownMenuItem(text={Text("بدون کارت")},onClick={cardOpen=false;card=""});cards.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={cardOpen=false;card=q.name})}}};Box{OutlinedButton(onClick={personOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(person.isBlank())"انتخاب شخص" else "شخص: "+person)};DropdownMenu(personOpen,{personOpen=false}){DropdownMenuItem(text={Text("بدون شخص")},onClick={personOpen=false;person=""});people.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={personOpen=false;person=q.name})}}}}})
  if(dateOpen)JalaliDatePickerDialog(date,{dateOpen=false}){date=it;dateOpen=false}
 }
 
 // ---------------- WORK ----------------
 
 @Composable
-fun WorkPage(strings:AppStrings,workDays:List<WorkDay>,people:List<Person>,onWorkChange:(MutableList<WorkDay>)->Unit){
+fun WorkPage(strings:AppStrings,workDays:List<WorkDay>,people:List<Person>,workplaces:List<Workplace>,onWorkChange:(MutableList<WorkDay>)->Unit){
  var show by remember{mutableStateOf(false)};var edit by remember{mutableStateOf<WorkDay?>(null)}
  Column(Modifier.fillMaxSize().padding(16.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text(strings.work,fontSize=28.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));FloatingActionButton(onClick={edit=null;show=true}){Icon(Icons.Default.Add,null)}};Spacer(Modifier.height(12.dp));LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){items(workDays.sortedByDescending{it.id},key={it.id}){w->WorkCard(w,{val x=workDays.toMutableList();x.removeAll{it.id==w.id};onWorkChange(x)},{edit=w;show=true})}}}
- if(show)AddWorkDialog(strings,people,edit,{show=false}){w->val x=workDays.toMutableList();val i=x.indexOfFirst{it.id==w.id};if(i>=0)x[i]=w else x.add(w);onWorkChange(x);show=false}
+ if(show)AddWorkDialog(strings,people,workplaces,edit,{show=false}){w->val x=workDays.toMutableList();val i=x.indexOfFirst{it.id==w.id};if(i>=0)x[i]=w else x.add(w);onWorkChange(x);show=false}
 }
 
 // ---------------- WORK CARD ----------------
@@ -990,11 +1081,13 @@ fun WorkCard(
                         fontWeight = FontWeight.Bold
                     )
 
-                    Text(work.date)
-
                     Text(
-                        "${work.start} → ${work.end}"
+                        if (work.startDate.isNotBlank() && work.endDate.isNotBlank())
+                            "${work.startDate} → ${work.endDate}"
+                        else work.date
                     )
+
+                    Text("${work.start} → ${work.end}")
 
                     Text(
                         String.format(
@@ -1036,10 +1129,156 @@ fun WorkCard(
 // ---------------- ADD WORK ----------------
 
 @Composable
-fun AddWorkDialog(strings:AppStrings,people:List<Person>,existing:WorkDay?,onDismiss:()->Unit,onSave:(WorkDay)->Unit){
- val ctx=LocalContext.current;var place by remember{mutableStateOf(existing?.place?:"")};var date by remember{mutableStateOf(existing?.date?:today())};var start by remember{mutableStateOf(existing?.start?:"08:00")};var end by remember{mutableStateOf(existing?.end?:"16:00")};var income by remember{mutableStateOf(existing?.income?.toString()?:"")};var description by remember{mutableStateOf(existing?.description?:"")};var person by remember{mutableStateOf(existing?.person?:"")};var dateOpen by remember{mutableStateOf(false)};var personOpen by remember{mutableStateOf(false)}
- AlertDialog(onDismissRequest=onDismiss,confirmButton={TextButton(onClick={onSave(WorkDay(existing?.id?:System.currentTimeMillis(),place,date,start,end,income.toLongOrNull()?:0L,description,person))}){Text(strings.save)}},dismissButton={TextButton(onClick=onDismiss){Text(strings.cancel)}},title={Text(if(existing==null)"روز کاری جدید" else "ویرایش روز کاری")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(place,{place=it},label={Text(strings.place)},modifier=Modifier.fillMaxWidth());OutlinedButton(onClick={dateOpen=true},modifier=Modifier.fillMaxWidth()){Text(strings.date+" : "+date)};Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={android.app.TimePickerDialog(ctx,{_,h,m->start="%02d:%02d".format(h,m)},start.substringBefore(":").toIntOrNull()?:8,start.substringAfter(":").toIntOrNull()?:0,true).show()},modifier=Modifier.weight(1f)){Text(strings.start+" : "+start)};OutlinedButton(onClick={android.app.TimePickerDialog(ctx,{_,h,m->end="%02d:%02d".format(h,m)},end.substringBefore(":").toIntOrNull()?:16,end.substringAfter(":").toIntOrNull()?:0,true).show()},modifier=Modifier.weight(1f)){Text(strings.end+" : "+end)}};OutlinedTextField(income,{income=it.filter(Char::isDigit)},label={Text(strings.income)},modifier=Modifier.fillMaxWidth());Box{OutlinedButton(onClick={personOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(person.isBlank())"انتخاب شخص / کارفرما" else person)};DropdownMenu(personOpen,{personOpen=false}){DropdownMenuItem(text={Text("بدون شخص")},onClick={personOpen=false;person=""});people.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={personOpen=false;person=q.name})}}};OutlinedTextField(description,{description=it},label={Text(strings.description)},modifier=Modifier.fillMaxWidth())}})
- if(dateOpen)JalaliDatePickerDialog(date,{dateOpen=false}){date=it;dateOpen=false}
+fun AddWorkDialog(
+    strings: AppStrings,
+    people: List<Person>,
+    workplaces: List<Workplace>,
+    existing: WorkDay?,
+    onDismiss: () -> Unit,
+    onSave: (WorkDay) -> Unit
+) {
+    val ctx = LocalContext.current
+    var place by remember { mutableStateOf(existing?.place ?: workplaces.firstOrNull()?.name ?: "") }
+    var startDate by remember { mutableStateOf(existing?.startDate?.ifBlank { existing.date } ?: today()) }
+    var endDate by remember { mutableStateOf(existing?.endDate?.ifBlank { existing.date } ?: today()) }
+    var start by remember { mutableStateOf(existing?.start ?: "08:00") }
+    var end by remember { mutableStateOf(existing?.end ?: "16:00") }
+    var income by remember { mutableStateOf(existing?.income?.let(::formatNumberInput) ?: "") }
+    var description by remember { mutableStateOf(existing?.description ?: "") }
+    var person by remember { mutableStateOf(existing?.person ?: "") }
+    var dateOpen by remember { mutableStateOf(false) }
+    var endDateOpen by remember { mutableStateOf(false) }
+    var placeOpen by remember { mutableStateOf(false) }
+    var personOpen by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                onSave(
+                    WorkDay(
+                        existing?.id ?: System.currentTimeMillis(),
+                        place,
+                        startDate,
+                        start,
+                        end,
+                        normalizeDigits(income).toLongOrNull() ?: 0L,
+                        description,
+                        person,
+                        startDate,
+                        endDate
+                    )
+                )
+            }) { Text(strings.save) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(strings.cancel) }
+        },
+        title = { Text(if (existing == null) "روز کاری جدید" else "ویرایش روز کاری") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box {
+                    OutlinedButton(onClick = { placeOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (place.isBlank()) "انتخاب محل کار" else place)
+                    }
+                    DropdownMenu(
+                        expanded = placeOpen,
+                        onDismissRequest = { placeOpen = false }
+                    ) {
+                        workplaces.forEach { q ->
+                            DropdownMenuItem(
+                                text = { Text(q.name) },
+                                onClick = { place = q.name; placeOpen = false }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedButton(onClick = { dateOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("تاریخ شروع: $startDate")
+                }
+                OutlinedButton(onClick = { endDateOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("تاریخ پایان: $endDate")
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            android.app.TimePickerDialog(
+                                ctx,
+                                { _, h, m -> start = "%02d:%02d".format(h, m) },
+                                start.substringBefore(":").toIntOrNull() ?: 8,
+                                start.substringAfter(":").toIntOrNull() ?: 0,
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text(strings.start + " : " + start) }
+
+                    OutlinedButton(
+                        onClick = {
+                            android.app.TimePickerDialog(
+                                ctx,
+                                { _, h, m -> end = "%02d:%02d".format(h, m) },
+                                end.substringBefore(":").toIntOrNull() ?: 16,
+                                end.substringAfter(":").toIntOrNull() ?: 0,
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text(strings.end + " : " + end) }
+                }
+
+                OutlinedTextField(
+                    income,
+                    { income = formatNumberInput(it) },
+                    label = { Text(strings.income) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Box {
+                    OutlinedButton(onClick = { personOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (person.isBlank()) "انتخاب شخص / کارفرما" else person)
+                    }
+                    DropdownMenu(
+                        expanded = personOpen,
+                        onDismissRequest = { personOpen = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("بدون شخص") },
+                            onClick = { personOpen = false; person = "" }
+                        )
+                        people.forEach { q ->
+                            DropdownMenuItem(
+                                text = { Text(q.name) },
+                                onClick = { personOpen = false; person = q.name }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    description,
+                    { description = it },
+                    label = { Text(strings.description) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    )
+
+    if (dateOpen) {
+        JalaliDatePickerDialog(startDate, { dateOpen = false }) {
+            startDate = it
+            dateOpen = false
+        }
+    }
+    if (endDateOpen) {
+        JalaliDatePickerDialog(endDate, { endDateOpen = false }) {
+            endDate = it
+            endDateOpen = false
+        }
+    }
 }
 
 // ---------------- REPORTS ----------------
@@ -1050,130 +1289,44 @@ fun ReportsPage(
     transactions: List<Transaction>,
     workDays: List<WorkDay>
 ) {
-
-    val income =
-        transactions
-            .filter { it.type == "income" }
-            .sumOf { it.amount }
-
-    val expense =
-        transactions
-            .filter { it.type == "expense" }
-            .sumOf { it.amount }
-
-    val workIncome =
-        workDays.sumOf { it.income }
-
-    val hours =
-        workDays.sumOf {
-            calculateHours(it.start, it.end)
-        }
+    val cards = transactions.map { it.card }.filter { it.isNotBlank() }.distinct()
+    var selectedCard by remember { mutableStateOf("") }
+    val cardTransactions = if (selectedCard.isBlank()) transactions else transactions.filter { it.card == selectedCard }
+    val income = cardTransactions.filter { it.type == "income" }.sumOf { it.amount }
+    val expense = cardTransactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val workIncome = if (selectedCard.isBlank()) workDays.sumOf { it.income } else 0L
+    val hours = workDays.sumOf { calculateHours(it.start, it.end) }
 
     LazyColumn(
-        Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-
         item {
-
-            Text(
-                strings.monthlyReport,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         }
-
         item {
-
-            InfoCard(
-                strings.income,
-                money(income + workIncome),
-                Icons.Default.TrendingUp
-            )
+            Box {
+                OutlinedButton(onClick = { selectedCard = if (selectedCard.isBlank()) cards.firstOrNull().orEmpty() else "" }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (selectedCard.isBlank()) "همه کارت‌ها" else selectedCard)
+                }
+            }
         }
-
+        item { InfoCard(strings.income, money(income + workIncome), Icons.Default.TrendingUp) }
+        item { InfoCard(strings.expense, money(expense), Icons.Default.TrendingDown) }
+        item { InfoCard(strings.balance, money(income + workIncome - expense), Icons.Default.AccountBalance) }
+        item { InfoCard("درآمد کاری", money(workIncome), Icons.Default.Work) }
         item {
-
-            InfoCard(
-                strings.expense,
-                money(expense),
-                Icons.Default.TrendingDown
-            )
+            InfoCard(strings.hours, String.format(Locale.US, "%.1f ساعت", hours), Icons.Default.AccessTime)
         }
-
         item {
-
-            InfoCard(
-                "درآمد کاری",
-                money(workIncome),
-                Icons.Default.Work
-            )
+            Text("دسته‌بندی هزینه‌ها", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
-
-        item {
-
-            InfoCard(
-                strings.hours,
-                String.format(
-                    Locale.US,
-                    "%.1f ساعت",
-                    hours
-                ),
-                Icons.Default.AccessTime
-            )
-        }
-
-        item {
-
-            InfoCard(
-                "تعداد روزهای کاری",
-                workDays.size.toString(),
-                Icons.Default.CalendarMonth
-            )
-        }
-
-        item {
-
-            Text(
-                "دسته‌بندی هزینه‌ها",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        val categories =
-            transactions
-                .filter { it.type == "expense" }
-                .groupBy { it.category }
-
+        val categories = cardTransactions.filter { it.type == "expense" }.groupBy { it.category }
         items(categories.entries.toList()) { entry ->
-
-            Card(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-
-                    Text(
-                        entry.key,
-                        Modifier.weight(1f)
-                    )
-
-                    Text(
-                        money(
-                            entry.value.sumOf {
-                                it.amount
-                            }
-                        ),
-                        fontWeight = FontWeight.Bold
-                    )
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                Row(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(entry.key, Modifier.weight(1f))
+                    Text(money(entry.value.sumOf { it.amount }), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1187,14 +1340,18 @@ fun SettingsPage(
     strings: AppStrings,
     cards: List<BankCard>,
     people: List<Person>,
+    workplaces: List<Workplace>,
+    transactions: List<Transaction>,
     onCardsChange: (MutableList<BankCard>) -> Unit,
     onPeopleChange: (MutableList<Person>) -> Unit,
+    onWorkplacesChange: (MutableList<Workplace>) -> Unit,
     onLanguageChange: (String) -> Unit,
     onThemeChange: (String) -> Unit
 ) {
 
     var showCard by remember { mutableStateOf(false) }
     var showPerson by remember { mutableStateOf(false) }
+    var showWorkplace by remember { mutableStateOf(false) }
 
     LazyColumn(
         Modifier
@@ -1290,6 +1447,7 @@ fun SettingsPage(
 
             CardItem(
                 card = card,
+                currentBalance = cardCurrentBalance(card, transactions),
                 onDelete = {
 
                     val list =
@@ -1302,6 +1460,32 @@ fun SettingsPage(
                     onCardsChange(list)
                 }
             )
+        }
+
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("محل‌های کار", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(onClick = { showWorkplace = true }) {
+                    Icon(Icons.Default.Add, null)
+                }
+            }
+        }
+
+        items(workplaces, key = { it.id }) { workplace ->
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Place, null)
+                    Spacer(Modifier.width(12.dp))
+                    Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                    IconButton(onClick = {
+                        val list = workplaces.toMutableList()
+                        list.removeAll { it.id == workplace.id }
+                        onWorkplacesChange(list)
+                    }) {
+                        Icon(Icons.Default.Delete, null)
+                    }
+                }
+            }
         }
 
         item {
@@ -1365,6 +1549,18 @@ fun SettingsPage(
                 onCardsChange(list)
 
                 showCard = false
+            }
+        )
+    }
+
+    if (showWorkplace) {
+        AddWorkplaceDialog(
+            onDismiss = { showWorkplace = false },
+            onSave = {
+                val list = workplaces.toMutableList()
+                list.add(it)
+                onWorkplacesChange(list)
+                showWorkplace = false
             }
         )
     }
@@ -1471,6 +1667,7 @@ fun ThemeOption(
 @Composable
 fun CardItem(
     card: BankCard,
+    currentBalance: Long,
     onDelete: () -> Unit
 ) {
 
@@ -1504,7 +1701,7 @@ fun CardItem(
                     Spacer(Modifier.height(5.dp))
 
                     Text(
-                        money(card.balance),
+                        money(currentBalance),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -1617,6 +1814,34 @@ fun AddCardDialog(
     )
 }
 
+@Composable
+fun AddWorkplaceDialog(
+    onDismiss: () -> Unit,
+    onSave: (Workplace) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                if (name.isNotBlank()) {
+                    onSave(Workplace(System.currentTimeMillis(), name.trim()))
+                }
+            }) { Text("ذخیره") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
+        title = { Text("محل کار جدید") },
+        text = {
+            OutlinedTextField(
+                name,
+                { name = it },
+                label = { Text("نام محل کار") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    )
+}
+
 // ---------------- PEOPLE ----------------
 
 @Composable
@@ -1657,6 +1882,10 @@ fun PersonItem(
                     Text(person.phone)
                 }
 
+                if (person.job.isNotBlank()) {
+                    Text(person.job)
+                }
+
                 if (person.note.isNotBlank()) {
                     Text(person.note)
                 }
@@ -1680,6 +1909,7 @@ fun AddPersonDialog(
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+    var job by remember { mutableStateOf("") }
 
     AlertDialog(
 
@@ -1697,7 +1927,8 @@ fun AddPersonDialog(
                                 id = System.currentTimeMillis(),
                                 name = name,
                                 phone = phone,
-                                note = note
+                                note = note,
+                                job = job
                             )
                         )
                     }
@@ -1743,11 +1974,15 @@ fun AddPersonDialog(
                 )
 
                 OutlinedTextField(
+                    job,
+                    { job = it },
+                    label = { Text("شغل / نقش") }
+                )
+
+                OutlinedTextField(
                     note,
                     { note = it },
-                    label = {
-                        Text("توضیحات")
-                    }
+                    label = { Text("توضیحات") }
                 )
             }
         }
