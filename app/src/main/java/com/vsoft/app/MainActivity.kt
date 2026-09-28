@@ -738,10 +738,43 @@ fun MainScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(pages[selectedPage]) },
+                title = {
+                    AnimatedContent(
+                        targetState = pages[selectedPage],
+                        transitionSpec = {
+                            (fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 5 }) togetherWith
+                                (fadeOut(tween(120)) + slideOutHorizontally(tween(160)) { -it / 6 })
+                        },
+                        label = "top_title"
+                    ) { title ->
+                        Column {
+                            Text(
+                                "VSOFT",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 1.5.sp
+                            )
+                            Text(title, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { selectedPage = 4 }) {
-                        Icon(Icons.Default.Settings, contentDescription = strings.settings)
+                        Box(
+                            Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = strings.settings,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(21.dp)
+                            )
+                        }
                     }
                 }
             )
@@ -756,9 +789,7 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = selectedPage == 0,
                     onClick = { selectedPage = 0 },
-                    icon = {
-                        Icon(Icons.Default.Home, null)
-                    },
+                    icon = { AnimatedNavIcon(Icons.Default.Home, selectedPage == 0) },
                     label = {
                         Text(strings.dashboard)
                     }
@@ -767,9 +798,7 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = selectedPage == 1,
                     onClick = { selectedPage = 1 },
-                    icon = {
-                        Icon(Icons.Default.AccountBalanceWallet, null)
-                    },
+                    icon = { AnimatedNavIcon(Icons.Default.AccountBalanceWallet, selectedPage == 1) },
                     label = {
                         Text(strings.finance)
                     }
@@ -778,9 +807,7 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = selectedPage == 2,
                     onClick = { selectedPage = 2 },
-                    icon = {
-                        Icon(Icons.Default.Work, null)
-                    },
+                    icon = { AnimatedNavIcon(Icons.Default.Work, selectedPage == 2) },
                     label = {
                         Text(strings.work)
                     }
@@ -789,9 +816,7 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = selectedPage == 3,
                     onClick = { selectedPage = 3 },
-                    icon = {
-                        Icon(Icons.Default.BarChart, null)
-                    },
+                    icon = { AnimatedNavIcon(Icons.Default.BarChart, selectedPage == 3) },
                     label = {
                         Text(strings.reports)
                     }
@@ -868,6 +893,29 @@ fun MainScreen(
             }
         }
     }
+}
+
+@Composable
+fun AnimatedNavIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.12f else 1f,
+        animationSpec = spring(
+            dampingRatio = 0.72f,
+            stiffness = 420f
+        ),
+        label = "nav_scale"
+    )
+    Icon(
+        icon,
+        contentDescription = null,
+        modifier = Modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+    )
 }
 
 // ---------------- DASHBOARD ----------------
@@ -971,7 +1019,8 @@ fun DashboardMetric(
 ) {
     Card(modifier, shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
         Column(Modifier.padding(16.dp)) {
             Box(Modifier.size(36.dp).clip(CircleShape).background(accent.copy(alpha = .12f)),
                 contentAlignment = Alignment.Center) {
@@ -1108,9 +1157,10 @@ fun TransactionCard(
 ) {
     val isIncome = transaction.type == "income"
     val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp),
+    Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(46.dp).clip(CircleShape)
                 .background(accent.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
@@ -1233,7 +1283,8 @@ fun WorkCard(work: WorkDay, onDelete: () -> Unit, onEdit: () -> Unit = {}) {
     Card(Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(46.dp).clip(CircleShape)
@@ -1857,7 +1908,8 @@ fun CardItem(
         Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize(),
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
