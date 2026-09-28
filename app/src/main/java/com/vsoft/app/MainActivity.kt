@@ -1899,15 +1899,16 @@ fun FontOption(title: String, value: String, current: String, onChange: (String)
 fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, onCardsChange: (MutableList<BankCard>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<BankCard?>(null) }
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 28.dp)) {
+        contentPadding = PaddingValues(bottom = 100.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("کارت‌های بانکی", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
                     Text("${cards.size} کارت", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
-                FloatingActionButton(onClick = { show = true }) { Icon(Icons.Default.Add, null) }
+
             }
         }
         items(cards, key = { it.id }) { card ->
@@ -1916,6 +1917,12 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, onCardsCha
                 onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
         }
     }
+    }
+    FloatingActionButton(
+        modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
+        onClick = { show = true }, shape = RoundedCornerShape(18.dp)
+    ) { Icon(Icons.Default.Add, "افزودن") }
+
     if (show) AddCardDialog(onDismiss = { show = false }, onSave = { newCard ->
         onCardsChange(cards.toMutableList().also { it.add(newCard) }); show = false
     })
@@ -1925,6 +1932,8 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, onCardsCha
         }); editing = null
     })
 }
+
+
 
 @Composable
 fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList<Workplace>) -> Unit) {
@@ -1936,7 +1945,7 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                     Text("محل‌های کار", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
                     Text("${workplaces.size} محل", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                FloatingActionButton(onClick = { show = true }) { Icon(Icons.Default.Add, null) }
+
             }
         }
         itemsIndexed(workplaces, key = { _, it -> it.id }) { index, workplace ->
@@ -1960,10 +1969,18 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
             }
         }
     }
+    }
+    FloatingActionButton(
+        modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
+        onClick = { show = true }, shape = RoundedCornerShape(18.dp)
+    ) { Icon(Icons.Default.Add, "افزودن") }
+
     if (show) AddWorkplaceDialog(onDismiss = { show = false }, onSave = { newPlace ->
         onWorkplacesChange(workplaces.toMutableList().also { it.add(newPlace) }); show = false
     })
 }
+
+
 
 @Composable
 fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Unit) {
@@ -1975,7 +1992,7 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     Text("افراد", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
                     Text("${people.size} نفر", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                FloatingActionButton(onClick = { show = true }) { Icon(Icons.Default.Add, null) }
+
             }
         }
         itemsIndexed(people, key = { _, it -> it.id }) { index, person ->
@@ -1988,10 +2005,18 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
             }
         }
     }
+    }
+    FloatingActionButton(
+        modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
+        onClick = { show = true }, shape = RoundedCornerShape(18.dp)
+    ) { Icon(Icons.Default.Add, "افزودن") }
+
     if (show) AddPersonDialog(onDismiss = { show = false }, onSave = { newPerson ->
         onPeopleChange(people.toMutableList().also { it.add(newPerson) }); show = false
     })
 }
+
+
 
 // ---------------- SETTINGS COMPONENTS ----------------
 
