@@ -39,6 +39,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -70,6 +71,8 @@ private val PEOPLE_KEY = stringPreferencesKey("people")
 private val WORKPLACES_KEY = stringPreferencesKey("workplaces")
 private val LANGUAGE_KEY = stringPreferencesKey("language")
 private val THEME_KEY = stringPreferencesKey("theme")
+private val GLASS_KEY = stringPreferencesKey("glass")
+private val FONT_KEY = stringPreferencesKey("font")
 
 // ---------------- MODELS ----------------
 
@@ -501,6 +504,8 @@ fun VsoftApp() {
 
     var language by remember { mutableStateOf("fa") }
     var theme by remember { mutableStateOf("system") }
+    var glass by remember { mutableStateOf(false) }
+    var font by remember { mutableStateOf("sans") }
 
     var transactions by remember {
         mutableStateOf(mutableListOf<Transaction>())
@@ -532,6 +537,8 @@ fun VsoftApp() {
 
         language = preferences[LANGUAGE_KEY] ?: "fa"
         theme = preferences[THEME_KEY] ?: "system"
+        glass = preferences[GLASS_KEY] == "true"
+        font = preferences[FONT_KEY] ?: "sans"
 
         transactions =
             decodeTransactions(preferences[TRANSACTIONS_KEY] ?: "[]")
@@ -568,6 +575,7 @@ fun VsoftApp() {
     }
 
     val appStrings = strings(language)
+    val appFont = when (font) { "serif" -> FontFamily.Serif; "mono" -> FontFamily.Monospace; else -> FontFamily.SansSerif }
 
     if (!loaded) {
         Box(
@@ -610,8 +618,30 @@ fun VsoftApp() {
             )
         }
 
+        val themedColors = if (glass) {
+            if (darkTheme) colors.copy(
+                background = Color(0xFF070B12),
+                surface = Color(0xCC18212C),
+                surfaceVariant = Color(0x661F2B38)
+            ) else colors.copy(
+                background = Color(0xFFF1F5FC),
+                surface = Color(0xBFFFFFFF),
+                surfaceVariant = Color(0x88FFFFFF)
+            )
+        } else colors
+
         MaterialTheme(
-            colorScheme = colors,
+            colorScheme = themedColors,
+            typography = Typography().let { t -> t.copy(
+                titleLarge = t.titleLarge.copy(fontFamily = appFont),
+                titleMedium = t.titleMedium.copy(fontFamily = appFont),
+                bodyLarge = t.bodyLarge.copy(fontFamily = appFont),
+                bodyMedium = t.bodyMedium.copy(fontFamily = appFont),
+                bodySmall = t.bodySmall.copy(fontFamily = appFont),
+                labelLarge = t.labelLarge.copy(fontFamily = appFont),
+                labelMedium = t.labelMedium.copy(fontFamily = appFont),
+                labelSmall = t.labelSmall.copy(fontFamily = appFont)
+            ) },
             shapes = Shapes(
                 extraSmall = RoundedCornerShape(10.dp),
                 small = RoundedCornerShape(14.dp),
@@ -625,6 +655,8 @@ fun VsoftApp() {
                 strings = appStrings,
                 language = language,
                 theme = theme,
+                glass = glass,
+                font = font,
                 transactions = transactions,
                 workDays = workDays,
                 cards = cards,
@@ -696,12 +728,15 @@ fun VsoftApp() {
 
                 onThemeChange = {
                     theme = it
-
-                    scope.launch {
-                        context.dataStore.edit { prefs ->
-                            prefs[THEME_KEY] = it
-                        }
-                    }
+                    scope.launch { context.dataStore.edit { prefs -> prefs[THEME_KEY] = it } }
+                },
+                onGlassChange = {
+                    glass = it
+                    scope.launch { context.dataStore.edit { prefs -> prefs[GLASS_KEY] = it.toString() } }
+                },
+                onFontChange = {
+                    font = it
+                    scope.launch { context.dataStore.edit { prefs -> prefs[FONT_KEY] = it } }
                 }
             )
         }
