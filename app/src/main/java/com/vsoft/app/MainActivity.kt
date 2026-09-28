@@ -267,21 +267,23 @@ val LocalVsoftGlass = compositionLocalOf { false }
 @Composable
 fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier {
     if (!LocalVsoftGlass.current) return this
+    val dark = isSystemInDarkTheme()
     return this
         .clip(shape)
         .shadow(
-            elevation = 18.dp,
+            elevation = 20.dp,
             shape = shape,
-            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .12f),
-            spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = .10f)
+            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .16f),
+            spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = .13f)
         )
         .background(
             Brush.linearGradient(
                 listOf(
-                    Color.White.copy(alpha = if (isSystemInDarkTheme()) .075f else .52f),
-                    MaterialTheme.colorScheme.surface.copy(alpha = if (isSystemInDarkTheme()) .56f else .70f),
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSystemInDarkTheme()) .30f else .34f),
-                    MaterialTheme.colorScheme.surface.copy(alpha = if (isSystemInDarkTheme()) .50f else .62f)
+                    Color.White.copy(alpha = if (dark) .11f else .68f),
+                    MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .60f else .76f),
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (dark) .34f else .38f),
+                    Color.White.copy(alpha = if (dark) .055f else .42f),
+                    MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .54f else .70f)
                 )
             )
         )
@@ -290,25 +292,25 @@ fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): 
                 1.dp,
                 Brush.linearGradient(
                     listOf(
-                        Color.White.copy(alpha = .30f),
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = .07f),
-                        MaterialTheme.colorScheme.primary.copy(alpha = .14f)
+                        Color.White.copy(alpha = if (dark) .34f else .72f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = .18f),
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = if (dark) .10f else .08f)
                     )
                 )
             ),
             shape
         )
-}
 
 fun money(value: Long): String {
     return NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
 }
 
-fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>): Long {
+fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays: List<WorkDay>): Long {
     val movement = transactions.filter { it.card == card.name }.sumOf {
         if (it.type == "income") it.amount else -it.amount
     }
-    return card.balance + movement
+    val workIncome = workDays.filter { it.card == card.name }.sumOf { it.income }
+    return card.balance + movement + workIncome
 }
 
 fun today(): String {
@@ -1092,7 +1094,7 @@ fun MainScreen(
                     glass, onGlassChange,
                     font, onFontChange
                 )
-                5 -> CardsPage(cards, transactions, onCardsChange)
+                5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
                 7 -> PeoplePage(people, onPeopleChange)
             }
@@ -1882,7 +1884,6 @@ fun SettingsPage(
         }}
         item { SettingsSection("فونت برنامه") {
             FontOption("مدرن و خوانا", "sans", font, onFontChange)
-            FontOption("مدرن و خوانا", "default", font, onFontChange)
         }}
     }
 }
@@ -1896,7 +1897,7 @@ fun FontOption(title: String, value: String, current: String, onChange: (String)
 }
 
 @Composable
-fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, onCardsChange: (MutableList<BankCard>) -> Unit) {
+fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: List<WorkDay>, onCardsChange: (MutableList<BankCard>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<BankCard?>(null) }
     Box(Modifier.fillMaxSize()) {
@@ -1909,7 +1910,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, onCardsCha
                 }
             }
             items(cards, key = { it.id }) { card ->
-                CardItem(card, cardCurrentBalance(card, transactions),
+                CardItem(card, cardCurrentBalance(card, transactions, workDays),
                     onEdit = { editing = card },
                     onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
             }
