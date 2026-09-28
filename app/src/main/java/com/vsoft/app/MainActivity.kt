@@ -1748,18 +1748,28 @@ fun SettingsPage(
             }
         }
 
-        items(workplaces, key = { it.id }) { workplace ->
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Place, null)
-                    Spacer(Modifier.width(12.dp))
-                    Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                    IconButton(onClick = {
-                        val list = workplaces.toMutableList()
-                        list.removeAll { it.id == workplace.id }
-                        onWorkplacesChange(list)
-                    }) {
-                        Icon(Icons.Default.Delete, null)
+        items(workplaces, key = { it.id }) { index, workplace ->
+            VsoftEntrance(index.coerceAtMost(7)) {
+                Card(
+                    Modifier
+                        .fillMaxWidth()
+                        .animateContentSize(),
+                    shape = RoundedCornerShape(22.dp)
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Place, null)
+                        Spacer(Modifier.width(12.dp))
+                        Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                        IconButton(
+                            modifier = Modifier.pressScale(0.94f),
+                            onClick = {
+                                val list = workplaces.toMutableList()
+                                list.removeAll { it.id == workplace.id }
+                                onWorkplacesChange(list)
+                            }
+                        ) {
+                            Icon(Icons.Default.Delete, null)
+                        }
                     }
                 }
             }
@@ -1791,22 +1801,24 @@ fun SettingsPage(
         items(
             people,
             key = { it.id }
-        ) { person ->
+        ) { index, person ->
 
-            PersonItem(
-                person = person,
-                onDelete = {
+            VsoftEntrance(index.coerceAtMost(7)) {
+                PersonItem(
+                    person = person,
+                    onDelete = {
 
-                    val list =
-                        people.toMutableList()
+                        val list =
+                            people.toMutableList()
 
-                    list.removeAll {
-                        it.id == person.id
+                        list.removeAll {
+                            it.id == person.id
+                        }
+
+                        onPeopleChange(list)
                     }
-
-                    onPeopleChange(list)
-                }
-            )
+                )
+            }
         }
     }
 
@@ -2000,8 +2012,8 @@ fun CardItem(
                 .background(
                     Brush.linearGradient(
                         listOf(
-                            startColor.copy(alpha = if (MaterialTheme.colorScheme.surface == Color.White) .94f else .72f),
-                            endColor.copy(alpha = if (MaterialTheme.colorScheme.surface == Color.White) .76f else .52f)
+                            startColor.copy(alpha = if (!isSystemInDarkTheme()) .94f else .72f),
+                            endColor.copy(alpha = if (!isSystemInDarkTheme()) .76f else .52f)
                         )
                     )
                 )
@@ -2236,7 +2248,9 @@ fun PersonItem(
 ) {
 
     Card(
-        Modifier.fillMaxWidth(),
+        Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         shape = RoundedCornerShape(22.dp)
     ) {
 
@@ -2407,7 +2421,16 @@ fun JalaliDatePickerDialog(
                         if (month < 1) { month = 12; year-- }
                     }) { Text("‹") }
 
-                    Text("${jalaliMonthName(month)} $year", fontWeight = FontWeight.Bold)
+                    AnimatedContent(
+                        targetState = "${jalaliMonthName(month)} $year",
+                        transitionSpec = {
+                            fadeIn(tween(160)) + slideInHorizontally(tween(180)) { it / 4 } togetherWith
+                                fadeOut(tween(100)) + slideOutHorizontally(tween(120)) { -it / 5 }
+                        },
+                        label = "jalali_month_title"
+                    ) { title ->
+                        Text(title, fontWeight = FontWeight.Bold)
+                    }
 
                     TextButton(onClick = {
                         month++
@@ -2436,9 +2459,25 @@ fun JalaliDatePickerDialog(
                                 if (value == null) {
                                     Spacer(Modifier.size(40.dp))
                                 } else {
-                                    TextButton(onClick = { day = value }) {
+                                    Box(
+                                        Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (value == day)
+                                                    MaterialTheme.colorScheme.primary
+                                                else
+                                                    Color.Transparent
+                                            )
+                                            .clickable { day = value },
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         Text(
                                             value.toString(),
+                                            color = if (value == day)
+                                                MaterialTheme.colorScheme.onPrimary
+                                            else
+                                                MaterialTheme.colorScheme.onSurface,
                                             fontWeight =
                                                 if (value == day) FontWeight.Bold
                                                 else FontWeight.Normal
