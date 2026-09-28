@@ -909,14 +909,34 @@ fun AnimatedNavIcon(
         ),
         label = "nav_scale"
     )
-    Icon(
-        icon,
-        contentDescription = null,
-        modifier = Modifier.graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
+    val containerAlpha by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(180),
+        label = "nav_indicator"
     )
+
+    Box(
+        Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(
+                MaterialTheme.colorScheme.primary.copy(
+                    alpha = 0.10f * containerAlpha
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+        )
+    }
 }
 
 // ---------------- DASHBOARD ----------------
