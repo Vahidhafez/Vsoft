@@ -1863,6 +1863,7 @@ fun AddTransactionDialog(
     var dateOpen by remember { mutableStateOf(false) }
     var cardOpen by remember { mutableStateOf(false) }
     var categoryOpen by remember { mutableStateOf(false) }
+    var personOpen by remember { mutableStateOf(false) }
     val financeCategories = listOf(
         "Salary", "Freelance", "Project income", "Business income", "Bonus", "Gift",
         "Investment return", "Interest", "Refund", "Transfer", "Other income",
