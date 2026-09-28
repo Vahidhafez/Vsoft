@@ -1291,7 +1291,7 @@ fun WorkPage(
                 Text("${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
                     color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
-            FloatingActionButton(onClick = { edit = null; show = true },
+            FloatingActionButton(modifier = Modifier.pressScale(), onClick = { edit = null; show = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape) { Icon(Icons.Default.Add, null) }
