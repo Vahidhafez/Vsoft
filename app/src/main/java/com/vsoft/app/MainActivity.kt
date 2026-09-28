@@ -281,6 +281,7 @@ fun uiText(key: String): String {
             "انتخاب" -> "Select"
             "ذخیره" -> "Save"
             "لغو" -> "Cancel"
+            else -> key
         }
         "ar" -> when (key) {
             "وضعیت مالی و کاری شما در یک نگاه" -> "ملخص وضعك المالي والعملي"
