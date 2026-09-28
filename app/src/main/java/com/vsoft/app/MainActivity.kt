@@ -300,6 +300,7 @@ fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): 
             ),
             shape
         )
+}
 
 fun money(value: Long): String {
     return NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
