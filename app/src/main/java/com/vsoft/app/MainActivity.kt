@@ -1630,9 +1630,28 @@ fun ReportsPage(
             Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         }
         item {
-            Box {
-                OutlinedButton(onClick = { selectedCard = if (selectedCard.isBlank()) availableCards.firstOrNull().orEmpty() else "" }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (selectedCard.isBlank()) "همه کارت‌ها" else selectedCard)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { FilterChip(selectedCard.isBlank(), { selectedCard = "" }, label = { Text("همه کارت‌ها") }) }
+                items(availableCards) { cardName ->
+                    FilterChip(selectedCard == cardName, { selectedCard = cardName }, label = { Text(cardName) })
+                }
+            }
+        }
+        items(cards, key = { it.id }) { card ->
+            val ct = transactions.filter { it.card == card.name }
+            val ci = ct.filter { it.type == "income" }.sumOf { it.amount }
+            val ce = ct.filter { it.type == "expense" }.sumOf { it.amount }
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CreditCard, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(10.dp))
+                        Text(card.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                        Text(money(cardCurrentBalance(card, transactions)), fontWeight = FontWeight.ExtraBold)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("درآمد ${money(ci)}  •  هزینه ${money(ce)}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
         }
@@ -1665,286 +1684,151 @@ fun SettingsPage(
     strings: AppStrings,
     language: String,
     theme: String,
-    cards: List<BankCard>,
-    people: List<Person>,
-    workplaces: List<Workplace>,
-    transactions: List<Transaction>,
-    onCardsChange: (MutableList<BankCard>) -> Unit,
-    onPeopleChange: (MutableList<Person>) -> Unit,
-    onWorkplacesChange: (MutableList<Workplace>) -> Unit,
     onLanguageChange: (String) -> Unit,
-    onThemeChange: (String) -> Unit
+    onThemeChange: (String) -> Unit,
+    glass: Boolean,
+    onGlassChange: (Boolean) -> Unit,
+    font: String,
+    onFontChange: (String) -> Unit
 ) {
-
-    var showCard by remember { mutableStateOf(false) }
-    var editingCard by remember { mutableStateOf<BankCard?>(null) }
-    var showPerson by remember { mutableStateOf(false) }
-    var showWorkplace by remember { mutableStateOf(false) }
-
-    LazyColumn(
-        Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-
-        item {
-
-            Text(
-                strings.settings,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        item {
-
-            SettingsSection(strings.language) {
-
-                LanguageOption(
-                    "فارسی",
-                    "fa",
-                    language,
-                    onLanguageChange
-                )
-
-                LanguageOption(
-                    "English",
-                    "en",
-                    language,
-                    onLanguageChange
-                )
-
-                LanguageOption(
-                    "العربية",
-                    "ar",
-                    language,
-                    onLanguageChange
-                )
-            }
-        }
-
-        item {
-
-            SettingsSection(strings.theme) {
-
-                ThemeOption(
-                    strings.light,
-                    "light",
-                    theme,
-                    onThemeChange
-                )
-
-                ThemeOption(
-                    strings.dark,
-                    "dark",
-                    theme,
-                    onThemeChange
-                )
-
-                ThemeOption(
-                    strings.system,
-                    "system",
-                    theme,
-                    onThemeChange
-                )
-            }
-        }
-
-        item {
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Text(
-                    strings.cards,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-
-                IconButton(
-                    onClick = {
-                        showCard = true
-                    }
-                ) {
-                    Icon(Icons.Default.Add, null)
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { Text(strings.settings, fontSize = 30.sp, fontWeight = FontWeight.Bold) }
+        item { SettingsSection(strings.language) {
+            LanguageOption("فارسی", "fa", language, onLanguageChange)
+            LanguageOption("English", "en", language, onLanguageChange)
+            LanguageOption("العربية", "ar", language, onLanguageChange)
+        }}
+        item { SettingsSection(strings.theme) {
+            ThemeOption(strings.light, "light", theme, onThemeChange)
+            ThemeOption(strings.dark, "dark", theme, onThemeChange)
+            ThemeOption(strings.system, "system", theme, onThemeChange)
+        }}
+        item { SettingsSection("تم شیشه‌ای / Liquid Glass") {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("ظاهر شفاف و چندلایه")
+                    Text("شفافیت کنترل‌شده با حرکت و عمق بیشتر",
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Switch(checked = glass, onCheckedChange = onGlassChange)
             }
-        }
+        }}
+        item { SettingsSection("فونت برنامه") {
+            FontOption("ساده", "sans", font, onFontChange)
+            FontOption("کلاسیک", "serif", font, onFontChange)
+            FontOption("فنی", "mono", font, onFontChange)
+        }}
+    }
+}
 
-        items(
-            cards,
-            key = { it.id }
-        ) { card ->
+@Composable
+fun FontOption(title: String, value: String, current: String, onChange: (String) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = value == current, onClick = { onChange(value) })
+        Text(title, fontFamily = when (value) {
+            "serif" -> FontFamily.Serif
+            "mono" -> FontFamily.Monospace
+            else -> FontFamily.SansSerif
+        })
+    }
+}
 
-            CardItem(
-                card = card,
-                currentBalance = cardCurrentBalance(card, transactions),
-                onEdit = { editingCard = card },
-                onDelete = {
-
-                    val list =
-                        cards.toMutableList()
-
-                    list.removeAll {
-                        it.id == card.id
-                    }
-
-                    onCardsChange(list)
-                }
-            )
-        }
-
+@Composable
+fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, onCardsChange: (MutableList<BankCard>) -> Unit) {
+    var show by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<BankCard?>(null) }
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 28.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("محل‌های کار", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                IconButton(onClick = { showWorkplace = true }) {
-                    Icon(Icons.Default.Add, null)
+                Column(Modifier.weight(1f)) {
+                    Text("کارت‌های بانکی", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("${cards.size} کارت", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
+                FloatingActionButton(onClick = { show = true }) { Icon(Icons.Default.Add, null) }
             }
         }
+        items(cards, key = { it.id }) { card ->
+            CardItem(card, cardCurrentBalance(card, transactions),
+                onEdit = { editing = card },
+                onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
+        }
+    }
+    if (show) AddCardDialog(onDismiss = { show = false }, onSave = { newCard ->
+        onCardsChange(cards.toMutableList().also { it.add(newCard) }); show = false
+    })
+    if (editing != null) EditCardDialog(editing!!, onDismiss = { editing = null }, onSave = { updated ->
+        onCardsChange(cards.toMutableList().also { list ->
+            val i = list.indexOfFirst { it.id == updated.id }; if (i >= 0) list[i] = updated
+        }); editing = null
+    })
+}
 
+@Composable
+fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList<Workplace>) -> Unit) {
+    var show by remember { mutableStateOf(false) }
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("محل‌های کار", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("${workplaces.size} محل", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                FloatingActionButton(onClick = { show = true }) { Icon(Icons.Default.Add, null) }
+            }
+        }
         itemsIndexed(workplaces, key = { _, it -> it.id }) { index, workplace ->
             VsoftEntrance(index.coerceAtMost(7)) {
-                Card(
-                    Modifier
-                        .fillMaxWidth()
-                        .animateContentSize(),
-                    shape = RoundedCornerShape(22.dp)
-                ) {
+                Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp)) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Place, null)
+                        Box(Modifier.size(46.dp).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                            contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary)
+                        }
                         Spacer(Modifier.width(12.dp))
                         Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                        IconButton(
-                            modifier = Modifier.pressScale(0.94f),
-                            onClick = {
-                                val list = workplaces.toMutableList()
-                                list.removeAll { it.id == workplace.id }
-                                onWorkplacesChange(list)
-                            }
-                        ) {
-                            Icon(Icons.Default.Delete, null)
-                        }
+                        IconButton(onClick = {
+                            onWorkplacesChange(workplaces.toMutableList().also { list ->
+                                list.removeAll { w -> w.id == workplace.id }
+                            })
+                        }) { Icon(Icons.Default.DeleteOutline, null) }
                     }
                 }
             }
         }
+    }
+    if (show) AddWorkplaceDialog(onDismiss = { show = false }, onSave = { newPlace ->
+        onWorkplacesChange(workplaces.toMutableList().also { it.add(newPlace) }); show = false
+    })
+}
 
+@Composable
+fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Unit) {
+    var show by remember { mutableStateOf(false) }
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Text(
-                    strings.people,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-
-                IconButton(
-                    onClick = {
-                        showPerson = true
-                    }
-                ) {
-                    Icon(Icons.Default.Add, null)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("افراد", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("${people.size} نفر", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                FloatingActionButton(onClick = { show = true }) { Icon(Icons.Default.Add, null) }
+            }
+        }
+        itemsIndexed(people, key = { _, it -> it.id }) { index, person ->
+            VsoftEntrance(index.coerceAtMost(7)) {
+                PersonItem(person) {
+                    onPeopleChange(people.toMutableList().also { list ->
+                        list.removeAll { p -> p.id == person.id }
+                    })
                 }
             }
         }
-
-        itemsIndexed(
-            people,
-            key = { _, it -> it.id }
-        ) { index, person ->
-
-            VsoftEntrance(index.coerceAtMost(7)) {
-                PersonItem(
-                    person = person,
-                    onDelete = {
-
-                        val list =
-                            people.toMutableList()
-
-                        list.removeAll {
-                            it.id == person.id
-                        }
-
-                        onPeopleChange(list)
-                    }
-                )
-            }
-        }
     }
-
-    if (showCard) {
-
-        AddCardDialog(
-            onDismiss = {
-                showCard = false
-            },
-            onSave = {
-
-                val list =
-                    cards.toMutableList()
-
-                list.add(it)
-
-                onCardsChange(list)
-
-                showCard = false
-            }
-        )
-    }
-
-    if (editingCard != null) {
-        EditCardDialog(
-            card = editingCard!!,
-            onDismiss = { editingCard = null },
-            onSave = { updated ->
-                val list = cards.toMutableList()
-                val index = list.indexOfFirst { it.id == updated.id }
-                if (index >= 0) list[index] = updated
-                onCardsChange(list)
-                editingCard = null
-            }
-        )
-    }
-
-    if (showWorkplace) {
-        AddWorkplaceDialog(
-            onDismiss = { showWorkplace = false },
-            onSave = {
-                val list = workplaces.toMutableList()
-                list.add(it)
-                onWorkplacesChange(list)
-                showWorkplace = false
-            }
-        )
-    }
-
-    if (showPerson) {
-
-        AddPersonDialog(
-            onDismiss = {
-                showPerson = false
-            },
-            onSave = {
-
-                val list =
-                    people.toMutableList()
-
-                list.add(it)
-
-                onPeopleChange(list)
-
-                showPerson = false
-            }
-        )
-    }
+    if (show) AddPersonDialog(onDismiss = { show = false }, onSave = { newPerson ->
+        onPeopleChange(people.toMutableList().also { it.add(newPerson) }); show = false
+    })
 }
 
 // ---------------- SETTINGS COMPONENTS ----------------
