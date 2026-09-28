@@ -1952,6 +1952,18 @@ fun ThemeOption(
 
 // ---------------- CARDS ----------------
 
+fun bankCardColors(bank: String): Pair<Color, Color> {
+    val name = bank.trim().lowercase()
+    return when {
+        "ملی" in name -> Color(0xFF1769AA) to Color(0xFF4FC3F7)
+        "مسکن" in name -> Color(0xFF00695C) to Color(0xFF26A69A)
+        "بلو" in name -> Color(0xFF1565C0) to Color(0xFF42A5F5)
+        "رد" in name -> Color(0xFF7B1FA2) to Color(0xFFCE93D8)
+        "مهر" in name -> Color(0xFFE65100) to Color(0xFFFFB74D)
+        else -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.secondary
+    }
+}
+
 @Composable
 fun CardItem(
     card: BankCard,
@@ -1965,49 +1977,126 @@ fun CardItem(
         else if (reveal) number.chunked(4).joinToString("  ")
         else "••••  ••••  ••••  " + number.takeLast(4)
 
+    val (startColor, endColor) = bankCardColors(card.bank)
+    val animatedBalance by animateFloatAsState(
+        targetValue = currentBalance.toFloat(),
+        animationSpec = tween(420, easing = FastOutSlowInEasing),
+        label = "card_balance"
+    )
+
     Card(
-        Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize(),
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        Modifier
+            .fillMaxWidth()
+            .clickable { onEdit() }
+            .animateContentSize(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(48.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)),
-                    contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.CreditCard, null, tint = MaterialTheme.colorScheme.primary)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            startColor.copy(alpha = if (MaterialTheme.colorScheme.surface == Color.White) .94f else .72f),
+                            endColor.copy(alpha = if (MaterialTheme.colorScheme.surface == Color.White) .76f else .52f)
+                        )
+                    )
+                )
+                .padding(18.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = .18f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.CreditCard,
+                            null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            card.bank,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                        Text(
+                            card.name,
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = .78f)
+                        )
+                    }
+                    IconButton(onClick = { reveal = !reveal }) {
+                        Icon(
+                            if (reveal) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            null,
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.DeleteOutline,
+                            null,
+                            tint = Color.White.copy(alpha = .92f)
+                        )
+                    }
                 }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(card.bank, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(card.name, fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                Spacer(Modifier.height(20.dp))
+
+                AnimatedContent(
+                    targetState = displayNumber,
+                    transitionSpec = {
+                        fadeIn(tween(180)) + scaleIn(tween(180)) togetherWith
+                            fadeOut(tween(120)) + scaleOut(tween(120))
+                    },
+                    label = "card_number_reveal"
+                ) { value ->
+                    Text(
+                        value,
+                        fontSize = 16.sp,
+                        letterSpacing = 1.4.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
                 }
-                IconButton(onClick = { reveal = !reveal }) {
-                    Icon(if (reveal) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        null)
+
+                Spacer(Modifier.height(18.dp))
+
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "موجودی فعلی",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = .72f)
+                        )
+                        Text(
+                            money(animatedBalance.toLong()),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                    }
+                    Text(
+                        "برای ویرایش ضربه بزنید",
+                        fontSize = 11.sp,
+                        color = Color.White.copy(alpha = .72f)
+                    )
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.DeleteOutline, null)
-                }
-            }
-            Spacer(Modifier.height(18.dp))
-            Text(displayNumber, fontSize = 15.sp, letterSpacing = 1.2.sp)
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) {
-                    Text("موجودی", fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(money(currentBalance), fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-                }
-                Text("ویرایش ›", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
 }
-
 
 @Composable
 fun AddCardDialog(
