@@ -901,12 +901,13 @@ fun MainScreen(
         Modifier.fillMaxSize().background(
             if (glass) Brush.radialGradient(
                 colors = listOf(
-                    MaterialTheme.colorScheme.primary.copy(alpha = .22f),
-                    MaterialTheme.colorScheme.secondary.copy(alpha = .10f),
-                    MaterialTheme.colorScheme.tertiary.copy(alpha = .045f),
+                    MaterialTheme.colorScheme.primary.copy(alpha = .30f),
+                    MaterialTheme.colorScheme.secondary.copy(alpha = .16f),
+                    MaterialTheme.colorScheme.tertiary.copy(alpha = .075f),
+                    MaterialTheme.colorScheme.background.copy(alpha = .92f),
                     Color.Transparent
                 ),
-                radius = 1050f
+                radius = 1250f
             ) else Brush.linearGradient(
                 listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background)
             )
