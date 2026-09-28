@@ -204,6 +204,160 @@ fun strings(language: String): AppStrings {
     }
 }
 
+val LocalVsoftLanguage = compositionLocalOf { "fa" }
+
+fun uiText(key: String): String {
+    return when (LocalVsoftLanguage.current) {
+        "en" -> when (key) {
+            "وضعیت مالی و کاری شما در یک نگاه" -> "Your financial and work overview at a glance"
+            "موجودی کل" -> "Total balance"
+            "ساعت کاری" -> "Work hours"
+            "کارت‌های بانکی" -> "Bank cards"
+            "آخرین تراکنش‌ها" -> "Recent transactions"
+            "هنوز تراکنشی ثبت نشده" -> "No transactions yet"
+            "با دکمه + اولین مورد را اضافه کنید" -> "Use the + button to add your first item"
+            "تراکنشی با این فیلتر پیدا نشد" -> "No transactions match this filter"
+            "ثبت تراکنش جدید" -> "New transaction"
+            "ویرایش تراکنش" -> "Edit transaction"
+            "اطلاعات مالی را دقیق و سریع ثبت کنید" -> "Record financial details quickly and accurately"
+            "بستن" -> "Close"
+            "انتخاب کارت مبدا / مقصد" -> "Select source / destination card"
+            "بدون کارت" -> "No card"
+            "انتخاب شخص" -> "Select person"
+            "بدون شخص" -> "No person"
+            "ثبت روز کاری" -> "Add workday"
+            "ویرایش روز کاری" -> "Edit workday"
+            "ساعت، درآمد و جزئیات کار را یکجا ثبت کنید" -> "Record hours, income and work details together"
+            "انتخاب محل کار" -> "Select workplace"
+            "درآمد کار" -> "Work income"
+            "درآمد به کدام کارت برود؟" -> "Which card should receive the income?"
+            "واریز به:" -> "Deposit to:"
+            "انتخاب شخص / کارفرما" -> "Select person / employer"
+            "شرح کار" -> "Work description"
+            "مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی..." -> "e.g. panel installation, motor repair, wiring..."
+            "هر کارت را جداگانه بررسی کنید؛ گزارش‌ها شلوغ نمی‌شوند." -> "Review each card separately without clutter."
+            "انتخاب کارت" -> "Select card"
+            "هنوز کارت بانکی ثبت نشده" -> "No bank card has been added yet"
+            "موجودی فعلی کارت" -> "Current card balance"
+            "درآمد کارت" -> "Card income"
+            "هزینه کارت" -> "Card expenses"
+            "موجودی اولیه" -> "Opening balance"
+            "درآمد کاری واریزشده" -> "Work income deposited"
+            "ساعات کاری مرتبط" -> "Related work hours"
+            "تم شیشه‌ای / Liquid Glass" -> "Glass / Liquid Glass"
+            "ظاهر شفاف و چندلایه" -> "Layered translucent appearance"
+            "شفافیت کنترل‌شده با حرکت و عمق بیشتر" -> "Controlled translucency with subtle depth"
+            "فونت برنامه" -> "App font"
+            "مدرن و خوانا" -> "Modern"
+            "کلاسیک" -> "Classic"
+            "فنی" -> "Technical"
+            "دست‌نویس" -> "Handwritten"
+            "کارت" -> "card"
+            "افزودن کارت" -> "Add card"
+            "محل" -> "place"
+            "افزودن محل کار" -> "Add workplace"
+            "نفر" -> "person"
+            "افزودن شخص" -> "Add person"
+            "شماره کارت ثبت نشده" -> "Card number not added"
+            "موجودی فعلی" -> "Current balance"
+            "برای ویرایش ضربه بزنید" -> "Tap to edit"
+            "کارت بانکی جدید" -> "New bank card"
+            "نام بانک" -> "Bank name"
+            "عنوان کارت" -> "Card title"
+            "شماره کامل کارت" -> "Full card number"
+            "۱۶ رقم" -> "16 digits"
+            "ویرایش کارت" -> "Edit card"
+            "بانک" -> "Bank"
+            "نام کارت" -> "Card name"
+            "محل کار جدید" -> "New workplace"
+            "نام محل کار" -> "Workplace name"
+            "مثلاً پروژه، شرکت یا کارگاه" -> "e.g. project, company or workshop"
+            "شخص جدید" -> "New person"
+            "نام و نام خانوادگی" -> "Full name"
+            "شماره تماس" -> "Phone number"
+            "شغل / نقش" -> "Job / role"
+            "یادداشت" -> "Note"
+            "انتخاب" -> "Select"
+            "ذخیره" -> "Save"
+            "لغو" -> "Cancel"
+        }
+        "ar" -> when (key) {
+            "وضعیت مالی و کاری شما در یک نگاه" -> "ملخص وضعك المالي والعملي"
+            "موجودی کل" -> "إجمالي الرصيد"
+            "ساعت کاری" -> "ساعات العمل"
+            "کارت‌های بانکی" -> "البطاقات البنكية"
+            "آخرین تراکنش‌ها" -> "آخر المعاملات"
+            "هنوز تراکنشی ثبت نشده" -> "لم تُسجّل معاملات بعد"
+            "با دکمه + اولین مورد را اضافه کنید" -> "استخدم زر + لإضافة أول عنصر"
+            "تراکنشی با این فیلتر پیدا نشد" -> "لا توجد معاملات مطابقة"
+            "ثبت تراکنش جدید" -> "معاملة جديدة"
+            "ویرایش تراکنش" -> "تعديل المعاملة"
+            "اطلاعات مالی را دقیق و سریع ثبت کنید" -> "سجّل المعلومات المالية بسرعة ودقة"
+            "بستن" -> "إغلاق"
+            "انتخاب کارت مبدا / مقصد" -> "اختر بطاقة المصدر / الوجهة"
+            "بدون کارت" -> "بدون بطاقة"
+            "انتخاب شخص" -> "اختر شخصًا"
+            "بدون شخص" -> "بدون شخص"
+            "ثبت روز کاری" -> "إضافة يوم عمل"
+            "ویرایش روز کاری" -> "تعديل يوم العمل"
+            "ساعت، درآمد و جزئیات کار را یکجا ثبت کنید" -> "سجّل الساعات والدخل وتفاصيل العمل معًا"
+            "انتخاب محل کار" -> "اختر مكان العمل"
+            "درآمد کار" -> "دخل العمل"
+            "درآمد به کدام کارت برود؟" -> "إلى أي بطاقة يُحوّل الدخل؟"
+            "واریز به:" -> "الإيداع إلى:"
+            "انتخاب شخص / کارفرما" -> "اختر الشخص / صاحب العمل"
+            "شرح کار" -> "وصف العمل"
+            "مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی..." -> "مثال: تركيب لوحة، إصلاح محرك، تمديدات كهربائية..."
+            "هر کارت را جداگانه بررسی کنید؛ گزارش‌ها شلوغ نمی‌شوند." -> "راجع كل بطاقة بشكل منفصل دون ازدحام."
+            "انتخاب کارت" -> "اختر البطاقة"
+            "هنوز کارت بانکی ثبت نشده" -> "لم تُضف أي بطاقة بنكية بعد"
+            "موجودی فعلی کارت" -> "الرصيد الحالي للبطاقة"
+            "درآمد کارت" -> "دخل البطاقة"
+            "هزینه کارت" -> "مصروفات البطاقة"
+            "موجودی اولیه" -> "الرصيد الافتتاحي"
+            "درآمد کاری واریزشده" -> "دخل العمل المُودع"
+            "ساعات کاری مرتبط" -> "ساعات العمل المرتبطة"
+            "تم شیشه‌ای / Liquid Glass" -> "الزجاج / Liquid Glass"
+            "ظاهر شفاف و چندلایه" -> "مظهر شفاف متعدد الطبقات"
+            "شفافیت کنترل‌شده با حرکت و عمق بیشتر" -> "شفافية مضبوطة مع عمق خفيف"
+            "فونت برنامه" -> "خط التطبيق"
+            "مدرن و خوانا" -> "عصري"
+            "کلاسیک" -> "كلاسيكي"
+            "فنی" -> "تقني"
+            "دست‌نویس" -> "يدوي"
+            "کارت" -> "بطاقة"
+            "افزودن کارت" -> "إضافة بطاقة"
+            "محل" -> "مكان"
+            "افزودن محل کار" -> "إضافة مكان عمل"
+            "نفر" -> "شخص"
+            "افزودن شخص" -> "إضافة شخص"
+            "شماره کارت ثبت نشده" -> "لم يتم تسجيل رقم البطاقة"
+            "موجودی فعلی" -> "الرصيد الحالي"
+            "برای ویرایش ضربه بزنید" -> "اضغط للتعديل"
+            "کارت بانکی جدید" -> "بطاقة بنكية جديدة"
+            "نام بانک" -> "اسم البنك"
+            "عنوان کارت" -> "عنوان البطاقة"
+            "شماره کامل کارت" -> "رقم البطاقة الكامل"
+            "۱۶ رقم" -> "16 رقمًا"
+            "ویرایش کارت" -> "تعديل البطاقة"
+            "بانک" -> "البنك"
+            "نام کارت" -> "اسم البطاقة"
+            "محل کار جدید" -> "مكان عمل جديد"
+            "نام محل کار" -> "اسم مكان العمل"
+            "مثلاً پروژه، شرکت یا کارگاه" -> "مثال: مشروع أو شركة أو ورشة"
+            "شخص جدید" -> "شخص جديد"
+            "نام و نام خانوادگی" -> "الاسم الكامل"
+            "شماره تماس" -> "رقم الهاتف"
+            "شغل / نقش" -> "المهنة / الدور"
+            "یادداشت" -> "ملاحظة"
+            "انتخاب" -> "اختيار"
+            "ذخیره" -> "حفظ"
+            "لغو" -> "إلغاء"
+        }
+        else -> key
+    }
+}
+
 // ---------------- HELPERS ----------------
 
 fun normalizeDigits(value: String): String {
@@ -268,40 +422,31 @@ val LocalVsoftGlass = compositionLocalOf { false }
 fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier {
     if (!LocalVsoftGlass.current) return this
     val dark = isSystemInDarkTheme()
+    val matte = if (dark) Color(0xD91A2028) else Color(0xD9FFFFFF)
+    val topSheen = if (dark) Color.White.copy(alpha = .055f) else Color.White.copy(alpha = .60f)
     return this
         .clip(shape)
         .shadow(
-            elevation = 20.dp,
+            elevation = 8.dp,
             shape = shape,
-            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .16f),
-            spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = .13f)
+            ambientColor = Color.Black.copy(alpha = if (dark) .22f else .08f),
+            spotColor = Color.Black.copy(alpha = if (dark) .16f else .06f)
         )
-        .background(
-            Brush.linearGradient(
-                listOf(
-                    Color.White.copy(alpha = if (dark) .11f else .68f),
-                    MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .60f else .76f),
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (dark) .34f else .38f),
-                    Color.White.copy(alpha = if (dark) .055f else .42f),
-                    MaterialTheme.colorScheme.surface.copy(alpha = if (dark) .54f else .70f)
-                )
-            )
-        )
+        .background(matte, shape)
         .border(
             BorderStroke(
                 1.dp,
-                Brush.linearGradient(
+                Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = if (dark) .34f else .72f),
-                        MaterialTheme.colorScheme.primary.copy(alpha = .18f),
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = if (dark) .10f else .08f)
+                        topSheen,
+                        Color.White.copy(alpha = if (dark) .10f else .24f),
+                        Color.Transparent
                     )
                 )
             ),
             shape
         )
 }
-
 fun money(value: Long): String {
     return NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
 }
@@ -675,7 +820,12 @@ fun VsoftApp() {
     }
 
     val appStrings = strings(language)
-    val appFont = FontFamily.SansSerif
+    val appFont = when (font) {
+        "serif" -> FontFamily.Serif
+        "mono" -> FontFamily.Monospace
+        "cursive" -> FontFamily.Cursive
+        else -> FontFamily.SansSerif
+    }
 
     if (!loaded) {
         Box(
@@ -695,7 +845,8 @@ fun VsoftApp() {
             LayoutDirection.Rtl
 
     CompositionLocalProvider(
-        LocalLayoutDirection provides layoutDirection
+        LocalLayoutDirection provides layoutDirection,
+        LocalVsoftLanguage provides language
     ) {
 
         val colors = if (darkTheme) {
@@ -1236,7 +1387,7 @@ fun DashboardPage(
                 Text("VSOFT", fontSize = 13.sp, fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary)
                 Text(strings.dashboard, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-                VsoftEntrance(0) { Text("وضعیت مالی و کاری شما در یک نگاه", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                VsoftEntrance(0) { Text(uiText("وضعیت مالی و کاری شما در یک نگاه"), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
         item {
@@ -1251,7 +1402,7 @@ fun DashboardPage(
                             Icon(Icons.Default.AccountBalanceWallet, null, tint = Color.White)
                         }
                         Spacer(Modifier.width(12.dp))
-                        Text("موجودی کل", color = Color.White.copy(alpha = .82f), fontSize = 14.sp)
+                        Text(uiText("موجودی کل"), color = Color.White.copy(alpha = .82f), fontSize = 14.sp)
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(money(animatedBalance.toLong()), color = Color.White,
@@ -1276,13 +1427,13 @@ fun DashboardPage(
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DashboardMetric("ساعت کاری", String.format(Locale.US, "%.1f ساعت", totalHours),
+                DashboardMetric(uiText("ساعت کاری"), String.format(Locale.US, "%.1f ساعت", totalHours),
                     Icons.Default.AccessTime, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                 DashboardMetric("کارت بانکی", cards.size.toString(),
                     Icons.Default.CreditCard, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
             }
         }
-        item { VsoftEntrance(4) { Text("کارت‌های بانکی", fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
+        item { VsoftEntrance(4) { Text(uiText("کارت‌های بانکی"), fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(cards, key = { it.id }) { card ->
@@ -1290,9 +1441,9 @@ fun DashboardPage(
                 }
             }
         }
-        item { VsoftEntrance(6) { Text("آخرین تراکنش‌ها", fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
+        item { VsoftEntrance(6) { Text(uiText("آخرین تراکنش‌ها"), fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
         if (transactions.isEmpty()) {
-            item { EmptyState("هنوز تراکنشی ثبت نشده", Icons.Default.ReceiptLong) }
+            item { EmptyState(uiText("هنوز تراکنشی ثبت نشده"), Icons.Default.ReceiptLong) }
         } else {
             items(transactions.sortedByDescending { it.id }.take(5), key = { it.id }) { t ->
                 TransactionCard(t, onDelete = {})
@@ -1359,7 +1510,7 @@ fun EmptyState(title: String, icon: androidx.compose.ui.graphics.vector.ImageVec
             Icon(icon, null, modifier = Modifier.size(42.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(10.dp))
             Text(title, fontWeight = FontWeight.Bold)
-            Text("با دکمه + اولین مورد را اضافه کنید",
+            Text(uiText("با دکمه + اولین مورد را اضافه کنید"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
     }
@@ -1405,7 +1556,7 @@ fun FinancePage(
         }
         if (list.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
-                EmptyState("تراکنشی با این فیلتر پیدا نشد", Icons.Default.SearchOff)
+                EmptyState(uiText("تراکنشی با این فیلتر پیدا نشد"), Icons.Default.SearchOff)
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = 18.dp),
@@ -1517,10 +1668,10 @@ fun AddTransactionDialog(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (existing == null) "ثبت تراکنش جدید" else "ویرایش تراکنش", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("اطلاعات مالی را دقیق و سریع ثبت کنید", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(if (existing == null) uiText("ثبت تراکنش جدید") else uiText("ویرایش تراکنش"), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(uiText("اطلاعات مالی را دقیق و سریع ثبت کنید"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "بستن") }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, uiText("بستن")) }
                 }
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .72f)).padding(4.dp),
@@ -1542,19 +1693,19 @@ fun AddTransactionDialog(
                 }
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) "انتخاب کارت مبدا / مقصد" else "کارت: ${card}")
+                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) uiText("انتخاب کارت مبدا / مقصد") else "کارت: ${card}")
                     }
                     DropdownMenu(cardOpen, { cardOpen = false }) {
-                        DropdownMenuItem({ Text("بدون کارت") }, { card = ""; cardOpen = false })
+                        DropdownMenuItem({ Text(uiText("بدون کارت")) }, { card = ""; cardOpen = false })
                         cards.forEach { q -> DropdownMenuItem({ Text(q.name) }, { card = q.name; cardOpen = false }) }
                     }
                 }
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ personOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (person.isBlank()) "انتخاب شخص" else "شخص: ${person}")
+                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (person.isBlank()) uiText("انتخاب شخص") else "شخص: ${person}")
                     }
                     DropdownMenu(personOpen, { personOpen = false }) {
-                        DropdownMenuItem({ Text("بدون شخص") }, { person = ""; personOpen = false })
+                        DropdownMenuItem({ Text(uiText("بدون شخص")) }, { person = ""; personOpen = false })
                         people.forEach { q -> DropdownMenuItem({ Text(q.name) }, { person = q.name; personOpen = false }) }
                     }
                 }
@@ -1733,14 +1884,14 @@ fun AddWorkDialog(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (existing == null) "ثبت روز کاری" else "ویرایش روز کاری", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("ساعت، درآمد و جزئیات کار را یکجا ثبت کنید", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(if (existing == null) uiText("ثبت روز کاری") else uiText("ویرایش روز کاری"), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(uiText("ساعت، درآمد و جزئیات کار را یکجا ثبت کنید"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "بستن") }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, uiText("بستن")) }
                 }
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ placeOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Place, null); Spacer(Modifier.width(8.dp)); Text(if (place.isBlank()) "انتخاب محل کار" else place)
+                        Icon(Icons.Default.Place, null); Spacer(Modifier.width(8.dp)); Text(if (place.isBlank()) uiText("انتخاب محل کار") else place)
                     }
                     DropdownMenu(placeOpen, { placeOpen = false }) { workplaces.forEach { q -> DropdownMenuItem({ Text(q.name) }, { place = q.name; placeOpen = false }) } }
                 }
@@ -1758,30 +1909,30 @@ fun AddWorkDialog(
                             end.substringBefore(":").toIntOrNull() ?: 16, end.substringAfter(":").toIntOrNull() ?: 0, true).show()
                     }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Logout, null); Spacer(Modifier.width(5.dp)); Text("پایان ${end}") }
                 }
-                OutlinedTextField(income, { income = normalizeAmountInput(it) }, label = { Text("درآمد کار") },
+                OutlinedTextField(income, { income = normalizeAmountInput(it) }, label = { Text(uiText("درآمد کار")) },
                     leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) "درآمد به کدام کارت برود؟" else "واریز به: ${card}")
+                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) uiText("درآمد به کدام کارت برود؟") else "واریز به: ${card}")
                     }
                     DropdownMenu(cardOpen, { cardOpen = false }) {
-                        DropdownMenuItem({ Text("بدون کارت") }, { card = ""; cardOpen = false })
+                        DropdownMenuItem({ Text(uiText("بدون کارت")) }, { card = ""; cardOpen = false })
                         cards.forEach { q -> DropdownMenuItem({ Text(q.name) }, { card = q.name; cardOpen = false }) }
                     }
                 }
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ personOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (person.isBlank()) "انتخاب شخص / کارفرما" else person)
+                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (person.isBlank()) uiText("انتخاب شخص / کارفرما") else person)
                     }
                     DropdownMenu(personOpen, { personOpen = false }) {
-                        DropdownMenuItem({ Text("بدون شخص") }, { person = ""; personOpen = false })
+                        DropdownMenuItem({ Text(uiText("بدون شخص")) }, { person = ""; personOpen = false })
                         people.forEach { q -> DropdownMenuItem({ Text(q.name) }, { person = q.name; personOpen = false }) }
                     }
                 }
-                OutlinedTextField(description, { description = it }, label = { Text("شرح کار") },
+                OutlinedTextField(description, { description = it }, label = { Text(uiText("شرح کار")) },
                     leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 3, maxLines = 5, modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(17.dp), placeholder = { Text("مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی...") })
+                    shape = RoundedCornerShape(17.dp), placeholder = { Text(uiText("مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی...")) })
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
                     Button(onClick = {
@@ -1817,14 +1968,14 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
         contentPadding = PaddingValues(bottom = 28.dp)) {
         item {
             Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-            Text("هر کارت را جداگانه بررسی کنید؛ گزارش‌ها شلوغ نمی‌شوند.",
+            Text(uiText("هر کارت را جداگانه بررسی کنید؛ گزارش‌ها شلوغ نمی‌شوند."),
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
             Card(Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.padding(14.dp)) {
-                    Text("انتخاب کارت", fontWeight = FontWeight.Bold)
+                    Text(uiText("انتخاب کارت"), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(cards, key = { it.id }) { card ->
@@ -1836,14 +1987,14 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
             }
         }
         if (selected == null) {
-            item { EmptyState("هنوز کارت بانکی ثبت نشده", Icons.Default.CreditCard) }
+            item { EmptyState(uiText("هنوز کارت بانکی ثبت نشده"), Icons.Default.CreditCard) }
         } else {
-            item { InfoCard("موجودی فعلی کارت", money(current), Icons.Default.AccountBalance) }
-            item { InfoCard("درآمد کارت", money(income), Icons.Default.TrendingUp) }
-            item { InfoCard("هزینه کارت", money(expense), Icons.Default.TrendingDown) }
-            item { InfoCard("موجودی اولیه", money(opening), Icons.Default.CreditCard) }
-            item { InfoCard("درآمد کاری واریزشده", money(workIncome), Icons.Default.Work) }
-            item { InfoCard("ساعات کاری مرتبط", String.format(Locale.US, "%.1f ساعت", hours), Icons.Default.AccessTime) }
+            item { InfoCard(uiText("موجودی فعلی کارت"), money(current), Icons.Default.AccountBalance) }
+            item { InfoCard(uiText("درآمد کارت"), money(income), Icons.Default.TrendingUp) }
+            item { InfoCard(uiText("هزینه کارت"), money(expense), Icons.Default.TrendingDown) }
+            item { InfoCard(uiText("موجودی اولیه"), money(opening), Icons.Default.CreditCard) }
+            item { InfoCard(uiText("درآمد کاری واریزشده"), money(workIncome), Icons.Default.Work) }
+            item { InfoCard(uiText("ساعات کاری مرتبط"), String.format(Locale.US, "%.1f ساعت", hours), Icons.Default.AccessTime) }
         }
     }
 }
@@ -1874,18 +2025,21 @@ fun SettingsPage(
             ThemeOption(strings.dark, "dark", theme, onThemeChange)
             ThemeOption(strings.system, "system", theme, onThemeChange)
         }}
-        item { SettingsSection("تم شیشه‌ای / Liquid Glass") {
+        item { SettingsSection(uiText("تم شیشه‌ای / Liquid Glass")) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("ظاهر شفاف و چندلایه")
-                    Text("شفافیت کنترل‌شده با حرکت و عمق بیشتر",
+                    Text(uiText("ظاهر شفاف و چندلایه"))
+                    Text(uiText("شفافیت کنترل‌شده با حرکت و عمق بیشتر"),
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(checked = glass, onCheckedChange = onGlassChange)
             }
         }}
-        item { SettingsSection("فونت برنامه") {
-            FontOption("مدرن و خوانا", "sans", font, onFontChange)
+        item { SettingsSection(uiText("فونت برنامه")) {
+            FontOption(uiText("مدرن و خوانا"), "sans", font, onFontChange)
+            FontOption(uiText("کلاسیک"), "serif", font, onFontChange)
+            FontOption(uiText("فنی"), "mono", font, onFontChange)
+            FontOption(uiText("دست‌نویس"), "cursive", font, onFontChange)
         }}
     }
 }
@@ -1907,7 +2061,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
             contentPadding = PaddingValues(bottom = 100.dp)) {
             item {
                 Column {
-                    Text("کارت‌های بانکی", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(uiText("کارت‌های بانکی"), fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
                     Text(cards.size.toString() + " کارت", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
@@ -2077,11 +2231,11 @@ fun ThemeOption(
 fun bankCardColors(bank: String): Pair<Color, Color> {
     val name = bank.trim().lowercase()
     return when {
-        "ملی" in name -> Color(0xFF0D47A1) to Color(0xFF42A5F5)
-        "مسکن" in name -> Color(0xFF00695C) to Color(0xFF80CBC4)
-        "بلو" in name -> Color(0xFF0D47A1) to Color(0xFF00B8D4)
-        "رد" in name -> Color(0xFF6A1B9A) to Color(0xFFFF4081)
-        "مهر" in name -> Color(0xFFEF6C00) to Color(0xFFFFCA28)
+        "ملی" in name -> Color(0xFF0B3D91) to Color(0xFF4D8DFF)
+        "مسکن" in name -> Color(0xFF00695C) to Color(0xFF26A69A)
+        "بلو" in name -> Color(0xFF1565C0) to Color(0xFF42A5F5)
+        "رد" in name -> Color(0xFFB71C1C) to Color(0xFFFF5252)
+        "مهر" in name -> Color(0xFF0B6E4F) to Color(0xFFFFB300)
         else -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.secondary
     }
 }
@@ -2095,7 +2249,7 @@ fun CardItem(
 ) {
     var reveal by remember { mutableStateOf(false) }
     val number = card.cardNumber.filter(Char::isDigit)
-    val displayNumber = if (number.isBlank()) "شماره کارت ثبت نشده"
+    val displayNumber = if (number.isBlank()) uiText("شماره کارت ثبت نشده")
         else if (reveal) number.chunked(4).joinToString("  ")
         else "••••  ••••  ••••  " + number.takeLast(4)
 
@@ -2203,7 +2357,7 @@ fun CardItem(
                 Row(verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "موجودی فعلی",
+                            uiText("موجودی فعلی"),
                             fontSize = 11.sp,
                             color = Color.White.copy(alpha = .72f)
                         )
@@ -2215,7 +2369,7 @@ fun CardItem(
                         )
                     }
                     Text(
-                        "برای ویرایش ضربه بزنید",
+                        uiText("برای ویرایش ضربه بزنید"),
                         fontSize = 11.sp,
                         color = Color.White.copy(alpha = .72f)
                     )
@@ -2250,30 +2404,30 @@ fun AddCardDialog(
                         balance = normalizeDigits(balance).toLongOrNull() ?: 0L
                     )
                 )
-            }) { Text("ذخیره") }
+            }) { Text(uiText("ذخیره")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
         shape = RoundedCornerShape(28.dp),
         containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
-        title = { Text("کارت بانکی جدید", fontWeight = FontWeight.ExtraBold) },
+        title = { Text(uiText("کارت بانکی جدید"), fontWeight = FontWeight.ExtraBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(bank, { bank = it }, label = { Text("نام بانک") }, leadingIcon = { Icon(Icons.Default.AccountBalance, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(name, { name = it }, label = { Text("عنوان کارت") }, leadingIcon = { Icon(Icons.Default.CreditCard, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(bank, { bank = it }, label = { Text(uiText("نام بانک")) }, leadingIcon = { Icon(Icons.Default.AccountBalance, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text(uiText("عنوان کارت")) }, leadingIcon = { Icon(Icons.Default.CreditCard, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
                     cardNumber,
                     { cardNumber = normalizeDigits(it).filter(Char::isDigit).take(16) },
-                    label = { Text("شماره کامل کارت") },
+                    label = { Text(uiText("شماره کامل کارت")) },
                     leadingIcon = { Icon(Icons.Default.CreditCard, null) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    supportingText = { Text("۱۶ رقم") },
+                    supportingText = { Text(uiText("۱۶ رقم")) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = balance,
                     onValueChange = { balance = normalizeAmountInput(it) },
-                    label = { Text("موجودی اولیه") },
+                    label = { Text(uiText("موجودی اولیه")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     visualTransformation = GroupedNumberVisualTransformation(),
                     singleLine = true,
@@ -2309,26 +2463,26 @@ fun EditCardDialog(
                         balance = normalizeDigits(balance).toLongOrNull() ?: 0L
                     )
                 )
-            }) { Text("ذخیره") }
+            }) { Text(uiText("ذخیره")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
         shape = RoundedCornerShape(28.dp),
         containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
-        title = { Text("ویرایش کارت", fontWeight = FontWeight.ExtraBold) },
+        title = { Text(uiText("ویرایش کارت"), fontWeight = FontWeight.ExtraBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(bank, { bank = it }, label = { Text("بانک") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(name, { name = it }, label = { Text("نام کارت") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(bank, { bank = it }, label = { Text(uiText("بانک")) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text(uiText("نام کارت")) }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
                     cardNumber,
                     { cardNumber = normalizeDigits(it).filter(Char::isDigit).take(16) },
-                    label = { Text("شماره کامل کارت") },
+                    label = { Text(uiText("شماره کامل کارت")) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     balance,
                     { balance = normalizeAmountInput(it) },
-                    label = { Text("موجودی اولیه") },
+                    label = { Text(uiText("موجودی اولیه")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     visualTransformation = GroupedNumberVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
@@ -2351,19 +2505,19 @@ fun AddWorkplaceDialog(
                 if (name.isNotBlank()) {
                     onSave(Workplace(System.currentTimeMillis(), name.trim()))
                 }
-            }) { Text("ذخیره") }
+            }) { Text(uiText("ذخیره")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
         shape = RoundedCornerShape(28.dp),
         containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
-        title = { Text("محل کار جدید", fontWeight = FontWeight.ExtraBold) },
+        title = { Text(uiText("محل کار جدید"), fontWeight = FontWeight.ExtraBold) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("نام محل کار") },
+                label = { Text(uiText("نام محل کار")) },
                 leadingIcon = { Icon(Icons.Default.Place, null) },
-                placeholder = { Text("مثلاً پروژه، شرکت یا کارگاه") },
+                placeholder = { Text(uiText("مثلاً پروژه، شرکت یا کارگاه")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -2477,7 +2631,7 @@ fun AddPersonDialog(
                     }
                 }
             ) {
-                Text("ذخیره")
+                Text(uiText("ذخیره"))
             }
         },
 
@@ -2486,14 +2640,14 @@ fun AddPersonDialog(
             TextButton(
                 onClick = onDismiss
             ) {
-                Text("لغو")
+                Text(uiText("لغو"))
             }
         },
 
         shape = RoundedCornerShape(28.dp),
         containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
         title = {
-            Text("شخص جدید", fontWeight = FontWeight.ExtraBold)
+            Text(uiText("شخص جدید"), fontWeight = FontWeight.ExtraBold)
         },
 
         text = {
@@ -2505,7 +2659,7 @@ fun AddPersonDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("نام و نام خانوادگی") },
+                    label = { Text(uiText("نام و نام خانوادگی")) },
                     leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -2514,7 +2668,7 @@ fun AddPersonDialog(
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("شماره تماس") },
+                    label = { Text(uiText("شماره تماس")) },
                     leadingIcon = { Icon(Icons.Default.Phone, null) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true,
@@ -2524,7 +2678,7 @@ fun AddPersonDialog(
                 OutlinedTextField(
                     value = job,
                     onValueChange = { job = it },
-                    label = { Text("شغل / نقش") },
+                    label = { Text(uiText("شغل / نقش")) },
                     leadingIcon = { Icon(Icons.Default.Badge, null) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -2533,7 +2687,7 @@ fun AddPersonDialog(
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("یادداشت") },
+                    label = { Text(uiText("یادداشت")) },
                     leadingIcon = { Icon(Icons.Default.Notes, null) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
@@ -2559,10 +2713,10 @@ fun JalaliDatePickerDialog(
         confirmButton = {
             TextButton(onClick = {
                 onSelected("%04d/%02d/%02d".format(Locale.US, year, month, day))
-            }) { Text("انتخاب") }
+            }) { Text(uiText("انتخاب")) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("لغو") }
+            TextButton(onClick = onDismiss) { Text(uiText("لغو")) }
         },
         title = { Text("${jalaliMonthName(month)} $year") },
         text = {
