@@ -1204,7 +1204,8 @@ fun MainScreen(
         strings.settings,
         "کارت‌ها",
         "محل‌های کار",
-        strings.people
+        strings.people,
+        if (language == "en") "Tools" else if (language == "ar") "الأدوات" else "ابزارها"
     )
 
     Box(
@@ -1348,6 +1349,15 @@ fun MainScreen(
                     }
                 )
 
+                NavigationBarItem(
+                    selected = selectedPage == 8,
+                    onClick = { selectedPage = 8 },
+                    icon = { AnimatedNavIcon(Icons.Default.MoreHoriz, selectedPage == 8) },
+                    label = {
+                        Text(if (language == "en") "Tools" else if (language == "ar") "الأدوات" else "ابزارها")
+                    }
+                )
+
             }
         }
     ) { padding ->
@@ -1414,6 +1424,15 @@ fun MainScreen(
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
                 7 -> PeoplePage(people, onPeopleChange)
+
+                8 -> VsoftToolsPage(
+                    language = language,
+                    transactions = transactions,
+                    workDays = workDays,
+                    cards = cards,
+                    people = people,
+                    workplaces = workplaces
+                )
             }
         }
     }
