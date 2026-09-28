@@ -66,6 +66,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -281,6 +283,11 @@ fun uiText(key: String): String {
             "شماره تماس" -> "Phone number"
             "شغل / نقش" -> "Job / role"
             "یادداشت" -> "Note"
+            "حساب و همگام‌سازی" -> "Account & sync"
+            "با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم." -> "Sign in with Google to securely connect your Vsoft data to your account."
+            "ورود با Google" -> "Sign in with Google"
+            "حساب Google" -> "Google account"
+            "خروج از حساب" -> "Sign out"
             "انتخاب" -> "Select"
             "ذخیره" -> "Save"
             "لغو" -> "Cancel"
@@ -355,6 +362,11 @@ fun uiText(key: String): String {
             "شماره تماس" -> "رقم الهاتف"
             "شغل / نقش" -> "المهنة / الدور"
             "یادداشت" -> "ملاحظة"
+            "حساب و همگام‌سازی" -> "الحساب والمزامنة"
+            "با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم." -> "سجّل الدخول باستخدام Google لربط بيانات Vsoft بحسابك بأمان."
+            "ورود با Google" -> "تسجيل الدخول باستخدام Google"
+            "حساب Google" -> "حساب Google"
+            "خروج از حساب" -> "تسجيل الخروج"
             "انتخاب" -> "اختيار"
             "ذخیره" -> "حفظ"
             "لغو" -> "إلغاء"
@@ -890,6 +902,16 @@ fun VsoftApp() {
 
     var pendingRestore by remember { mutableStateOf<VsoftBackup?>(null) }
 
+    val firebaseAuth = remember { FirebaseAuth.getInstance() }
+    var firebaseUser by remember { mutableStateOf<FirebaseUser?>(firebaseAuth.currentUser) }
+    var authError by remember { mutableStateOf<String?>(null) }
+
+    DisposableEffect(firebaseAuth) {
+        val listener = FirebaseAuth.AuthStateListener { auth -> firebaseUser = auth.currentUser }
+        firebaseAuth.addAuthStateListener(listener)
+        onDispose { firebaseAuth.removeAuthStateListener(listener) }
+    }
+
     val backupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -1118,7 +1140,22 @@ fun VsoftApp() {
                     scope.launch { context.dataStore.edit { prefs -> prefs[FONT_KEY] = it } }
                 },
                 onBackup = { backupLauncher.launch("vsoft-backup.json") },
-                onRestore = { restoreLauncher.launch(arrayOf("application/json")) }
+                onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
+                firebaseUser = firebaseUser,
+                authError = authError,
+                onGoogleSignIn = {
+                    scope.launch {
+                        authError = null
+                        runCatching { signInWithGoogle(context, context.getString(R.string.default_web_client_id)) }
+                            .onFailure { authError = it.message ?: "Google sign-in failed" }
+                    }
+                },
+                onGoogleSignOut = {
+                    scope.launch {
+                        runCatching { signOutFromGoogle(context) }
+                            .onFailure { authError = it.message ?: "Sign-out failed" }
+                    }
+                }
             )
             }
         }
@@ -1150,7 +1187,11 @@ fun MainScreen(
     onGlassChange: (Boolean) -> Unit,
     onFontChange: (String) -> Unit,
     onBackup: () -> Unit,
-    onRestore: () -> Unit
+    onRestore: () -> Unit,
+    firebaseUser: FirebaseUser?,
+    authError: String?,
+    onGoogleSignIn: () -> Unit,
+    onGoogleSignOut: () -> Unit
 ) {
 
     var selectedPage by remember { mutableStateOf(0) }
@@ -1364,7 +1405,11 @@ fun MainScreen(
                     glass, onGlassChange,
                     font, onFontChange,
                     onBackup = onBackup,
-                    onRestore = onRestore
+                    onRestore = onRestore,
+                    firebaseUser = firebaseUser,
+                    authError = authError,
+                    onGoogleSignIn = onGoogleSignIn,
+                    onGoogleSignOut = onGoogleSignOut
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
@@ -2140,7 +2185,11 @@ fun SettingsPage(
     font: String,
     onFontChange: (String) -> Unit,
     onBackup: () -> Unit,
-    onRestore: () -> Unit
+    onRestore: () -> Unit,
+    firebaseUser: FirebaseUser?,
+    authError: String?,
+    onGoogleSignIn: () -> Unit,
+    onGoogleSignOut: () -> Unit
 ) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text(strings.settings, fontSize = 30.sp, fontWeight = FontWeight.Bold) }
@@ -2164,6 +2213,32 @@ fun SettingsPage(
                 Switch(checked = glass, onCheckedChange = onGlassChange)
             }
         }}
+        item {
+            SettingsSection(uiText("حساب و همگام‌سازی")) {
+                if (firebaseUser == null) {
+                    Text(uiText("با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(10.dp))
+                    Button(onClick = onGoogleSignIn, modifier = Modifier.fillMaxWidth().pressScale()) {
+                        Icon(Icons.Default.AccountCircle, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(uiText("ورود با Google"))
+                    }
+                } else {
+                    Text(firebaseUser.displayName ?: uiText("حساب Google"), fontWeight = FontWeight.Bold)
+                    Text(firebaseUser.email ?: "", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(onClick = onGoogleSignOut, modifier = Modifier.fillMaxWidth().pressScale()) {
+                        Icon(Icons.Default.Logout, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(uiText("خروج از حساب"))
+                    }
+                }
+                if (!authError.isNullOrBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(authError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
+            }
+        }
         item {
             SettingsSection(uiText("پشتیبان‌گیری و بازیابی")) {
                 Text(
