@@ -51,8 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.shadow
@@ -1054,20 +1053,18 @@ fun Modifier.pressScale(
             scaleY = scale
         }
         .pointerInput(pressedScale) {
-            awaitPointerEventScope {
-                while (true) {
-                    awaitFirstDown(requireUnconsumed = false)
+            detectTapGestures(
+                onPress = {
                     scaleState.floatValue = pressedScale
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        if (event.changes.all { !it.pressed }) break
+                    try {
+                        tryAwaitRelease()
+                    } finally {
+                        scaleState.floatValue = 1f
                     }
-                    scaleState.floatValue = 1f
                 }
-            }
+            )
         }
 }
-
 @Composable
 fun TopActionIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
     val scale by animateFloatAsState(
