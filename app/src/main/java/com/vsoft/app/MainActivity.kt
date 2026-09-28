@@ -1286,7 +1286,7 @@ fun DashboardPage(
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(cards, key = { it.id }) { card ->
-                    MiniBankCard(card, cardCurrentBalance(card, transactions))
+                    MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
                 }
             }
         }
