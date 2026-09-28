@@ -963,6 +963,24 @@ fun Modifier.pressScale(
 }
 
 @Composable
+fun TopActionIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.08f else 1f,
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = 480f),
+        label = "top_action_scale"
+    )
+    IconButton(onClick = onClick, modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale }) {
+        Box(
+            Modifier.size(38.dp).clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = if (selected) .16f else .07f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+@Composable
 fun AnimatedNavIcon(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     selected: Boolean
@@ -1593,9 +1611,10 @@ fun AddWorkDialog(
 fun ReportsPage(
     strings: AppStrings,
     transactions: List<Transaction>,
-    workDays: List<WorkDay>
+    workDays: List<WorkDay>,
+    cards: List<BankCard>
 ) {
-    val cards = transactions.map { it.card }.filter { it.isNotBlank() }.distinct()
+    val availableCards = cards.map { it.name }.distinct()
     var selectedCard by remember { mutableStateOf("") }
     val cardTransactions = if (selectedCard.isBlank()) transactions else transactions.filter { it.card == selectedCard }
     val income = cardTransactions.filter { it.type == "income" }.sumOf { it.amount }
@@ -1612,7 +1631,7 @@ fun ReportsPage(
         }
         item {
             Box {
-                OutlinedButton(onClick = { selectedCard = if (selectedCard.isBlank()) cards.firstOrNull().orEmpty() else "" }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { selectedCard = if (selectedCard.isBlank()) availableCards.firstOrNull().orEmpty() else "" }, modifier = Modifier.fillMaxWidth()) {
                     Text(if (selectedCard.isBlank()) "همه کارت‌ها" else selectedCard)
                 }
             }
