@@ -206,6 +206,7 @@ fun strings(language: String): AppStrings {
 
 val LocalVsoftLanguage = compositionLocalOf { "fa" }
 
+@Composable
 fun uiText(key: String): String {
     return when (LocalVsoftLanguage.current) {
         "en" -> when (key) {
@@ -353,6 +354,7 @@ fun uiText(key: String): String {
             "انتخاب" -> "اختيار"
             "ذخیره" -> "حفظ"
             "لغو" -> "إلغاء"
+            else -> key
         }
         else -> key
     }
