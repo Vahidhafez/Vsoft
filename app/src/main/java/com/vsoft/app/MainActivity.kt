@@ -31,6 +31,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -57,6 +59,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalContext
@@ -1483,18 +1486,88 @@ fun TransactionCard(
 // ---------------- ADD TRANSACTION ----------------
 
 @Composable
-fun AddTransactionDialog(strings:AppStrings,cards:List<BankCard>,people:List<Person>,existing:Transaction?,onDismiss:()->Unit,onSave:(Transaction)->Unit){
- var type by remember{mutableStateOf(existing?.type?:"expense")};var amount by remember{mutableStateOf(existing?.amount?.toString()?.let(::formatNumberInput)?:"")};var category by remember{mutableStateOf(existing?.category?:"")};var description by remember{mutableStateOf(existing?.description?:"")};var date by remember{mutableStateOf(existing?.date?:today())};var card by remember{mutableStateOf(existing?.card?:"")};var person by remember{mutableStateOf(existing?.person?:"")};var dateOpen by remember{mutableStateOf(false)};var cardOpen by remember{mutableStateOf(false)};var personOpen by remember{mutableStateOf(false)}
- AlertDialog(onDismissRequest=onDismiss,confirmButton={TextButton(onClick={val v=normalizeDigits(amount).toLongOrNull()?:0L;if(v>0&&category.isNotBlank())onSave(Transaction(existing?.id?:System.currentTimeMillis(),type,v,category,description,date,card,person))}){Text(strings.save)}},dismissButton={TextButton(onClick=onDismiss){Text(strings.cancel)}},title={Text(if(existing==null)"تراکنش جدید" else "ویرایش تراکنش")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Row{FilterChip(type=="expense",{type="expense"},{Text(strings.expense)});Spacer(Modifier.width(8.dp));FilterChip(type=="income",{type="income"},{Text(strings.income)})};OutlinedTextField(
-    value = amount,
-    onValueChange = { amount = normalizeAmountInput(it) },
-    label = { Text(strings.amount) },
-    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-    visualTransformation = GroupedNumberVisualTransformation(),
-    singleLine = true,
-    modifier = Modifier.fillMaxWidth()
-);OutlinedTextField(category,{category=it},label={Text(strings.category)},modifier=Modifier.fillMaxWidth());OutlinedTextField(description,{description=it},label={Text(strings.description)},modifier=Modifier.fillMaxWidth());OutlinedButton(onClick={dateOpen=true},modifier=Modifier.fillMaxWidth()){Text(strings.date+" : "+date)};Box{OutlinedButton(onClick={cardOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(card.isBlank())"انتخاب کارت" else "کارت: "+card)};DropdownMenu(cardOpen,{cardOpen=false}){DropdownMenuItem(text={Text("بدون کارت")},onClick={cardOpen=false;card=""});cards.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={cardOpen=false;card=q.name})}}};Box{OutlinedButton(onClick={personOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(person.isBlank())"انتخاب شخص" else "شخص: "+person)};DropdownMenu(personOpen,{personOpen=false}){DropdownMenuItem(text={Text("بدون شخص")},onClick={personOpen=false;person=""});people.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={personOpen=false;person=q.name})}}}}})
- if(dateOpen)JalaliDatePickerDialog(date,{dateOpen=false}){date=it;dateOpen=false}
+fun AddTransactionDialog(
+    strings: AppStrings, cards: List<BankCard>, people: List<Person>, existing: Transaction?,
+    onDismiss: () -> Unit, onSave: (Transaction) -> Unit
+) {
+    var type by remember { mutableStateOf(existing?.type ?: "expense") }
+    var amount by remember { mutableStateOf(existing?.amount?.toString() ?: "") }
+    var category by remember { mutableStateOf(existing?.category ?: "") }
+    var description by remember { mutableStateOf(existing?.description ?: "") }
+    var date by remember { mutableStateOf(existing?.date ?: today()) }
+    var card by remember { mutableStateOf(existing?.card ?: "") }
+    var person by remember { mutableStateOf(existing?.person ?: "") }
+    var dateOpen by remember { mutableStateOf(false) }
+    var cardOpen by remember { mutableStateOf(false) }
+    var personOpen by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp), shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp, shadowElevation = 18.dp) {
+            Column(Modifier.padding(22.dp).heightIn(max = 620.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (existing == null) "ثبت تراکنش جدید" else "ویرایش تراکنش", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("اطلاعات مالی را دقیق و سریع ثبت کنید", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "بستن") }
+                }
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .72f)).padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FilterChip(type == "expense", { type = "expense" }, label = { Text(strings.expense) },
+                        leadingIcon = { Icon(Icons.Default.TrendingDown, null, Modifier.size(17.dp)) }, modifier = Modifier.weight(1f))
+                    FilterChip(type == "income", { type = "income" }, label = { Text(strings.income) },
+                        leadingIcon = { Icon(Icons.Default.TrendingUp, null, Modifier.size(17.dp)) }, modifier = Modifier.weight(1f))
+                }
+                OutlinedTextField(amount, { amount = normalizeAmountInput(it) }, label = { Text(strings.amount) },
+                    leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
+                OutlinedTextField(category, { category = it }, label = { Text(strings.category) },
+                    leadingIcon = { Icon(Icons.Default.Label, null) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
+                OutlinedTextField(description, { description = it }, label = { Text(strings.description) },
+                    leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 2, maxLines = 3, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
+                OutlinedButton({ dateOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
+                    Icon(Icons.Default.CalendarMonth, null); Spacer(Modifier.width(8.dp)); Text("${strings.date}: ${date}")
+                }
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
+                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) "انتخاب کارت مبدا / مقصد" else "کارت: ${card}")
+                    }
+                    DropdownMenu(cardOpen, { cardOpen = false }) {
+                        DropdownMenuItem({ Text("بدون کارت") }, { card = ""; cardOpen = false })
+                        cards.forEach { q -> DropdownMenuItem({ Text(q.name) }, { card = q.name; cardOpen = false }) }
+                    }
+                }
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ personOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
+                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (person.isBlank()) "انتخاب شخص" else "شخص: ${person}")
+                    }
+                    DropdownMenu(personOpen, { personOpen = false }) {
+                        DropdownMenuItem({ Text("بدون شخص") }, { person = ""; personOpen = false })
+                        people.forEach { q -> DropdownMenuItem({ Text(q.name) }, { person = q.name; personOpen = false }) }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
+                    Button(onClick = {
+                        val v = normalizeDigits(amount).toLongOrNull() ?: 0L
+                        if (v > 0 && category.isNotBlank())
+                            onSave(Transaction(existing?.id ?: System.currentTimeMillis(), type, v, category, description, date, card, person))
+                    }, Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)) {
+                        Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save)
+                    }
+                }
+            }
+        }
+    }
+    if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
 }
 
 // ---------------- WORK ----------------
@@ -1626,12 +1699,8 @@ fun WorkMeta(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String
 
 @Composable
 fun AddWorkDialog(
-    strings: AppStrings,
-    people: List<Person>,
-    workplaces: List<Workplace>,
-    existing: WorkDay?,
-    onDismiss: () -> Unit,
-    onSave: (WorkDay) -> Unit
+    strings: AppStrings, people: List<Person>, workplaces: List<Workplace>, cards: List<BankCard>, existing: WorkDay?,
+    onDismiss: () -> Unit, onSave: (WorkDay) -> Unit
 ) {
     val ctx = LocalContext.current
     var place by remember { mutableStateOf(existing?.place ?: workplaces.firstOrNull()?.name ?: "") }
@@ -1639,145 +1708,88 @@ fun AddWorkDialog(
     var endDate by remember { mutableStateOf(existing?.endDate?.ifBlank { existing.date } ?: today()) }
     var start by remember { mutableStateOf(existing?.start ?: "08:00") }
     var end by remember { mutableStateOf(existing?.end ?: "16:00") }
-    var income by remember { mutableStateOf(existing?.income?.toString()?.let(::formatNumberInput) ?: "") }
+    var income by remember { mutableStateOf(existing?.income?.toString() ?: "") }
     var description by remember { mutableStateOf(existing?.description ?: "") }
     var person by remember { mutableStateOf(existing?.person ?: "") }
-    var dateOpen by remember { mutableStateOf(false) }
-    var endDateOpen by remember { mutableStateOf(false) }
-    var placeOpen by remember { mutableStateOf(false) }
-    var personOpen by remember { mutableStateOf(false) }
+    var card by remember { mutableStateOf(existing?.card ?: "") }
+    var dateOpen by remember { mutableStateOf(false) }; var endDateOpen by remember { mutableStateOf(false) }
+    var placeOpen by remember { mutableStateOf(false) }; var personOpen by remember { mutableStateOf(false) }; var cardOpen by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                onSave(
-                    WorkDay(
-                        existing?.id ?: System.currentTimeMillis(),
-                        place,
-                        startDate,
-                        start,
-                        end,
-                        normalizeDigits(income).toLongOrNull() ?: 0L,
-                        description,
-                        person,
-                        startDate,
-                        endDate
-                    )
-                )
-            }) { Text(strings.save) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(strings.cancel) }
-        },
-        title = { Text(if (existing == null) "روز کاری جدید" else "ویرایش روز کاری") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box {
-                    OutlinedButton(onClick = { placeOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (place.isBlank()) "انتخاب محل کار" else place)
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp), shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp, shadowElevation = 18.dp) {
+            Column(Modifier.padding(22.dp).heightIn(max = 650.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp))
+                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Work, null, tint = MaterialTheme.colorScheme.secondary)
                     }
-                    DropdownMenu(
-                        expanded = placeOpen,
-                        onDismissRequest = { placeOpen = false }
-                    ) {
-                        workplaces.forEach { q ->
-                            DropdownMenuItem(
-                                text = { Text(q.name) },
-                                onClick = { place = q.name; placeOpen = false }
-                            )
-                        }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (existing == null) "ثبت روز کاری" else "ویرایش روز کاری", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("ساعت، درآمد و جزئیات کار را یکجا ثبت کنید", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "بستن") }
                 }
-
-                OutlinedButton(onClick = { dateOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text("تاریخ شروع: $startDate")
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ placeOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
+                        Icon(Icons.Default.Place, null); Spacer(Modifier.width(8.dp)); Text(if (place.isBlank()) "انتخاب محل کار" else place)
+                    }
+                    DropdownMenu(placeOpen, { placeOpen = false }) { workplaces.forEach { q -> DropdownMenuItem({ Text(q.name) }, { place = q.name; placeOpen = false }) } }
                 }
-                OutlinedButton(onClick = { endDateOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text("تاریخ پایان: $endDate")
-                }
-
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = {
-                            android.app.TimePickerDialog(
-                                ctx,
-                                { _, h, m -> start = "%02d:%02d".format(h, m) },
-                                start.substringBefore(":").toIntOrNull() ?: 8,
-                                start.substringAfter(":").toIntOrNull() ?: 0,
-                                true
-                            ).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text(strings.start + " : " + start) }
-
-                    OutlinedButton(
-                        onClick = {
-                            android.app.TimePickerDialog(
-                                ctx,
-                                { _, h, m -> end = "%02d:%02d".format(h, m) },
-                                end.substringBefore(":").toIntOrNull() ?: 16,
-                                end.substringAfter(":").toIntOrNull() ?: 0,
-                                true
-                            ).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text(strings.end + " : " + end) }
+                    OutlinedButton({ dateOpen = true }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text("شروع: ${startDate}") }
+                    OutlinedButton({ endDateOpen = true }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text("پایان: ${endDate}") }
                 }
-
-                OutlinedTextField(
-                    value = income,
-                    onValueChange = { income = normalizeAmountInput(it) },
-                    label = { Text(strings.income) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Box {
-                    OutlinedButton(onClick = { personOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (person.isBlank()) "انتخاب شخص / کارفرما" else person)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton({
+                        android.app.TimePickerDialog(ctx, { _, h, m -> start = "%02d:%02d".format(h, m) },
+                            start.substringBefore(":").toIntOrNull() ?: 8, start.substringAfter(":").toIntOrNull() ?: 0, true).show()
+                    }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Login, null); Spacer(Modifier.width(5.dp)); Text("شروع ${start}") }
+                    OutlinedButton({
+                        android.app.TimePickerDialog(ctx, { _, h, m -> end = "%02d:%02d".format(h, m) },
+                            end.substringBefore(":").toIntOrNull() ?: 16, end.substringAfter(":").toIntOrNull() ?: 0, true).show()
+                    }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Logout, null); Spacer(Modifier.width(5.dp)); Text("پایان ${end}") }
+                }
+                OutlinedTextField(income, { income = normalizeAmountInput(it) }, label = { Text("درآمد کار") },
+                    leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
+                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) "درآمد به کدام کارت برود؟" else "واریز به: ${card}")
                     }
-                    DropdownMenu(
-                        expanded = personOpen,
-                        onDismissRequest = { personOpen = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("بدون شخص") },
-                            onClick = { personOpen = false; person = "" }
-                        )
-                        people.forEach { q ->
-                            DropdownMenuItem(
-                                text = { Text(q.name) },
-                                onClick = { personOpen = false; person = q.name }
-                            )
-                        }
+                    DropdownMenu(cardOpen, { cardOpen = false }) {
+                        DropdownMenuItem({ Text("بدون کارت") }, { card = ""; cardOpen = false })
+                        cards.forEach { q -> DropdownMenuItem({ Text(q.name) }, { card = q.name; cardOpen = false }) }
                     }
                 }
-
-                OutlinedTextField(
-                    description,
-                    { description = it },
-                    label = { Text(strings.description) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ personOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
+                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (person.isBlank()) "انتخاب شخص / کارفرما" else person)
+                    }
+                    DropdownMenu(personOpen, { personOpen = false }) {
+                        DropdownMenuItem({ Text("بدون شخص") }, { person = ""; personOpen = false })
+                        people.forEach { q -> DropdownMenuItem({ Text(q.name) }, { person = q.name; personOpen = false }) }
+                    }
+                }
+                OutlinedTextField(description, { description = it }, label = { Text("شرح کار") },
+                    leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 3, maxLines = 5, modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(17.dp), placeholder = { Text("مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی...") })
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
+                    Button(onClick = {
+                        onSave(WorkDay(existing?.id ?: System.currentTimeMillis(), place, startDate, start, end,
+                            normalizeDigits(income).toLongOrNull() ?: 0L, description, person, startDate, endDate, card))
+                    }, Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)) {
+                        Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save)
+                    }
+                }
             }
         }
-    )
-
-    if (dateOpen) {
-        JalaliDatePickerDialog(startDate, { dateOpen = false }) {
-            startDate = it
-            dateOpen = false
-        }
     }
-    if (endDateOpen) {
-        JalaliDatePickerDialog(endDate, { endDateOpen = false }) {
-            endDate = it
-            endDateOpen = false
-        }
-    }
+    if (dateOpen) JalaliDatePickerDialog(startDate, { dateOpen = false }) { startDate = it; dateOpen = false }
+    if (endDateOpen) JalaliDatePickerDialog(endDate, { endDateOpen = false }) { endDate = it; endDateOpen = false }
 }
 
 // ---------------- REPORTS ----------------
