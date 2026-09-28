@@ -1031,17 +1031,16 @@ fun MainScreen(
             }
         }
     }
+    }
 }
-
 
 @Composable
 fun Modifier.pressScale(
     pressedScale: Float = 0.96f
 ): Modifier {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
+    val scaleState = remember { mutableFloatStateOf(1f) }
     val scale by animateFloatAsState(
-        targetValue = if (pressed) pressedScale else 1f,
+        targetValue = scaleState.floatValue,
         animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
         label = "press_scale"
     )
@@ -1050,11 +1049,19 @@ fun Modifier.pressScale(
             scaleX = scale
             scaleY = scale
         }
-        .clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            onClick = {}
-        )
+        .pointerInput(pressedScale) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitFirstDown(requireUnconsumed = false)
+                    scaleState.floatValue = pressedScale
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.changes.all { !it.pressed }) break
+                    }
+                    scaleState.floatValue = 1f
+                }
+            }
+        }
 }
 
 @Composable
