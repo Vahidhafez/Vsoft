@@ -1439,8 +1439,10 @@ fun DashboardPage(
         item { VsoftEntrance(4) { Text(uiText("کارت‌های بانکی"), fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(cards, key = { it.id }) { card ->
-                    MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
+                itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
+                    VsoftEntrance(index.coerceAtMost(5)) {
+                        MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
+                    }
                 }
             }
         }
@@ -1448,8 +1450,10 @@ fun DashboardPage(
         if (transactions.isEmpty()) {
             item { EmptyState(uiText("هنوز تراکنشی ثبت نشده"), Icons.Default.ReceiptLong) }
         } else {
-            items(transactions.sortedByDescending { it.id }.take(5), key = { it.id }) { t ->
-                TransactionCard(t, onDelete = {})
+            itemsIndexed(transactions.sortedByDescending { it.id }.take(5), key = { _, it -> it.id }) { index, t ->
+                VsoftEntrance(index.coerceAtMost(4)) {
+                    TransactionCard(t, onDelete = {})
+                }
             }
         }
     }
@@ -1565,14 +1569,16 @@ fun FinancePage(
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)) {
-                items(list, key = { it.id }) { t ->
-                    TransactionCard(t,
-                        onDelete = {
-                            val x = transactions.toMutableList()
-                            x.removeAll { it.id == t.id }
-                            onTransactionsChange(x)
-                        },
-                        onEdit = { edit = t; show = true })
+                itemsIndexed(list, key = { _, it -> it.id }) { index, t ->
+                    VsoftEntrance(index.coerceAtMost(7)) {
+                        TransactionCard(t,
+                            onDelete = {
+                                val x = transactions.toMutableList()
+                                x.removeAll { it.id == t.id }
+                                onTransactionsChange(x)
+                            },
+                            onEdit = { edit = t; show = true })
+                    }
                 }
             }
         }
@@ -1771,14 +1777,16 @@ fun WorkPage(
             LazyColumn(Modifier.fillMaxSize().padding(horizontal = 18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)) {
-                items(workDays.sortedByDescending { it.id }, key = { it.id }) { w ->
-                    WorkCard(w,
-                        onDelete = {
-                            val x = workDays.toMutableList()
-                            x.removeAll { it.id == w.id }
-                            onWorkChange(x)
-                        },
-                        onEdit = { edit = w; show = true })
+                itemsIndexed(workDays.sortedByDescending { it.id }, key = { _, it -> it.id }) { index, w ->
+                    VsoftEntrance(index.coerceAtMost(7)) {
+                        WorkCard(w,
+                            onDelete = {
+                                val x = workDays.toMutableList()
+                                x.removeAll { it.id == w.id }
+                                onWorkChange(x)
+                            },
+                            onEdit = { edit = w; show = true })
+                    }
                 }
             }
         }
@@ -2068,10 +2076,12 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                     Text(cards.size.toString() + " کارت", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
-            items(cards, key = { it.id }) { card ->
-                CardItem(card, cardCurrentBalance(card, transactions, workDays),
-                    onEdit = { editing = card },
-                    onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
+            itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
+                VsoftEntrance(index.coerceAtMost(5)) {
+                    CardItem(card, cardCurrentBalance(card, transactions, workDays),
+                        onEdit = { editing = card },
+                        onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
+                }
             }
         }
         FloatingActionButton(
