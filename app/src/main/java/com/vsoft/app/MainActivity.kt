@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -1748,7 +1749,7 @@ fun SettingsPage(
             }
         }
 
-        items(workplaces, key = { it.id }) { workplace ->
+        itemsIndexed(workplaces, key = { _, it -> it.id }) { index, workplace ->
             VsoftEntrance(index.coerceAtMost(7)) {
                 Card(
                     Modifier
@@ -1798,10 +1799,10 @@ fun SettingsPage(
             }
         }
 
-        items(
+        itemsIndexed(
             people,
-            key = { it.id }
-        ) { person ->
+            key = { _, it -> it.id }
+        ) { index, person ->
 
             VsoftEntrance(index.coerceAtMost(7)) {
                 PersonItem(
