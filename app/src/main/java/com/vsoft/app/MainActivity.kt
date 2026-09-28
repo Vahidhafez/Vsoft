@@ -436,35 +436,8 @@ class GroupedNumberVisualTransformation : VisualTransformation {
 
 val LocalVsoftGlass = compositionLocalOf { false }
 
-@Composable
-fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier {
-    if (!LocalVsoftGlass.current) return this
-    val dark = isSystemInDarkTheme()
-    val matte = if (dark) Color(0xD91A2028) else Color(0xD9FFFFFF)
-    val topSheen = if (dark) Color.White.copy(alpha = .055f) else Color.White.copy(alpha = .60f)
-    return this
-        .clip(shape)
-        .shadow(
-            elevation = 8.dp,
-            shape = shape,
-            ambientColor = Color.Black.copy(alpha = if (dark) .22f else .08f),
-            spotColor = Color.Black.copy(alpha = if (dark) .16f else .06f)
-        )
-        .background(matte, shape)
-        .border(
-            BorderStroke(
-                1.dp,
-                Brush.verticalGradient(
-                    listOf(
-                        topSheen,
-                        Color.White.copy(alpha = if (dark) .10f else .24f),
-                        Color.Transparent
-                    )
-                )
-            ),
-            shape
-        )
-}
+fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier = this
+
 fun money(value: Long): String {
     return NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
 }
@@ -863,7 +836,7 @@ fun VsoftApp() {
 
         language = preferences[LANGUAGE_KEY] ?: "fa"
         theme = preferences[THEME_KEY] ?: "system"
-        glass = preferences[GLASS_KEY] == "true"
+        glass = false
         font = preferences[FONT_KEY] ?: "sans"
 
         transactions =
@@ -949,7 +922,7 @@ fun VsoftApp() {
         workplaces = data.workplaces.toMutableList()
         language = data.language
         theme = data.theme
-        glass = data.glass
+        glass = false
         font = data.font
         pendingRestore = null
     }
@@ -1753,8 +1726,8 @@ fun FinancePage(
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(strings.finance, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(transactions.size.toString() + " تراکنش ثبت شده", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    
+                    Text(transactions.size.toString() + " transactions", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
         OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth()
@@ -1762,7 +1735,7 @@ fun FinancePage(
             label = { Text(strings.search) }, leadingIcon = { Icon(Icons.Default.Search, null) })
         Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            FilterChip(filter == "all", { filter = "all" }, label = { Text("همه") })
+            FilterChip(filter == "all", { filter = "all" }, label = { Text("All") })
             FilterChip(filter == "income", { filter = "income" }, label = { Text(strings.income) })
             FilterChip(filter == "expense", { filter = "expense" }, label = { Text(strings.expense) })
         }
@@ -1790,7 +1763,7 @@ fun FinancePage(
         }
         FloatingActionButton(modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(),
             onClick = { edit = null; show = true }, containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, "افزودن") }
+            contentColor = MaterialTheme.colorScheme.onPrimary, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, "Add") }
     }
     if (show) AddTransactionDialog(strings, cards, people, edit, { show = false }) { t ->
         val x = transactions.toMutableList()
