@@ -11,6 +11,9 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingExcept
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 suspend fun signInWithGoogle(
     context: Context,
@@ -51,9 +54,12 @@ suspend fun signInWithGoogle(
         null
     )
 
-    val authResult = FirebaseAuth.getInstance()
-        .signInWithCredential(firebaseCredential)
-        .awaitResult()
+    val authResult = suspendCoroutine<com.google.firebase.auth.AuthResult> { continuation ->
+        FirebaseAuth.getInstance()
+            .signInWithCredential(firebaseCredential)
+            .addOnSuccessListener { continuation.resume(it) }
+            .addOnFailureListener { continuation.resumeWithException(it) }
+    }
 
     return authResult.user
         ?: error("Firebase did not return a signed-in user")
