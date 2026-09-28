@@ -1116,7 +1116,9 @@ fun VsoftApp() {
                 onFontChange = {
                     font = it
                     scope.launch { context.dataStore.edit { prefs -> prefs[FONT_KEY] = it } }
-                }
+                },
+                onBackup = { backupLauncher.launch("vsoft-backup.json") },
+                onRestore = { restoreLauncher.launch(arrayOf("application/json")) }
             )
             }
         }
