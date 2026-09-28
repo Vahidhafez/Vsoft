@@ -1748,7 +1748,7 @@ fun SettingsPage(
             }
         }
 
-        items(workplaces, key = { it.id }) { index, workplace ->
+        items(workplaces, key = { it.id }) { workplace ->
             VsoftEntrance(index.coerceAtMost(7)) {
                 Card(
                     Modifier
@@ -1801,7 +1801,7 @@ fun SettingsPage(
         items(
             people,
             key = { it.id }
-        ) { index, person ->
+        ) { person ->
 
             VsoftEntrance(index.coerceAtMost(7)) {
                 PersonItem(
