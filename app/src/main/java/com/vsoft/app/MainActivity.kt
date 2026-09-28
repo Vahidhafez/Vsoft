@@ -1158,90 +1158,127 @@ fun AddTransactionDialog(strings:AppStrings,cards:List<BankCard>,people:List<Per
 // ---------------- WORK ----------------
 
 @Composable
-fun WorkPage(strings:AppStrings,workDays:List<WorkDay>,people:List<Person>,workplaces:List<Workplace>,onWorkChange:(MutableList<WorkDay>)->Unit){
- var show by remember{mutableStateOf(false)};var edit by remember{mutableStateOf<WorkDay?>(null)}
- Column(Modifier.fillMaxSize().padding(16.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text(strings.work,fontSize=28.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));FloatingActionButton(onClick={edit=null;show=true}){Icon(Icons.Default.Add,null)}};Spacer(Modifier.height(12.dp));LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){items(workDays.sortedByDescending{it.id},key={it.id}){w->WorkCard(w,{val x=workDays.toMutableList();x.removeAll{it.id==w.id};onWorkChange(x)},{edit=w;show=true})}}}
- if(show)AddWorkDialog(strings,people,workplaces,edit,{show=false}){w->val x=workDays.toMutableList();val i=x.indexOfFirst{it.id==w.id};if(i>=0)x[i]=w else x.add(w);onWorkChange(x);show=false}
+fun WorkPage(
+    strings: AppStrings,
+    workDays: List<WorkDay>,
+    people: List<Person>,
+    workplaces: List<Workplace>,
+    onWorkChange: (MutableList<WorkDay>) -> Unit
+) {
+    var show by remember { mutableStateOf(false) }
+    var edit by remember { mutableStateOf<WorkDay?>(null) }
+    val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
+    val totalIncome = workDays.sumOf { it.income }
+
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(strings.work, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                Text("${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            }
+            FloatingActionButton(onClick = { edit = null; show = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape) { Icon(Icons.Default.Add, null) }
+        }
+
+        Row(Modifier.padding(horizontal = 18.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            DashboardMetric("درآمد کاری", money(totalIncome), Icons.Default.Payments,
+                MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+            DashboardMetric("محل‌های کار", workplaces.size.toString(), Icons.Default.Place,
+                MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(12.dp))
+
+        if (workDays.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
+                EmptyState("هنوز روز کاری ثبت نشده", Icons.Default.WorkHistory)
+            }
+        } else {
+            LazyColumn(Modifier.fillMaxSize().padding(horizontal = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)) {
+                items(workDays.sortedByDescending { it.id }, key = { it.id }) { w ->
+                    WorkCard(w,
+                        onDelete = {
+                            val x = workDays.toMutableList()
+                            x.removeAll { it.id == w.id }
+                            onWorkChange(x)
+                        },
+                        onEdit = { edit = w; show = true })
+                }
+            }
+        }
+    }
+
+    if (show) AddWorkDialog(strings, people, workplaces, edit, { show = false }) { w ->
+        val x = workDays.toMutableList()
+        val i = x.indexOfFirst { it.id == w.id }
+        if (i >= 0) x[i] = w else x.add(w)
+        onWorkChange(x)
+        show = false
+    }
 }
 
 // ---------------- WORK CARD ----------------
 
 @Composable
-fun WorkCard(
-    work: WorkDay,
-    onDelete: () -> Unit,
-    onEdit: () -> Unit = {}
-) {
-
-    val hours =
-        calculateHours(work.start, work.end)
-
-    Card(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-
-        Column(
-            Modifier.padding(16.dp)
-        ) {
-
-            Row {
-
-                Column(
-                    Modifier.weight(1f)
-                ) {
-
-                    Text(
-                        work.place,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Text(
-                        if (work.startDate.isNotBlank() && work.endDate.isNotBlank())
-                            "${work.startDate} → ${work.endDate}"
-                        else work.date
-                    )
-
-                    Text("${work.start} → ${work.end}")
-
-                    Text(
-                        String.format(
-                            Locale.US,
-                            "%.1f ساعت",
-                            hours
-                        )
-                    )
+fun WorkCard(work: WorkDay, onDelete: () -> Unit, onEdit: () -> Unit = {}) {
+    val hours = calculateHours(work.start, work.end)
+    Card(Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(46.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Work, null, tint = MaterialTheme.colorScheme.primary)
                 }
-
-                Row {
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, null)
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, null)
-                    }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(work.place.ifBlank { "محل کار ثبت نشده" },
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(if (work.startDate.isNotBlank() && work.endDate.isNotBlank())
+                        "${work.startDate} → ${work.endDate}" else work.date,
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, null) }
             }
-
-            Spacer(Modifier.height(6.dp))
-
-            Text(
-                money(work.income),
-                fontWeight = FontWeight.Bold
-            )
-
-            if (work.person.isNotBlank()) {
-                Text(work.person)
+            Spacer(Modifier.height(14.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WorkMeta(Icons.Default.Schedule, "${work.start} → ${work.end}", Modifier.weight(1f))
+                WorkMeta(Icons.Default.Timer, String.format(Locale.US, "%.1f ساعت", hours), Modifier.weight(1f))
             }
-
-            if (work.description.isNotBlank()) {
-                Text(work.description)
-            }
+            Spacer(Modifier.height(9.dp))
+            Text(money(work.income), fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.secondary, fontSize = 17.sp)
+            if (work.person.isNotBlank()) Text("با: ${work.person}", fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (work.description.isNotBlank()) Text(work.description, fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
         }
     }
 }
 
+@Composable
+fun WorkMeta(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, modifier: Modifier) {
+    Surface(modifier, shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(6.dp))
+            Text(text, fontSize = 11.sp)
+        }
+    }
+}
+
+// ---------------- ADD WORK ----------------
 // ---------------- ADD WORK ----------------
 
 @Composable
@@ -2199,6 +2236,40 @@ fun JalaliDatePickerDialog(
             }
         }
     )
+}
+
+// ---------------- COMMON UI ----------------
+
+@Composable
+fun InfoCard(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(46.dp).clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(Modifier.width(13.dp))
+            Column {
+                Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(3.dp))
+                Text(value, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+            }
+        }
+    }
+}
+
+@Composable
+fun SmallInfoCard(modifier: Modifier, title: String, value: String,
+                  icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    DashboardMetric(title, value, icon, MaterialTheme.colorScheme.primary, modifier)
+}
+
+@Composable
+fun SectionTitle(text: String) {
+    Text(text, fontSize = 21.sp, fontWeight = FontWeight.Bold)
 }
 
 // ---------------- COMMON UI ----------------
