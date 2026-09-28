@@ -108,7 +108,8 @@ data class WorkDay(
     val description: String,
     val person: String,
     val startDate: String = "",
-    val endDate: String = ""
+    val endDate: String = "",
+    val card: String = ""
 )
 
 data class Workplace(
@@ -424,6 +425,7 @@ fun encodeWork(list: List<WorkDay>): String {
                 put("person", it.person)
                 put("startDate", it.startDate)
                 put("endDate", it.endDate)
+                put("card", it.card)
             }
         )
     }
@@ -451,7 +453,8 @@ fun decodeWork(value: String): MutableList<WorkDay> {
                     o.getString("description"),
                     o.getString("person"),
                     o.optString("startDate", o.getString("date")),
-                    o.optString("endDate", o.getString("date"))
+                    o.optString("endDate", o.getString("date")),
+                    o.optString("card", "")
                 )
             )
         }
@@ -666,7 +669,7 @@ fun VsoftApp() {
     }
 
     val appStrings = strings(language)
-    val appFont = when (font) { "serif" -> FontFamily.Serif; "mono" -> FontFamily.Monospace; else -> FontFamily.SansSerif }
+    val appFont = FontFamily.SansSerif
 
     if (!loaded) {
         Box(
@@ -691,21 +694,35 @@ fun VsoftApp() {
 
         val colors = if (darkTheme) {
             darkColorScheme(
-                primary = Color(0xFF8AB4F8),
-                secondary = Color(0xFF9AD9C6),
-                tertiary = Color(0xFFFFB86B),
-                background = Color(0xFF0B0F14),
-                surface = Color(0xFF121820),
-                surfaceVariant = Color(0xFF1B2530)
+                primary = Color(0xFF9DBBFF),
+                onPrimary = Color(0xFF07111F),
+                secondary = Color(0xFF7EE2C4),
+                onSecondary = Color(0xFF062018),
+                tertiary = Color(0xFFFFC078),
+                onTertiary = Color(0xFF2A1600),
+                background = Color(0xFF070B12),
+                onBackground = Color(0xFFF2F6FC),
+                surface = Color(0xFF111824),
+                onSurface = Color(0xFFF2F6FC),
+                surfaceVariant = Color(0xFF202A38),
+                onSurfaceVariant = Color(0xFFC3CDDB),
+                outline = Color(0xFF66758A)
             )
         } else {
             lightColorScheme(
                 primary = Color(0xFF315EFB),
-                secondary = Color(0xFF168A72),
-                tertiary = Color(0xFFE28A2B),
-                background = Color(0xFFF6F8FC),
-                surface = Color(0xFFFFFFFF),
-                surfaceVariant = Color(0xFFEEF2F8)
+                onPrimary = Color.White,
+                secondary = Color(0xFF087F68),
+                onSecondary = Color.White,
+                tertiary = Color(0xFFC96F12),
+                onTertiary = Color.White,
+                background = Color(0xFFF5F7FB),
+                onBackground = Color(0xFF101828),
+                surface = Color.White,
+                onSurface = Color(0xFF101828),
+                surfaceVariant = Color(0xFFEDF1F7),
+                onSurfaceVariant = Color(0xFF596579),
+                outline = Color(0xFF7A8799)
             )
         }
 
@@ -1876,9 +1893,8 @@ fun SettingsPage(
             }
         }}
         item { SettingsSection("فونت برنامه") {
-            FontOption("ساده", "sans", font, onFontChange)
-            FontOption("کلاسیک", "serif", font, onFontChange)
-            FontOption("فنی", "mono", font, onFontChange)
+            FontOption("مدرن و خوانا", "sans", font, onFontChange)
+            FontOption("مدرن و خوانا", "default", font, onFontChange)
         }}
     }
 }
@@ -1887,11 +1903,7 @@ fun SettingsPage(
 fun FontOption(title: String, value: String, current: String, onChange: (String) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = value == current, onClick = { onChange(value) })
-        Text(title, fontFamily = when (value) {
-            "serif" -> FontFamily.Serif
-            "mono" -> FontFamily.Monospace
-            else -> FontFamily.SansSerif
-        })
+        Text(title, fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium)
     }
 }
 
