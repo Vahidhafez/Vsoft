@@ -1,6 +1,9 @@
 package com.vsoft.app
 
 import android.os.Bundle
+import android.content.Context
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
@@ -729,6 +732,69 @@ fun decodeWorkplaces(value: String): MutableList<Workplace> {
     return result
 }
 
+// ---------------- BACKUP ----------------
+
+data class VsoftBackup(
+    val transactions: List<Transaction>,
+    val workDays: List<WorkDay>,
+    val cards: List<BankCard>,
+    val people: List<Person>,
+    val workplaces: List<Workplace>,
+    val language: String,
+    val theme: String,
+    val glass: Boolean,
+    val font: String
+)
+
+fun encodeBackup(data: VsoftBackup): String {
+    return JSONObject().apply {
+        put("version", 1)
+        put("transactions", JSONArray(encodeTransactions(data.transactions)))
+        put("workDays", JSONArray(encodeWork(data.workDays)))
+        put("cards", JSONArray(encodeCards(data.cards)))
+        put("people", JSONArray(encodePeople(data.people)))
+        put("workplaces", JSONArray(encodeWorkplaces(data.workplaces)))
+        put("language", data.language)
+        put("theme", data.theme)
+        put("glass", data.glass)
+        put("font", data.font)
+        put("createdAt", System.currentTimeMillis())
+    }.toString()
+}
+
+fun decodeBackup(value: String): VsoftBackup? {
+    return try {
+        val o = JSONObject(value)
+        VsoftBackup(
+            decodeTransactions(o.optJSONArray("transactions")?.toString() ?: "[]"),
+            decodeWork(o.optJSONArray("workDays")?.toString() ?: "[]"),
+            decodeCards(o.optJSONArray("cards")?.toString() ?: "[]"),
+            decodePeople(o.optJSONArray("people")?.toString() ?: "[]"),
+            decodeWorkplaces(o.optJSONArray("workplaces")?.toString() ?: "[]"),
+            o.optString("language", "fa"),
+            o.optString("theme", "system"),
+            o.optBoolean("glass", false),
+            o.optString("font", "sans")
+        )
+    } catch (_: Exception) {
+        null
+    }
+}
+
+suspend fun restoreBackup(context: Context, data: VsoftBackup) {
+    context.dataStore.edit { p ->
+        p[TRANSACTIONS_KEY] = encodeTransactions(data.transactions)
+        p[WORK_KEY] = encodeWork(data.workDays)
+        p[CARDS_KEY] = encodeCards(data.cards)
+        p[PEOPLE_KEY] = encodePeople(data.people)
+        p[WORKPLACES_KEY] = encodeWorkplaces(data.workplaces)
+        p[LANGUAGE_KEY] = data.language
+        p[THEME_KEY] = data.theme
+        p[GLASS_KEY] = data.glass.toString()
+        p[FONT_KEY] = data.font
+    }
+}
+
 // ---------------- ACTIVITY ----------------
 
 class MainActivity : ComponentActivity() {
@@ -820,6 +886,50 @@ fun VsoftApp() {
         "dark" -> true
         "light" -> false
         else -> isSystemInDarkTheme()
+    }
+
+    var pendingRestore by remember { mutableStateOf<VsoftBackup?>(null) }
+
+    val backupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            val snapshot = VsoftBackup(
+                transactions, workDays, cards, people, workplaces,
+                language, theme, glass, font
+            )
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use {
+                    it.write(encodeBackup(snapshot).toByteArray(Charsets.UTF_8))
+                }
+            }
+        }
+    }
+
+    val restoreLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                if (text != null) pendingRestore = decodeBackup(text)
+            }
+        }
+    }
+
+    LaunchedEffect(pendingRestore) {
+        val data = pendingRestore ?: return@LaunchedEffect
+        restoreBackup(context, data)
+        transactions = data.transactions.toMutableList()
+        workDays = data.workDays.toMutableList()
+        cards = data.cards.toMutableList()
+        people = data.people.toMutableList()
+        workplaces = data.workplaces.toMutableList()
+        language = data.language
+        theme = data.theme
+        glass = data.glass
+        font = data.font
+        pendingRestore = null
     }
 
     val appStrings = strings(language)
@@ -1248,7 +1358,9 @@ fun MainScreen(
                     strings, language, theme,
                     onLanguageChange, onThemeChange,
                     glass, onGlassChange,
-                    font, onFontChange
+                    font, onFontChange,
+                    onBackup = { backupLauncher.launch("Vsoft-Backup.json") },
+                    onRestore = { restoreLauncher.launch(arrayOf("application/json", "text/plain")) }
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
@@ -2022,7 +2134,9 @@ fun SettingsPage(
     glass: Boolean,
     onGlassChange: (Boolean) -> Unit,
     font: String,
-    onFontChange: (String) -> Unit
+    onFontChange: (String) -> Unit,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit
 ) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text(strings.settings, fontSize = 30.sp, fontWeight = FontWeight.Bold) }
@@ -2046,6 +2160,36 @@ fun SettingsPage(
                 Switch(checked = glass, onCheckedChange = onGlassChange)
             }
         }}
+        item {
+            SettingsSection(uiText("پشتیبان‌گیری و بازیابی")) {
+                Text(
+                    uiText("یک نسخه کامل از اطلاعات Vsoft روی گوشی ذخیره می‌شود و می‌توانی آن را بعداً روی همین یا یک گوشی دیگر بازیابی کنی."),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = onBackup,
+                        modifier = Modifier.weight(1f).pressScale()
+                    ) {
+                        Icon(Icons.Default.Upload, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("ایجاد پشتیبان"))
+                    }
+                    OutlinedButton(
+                        onClick = onRestore,
+                        modifier = Modifier.weight(1f).pressScale()
+                    ) {
+                        Icon(Icons.Default.Download, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("بازیابی"))
+                    }
+                }
+            }
+        }
         item { SettingsSection(uiText("فونت برنامه")) {
             FontOption(uiText("مدرن و خوانا"), "sans", font, onFontChange)
             FontOption(uiText("کلاسیک"), "serif", font, onFontChange)
