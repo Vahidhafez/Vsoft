@@ -1053,7 +1053,7 @@ fun DashboardPage(
                     Icons.Default.CreditCard, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
             }
         }
-        item { Text("کارت‌های بانکی", fontSize = 21.sp, fontWeight = FontWeight.Bold) }
+        item { VsoftEntrance(4) { Text("کارت‌های بانکی", fontSize = 21.sp, fontWeight = FontWeight.Bold) }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(cards, key = { it.id }) { card ->
@@ -1061,7 +1061,7 @@ fun DashboardPage(
                 }
             }
         }
-        item { Text("آخرین تراکنش‌ها", fontSize = 21.sp, fontWeight = FontWeight.Bold) }
+        item { VsoftEntrance(6) { Text("آخرین تراکنش‌ها", fontSize = 21.sp, fontWeight = FontWeight.Bold) }
         if (transactions.isEmpty()) {
             item { EmptyState("هنوز تراکنشی ثبت نشده", Icons.Default.ReceiptLong) }
         } else {
