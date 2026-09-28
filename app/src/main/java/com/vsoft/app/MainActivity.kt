@@ -751,6 +751,8 @@ fun MainScreen(
     strings: AppStrings,
     language: String,
     theme: String,
+    glass: Boolean,
+    font: String,
     transactions: List<Transaction>,
     workDays: List<WorkDay>,
     cards: List<BankCard>,
@@ -762,7 +764,9 @@ fun MainScreen(
     workplaces: List<Workplace>,
     onWorkplacesChange: (MutableList<Workplace>) -> Unit,
     onLanguageChange: (String) -> Unit,
-    onThemeChange: (String) -> Unit
+    onThemeChange: (String) -> Unit,
+    onGlassChange: (Boolean) -> Unit,
+    onFontChange: (String) -> Unit
 ) {
 
     var selectedPage by remember { mutableStateOf(0) }
@@ -772,7 +776,10 @@ fun MainScreen(
         strings.finance,
         strings.work,
         strings.reports,
-        strings.settings
+        strings.settings,
+        "کارت‌ها",
+        "محل‌های کار",
+        strings.people
     )
 
     Scaffold(
@@ -798,6 +805,11 @@ fun MainScreen(
                             Text(title, fontWeight = FontWeight.Bold, fontSize = 19.sp)
                         }
                     }
+                },
+                actions = {
+                    TopActionIcon(Icons.Default.CreditCard, "کارت‌ها", selectedPage == 5) { selectedPage = 5 }
+                    TopActionIcon(Icons.Default.Place, "محل‌های کار", selectedPage == 6) { selectedPage = 6 }
+                    TopActionIcon(Icons.Default.Person, "افراد", selectedPage == 7) { selectedPage = 7 }
                 },
                 navigationIcon = {
                     IconButton(modifier = Modifier.pressScale(0.92f), onClick = { selectedPage = 4 }) {
@@ -910,26 +922,17 @@ fun MainScreen(
                     onWorkChange
                 )
 
-                3 -> ReportsPage(
-                    strings,
-                    transactions,
-                    workDays
-                )
+                3 -> ReportsPage(strings, transactions, workDays, cards)
 
                 4 -> SettingsPage(
-                    strings,
-                    language,
-                    theme,
-                    cards,
-                    people,
-                    workplaces,
-                    transactions,
-                    onCardsChange,
-                    onPeopleChange,
-                    onWorkplacesChange,
-                    onLanguageChange,
-                    onThemeChange
+                    strings, language, theme,
+                    onLanguageChange, onThemeChange,
+                    glass, onGlassChange,
+                    font, onFontChange
                 )
+                5 -> CardsPage(cards, transactions, onCardsChange)
+                6 -> WorkplacesPage(workplaces, onWorkplacesChange)
+                7 -> PeoplePage(people, onPeopleChange)
             }
         }
     }
