@@ -1841,7 +1841,17 @@ fun AddTransactionDialog(
     var person by remember { mutableStateOf(existing?.person ?: "") }
     var dateOpen by remember { mutableStateOf(false) }
     var cardOpen by remember { mutableStateOf(false) }
-    var personOpen by remember { mutableStateOf(false) }
+    var categoryOpen by remember { mutableStateOf(false) }
+    val financeCategories = listOf(
+        "Salary", "Freelance", "Project income", "Business income", "Bonus", "Gift",
+        "Investment return", "Interest", "Refund", "Transfer", "Other income",
+        "Food & groceries", "Restaurant & cafe", "Transport", "Fuel", "Taxi & ride-hailing",
+        "Rent & housing", "Utilities", "Internet & mobile", "Subscriptions", "Shopping",
+        "Clothing", "Health & medicine", "Education", "Entertainment", "Travel",
+        "Insurance", "Bank fees", "Loan payment", "Debt repayment", "Family",
+        "Home", "Electronics", "Personal care", "Charity", "Taxes", "Work expenses",
+        "Tools & equipment", "Maintenance", "Other expense"
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp), shape = RoundedCornerShape(30.dp),
@@ -1871,8 +1881,18 @@ fun AddTransactionDialog(
                 OutlinedTextField(amount, { amount = normalizeAmountInput(it) }, label = { Text(strings.amount) },
                     leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
-                OutlinedTextField(category, { category = it }, label = { Text(strings.category) },
-                    leadingIcon = { Icon(Icons.Default.Label, null) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ categoryOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
+                        Icon(Icons.Default.Label, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (category.isBlank()) "Select category" else category)
+                    }
+                    DropdownMenu(categoryOpen, { categoryOpen = false }) {
+                        financeCategories.forEach { item ->
+                            DropdownMenuItem(text = { Text(item) }, onClick = { category = item; categoryOpen = false })
+                        }
+                    }
+                }
                 OutlinedTextField(description, { description = it }, label = { Text(strings.description) },
                     leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 2, maxLines = 3, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
                 OutlinedButton({ dateOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
@@ -2312,8 +2332,8 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
             contentPadding = PaddingValues(bottom = 100.dp)) {
             item {
                 Column {
-                    Text(uiText("کارت‌های بانکی"), fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(cards.size.toString() + " کارت", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text("Bank cards", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(cards.size.toString() + " cards", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
             itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
@@ -2347,8 +2367,8 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
             contentPadding = PaddingValues(bottom = 100.dp)) {
             item {
                 Column {
-                    Text("محل‌های کار", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(workplaces.size.toString() + " محل", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Workplaces", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(workplaces.size.toString() + " workplaces", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             itemsIndexed(workplaces, key = { _, it -> it.id }) { index, workplace ->
@@ -2484,12 +2504,22 @@ fun ThemeOption(
 fun bankCardColors(bank: String): Pair<Color, Color> {
     val name = bank.trim().lowercase()
     return when {
-        "ملی" in name -> Color(0xFF0B3D91) to Color(0xFF4D8DFF)
-        "مسکن" in name -> Color(0xFF00695C) to Color(0xFF26A69A)
-        "بلو" in name -> Color(0xFF1565C0) to Color(0xFF42A5F5)
-        "رد" in name -> Color(0xFFB71C1C) to Color(0xFFFF5252)
-        "مهر" in name -> Color(0xFF0B6E4F) to Color(0xFFFFB300)
-        else -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.secondary
+        "ملی" in name || "melli" in name -> Color(0xFF0B3D91) to Color(0xFF1E73E8)
+        "مسکن" in name || "maskan" in name -> Color(0xFF00695C) to Color(0xFF26A69A)
+        "بلو" in name || "blu" in name -> Color(0xFF0D47A1) to Color(0xFF2196F3)
+        "رد" in name || "red" in name -> Color(0xFF9B111E) to Color(0xFFE53935)
+        "مهر" in name || "mehr" in name -> Color(0xFF087F5B) to Color(0xFF20A66A)
+        "ملت" in name || "mellat" in name -> Color(0xFF007A53) to Color(0xFF12A875)
+        "صادرات" in name || "saderat" in name -> Color(0xFF00695C) to Color(0xFF00A88F)
+        "تجارت" in name || "tejarat" in name -> Color(0xFF0067A5) to Color(0xFF00A6D6)
+        "پارسیان" in name || "parsian" in name -> Color(0xFFE6A400) to Color(0xFFFFD54F)
+        "پاسارگاد" in name || "pasargad" in name -> Color(0xFF0D47A1) to Color(0xFF1565C0)
+        "سامان" in name || "saman" in name -> Color(0xFF263238) to Color(0xFF607D8B)
+        "کشاورزی" in name || "keshavarzi" in name -> Color(0xFF2E7D32) to Color(0xFF66BB6A)
+        "رفاه" in name || "refah" in name -> Color(0xFF1565C0) to Color(0xFF42A5F5)
+        "آینده" in name || "ayandeh" in name -> Color(0xFF7B1FA2) to Color(0xFFBA68C8)
+        "اقتصاد نوین" in name || "eghtesad" in name -> Color(0xFF8E24AA) to Color(0xFFCE93D8)
+        else -> Color(0xFF455A64) to Color(0xFF90A4AE)
     }
 }
 
