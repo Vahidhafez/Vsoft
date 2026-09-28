@@ -1080,6 +1080,7 @@ fun MainScreen(
                     workDays,
                     people,
                     workplaces,
+                    cards,
                     onWorkChange
                 )
 
@@ -1381,19 +1382,14 @@ fun FinancePage(
          it.card.contains(search, true))
     }.sortedByDescending { it.id }
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(strings.finance, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                Text("${transactions.size} تراکنش ثبت شده",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(strings.finance, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(transactions.size.toString() + " تراکنش ثبت شده", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
             }
-            FloatingActionButton(modifier = Modifier.pressScale(), onClick = { edit = null; show = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape) { Icon(Icons.Default.Add, null) }
-        }
         OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth()
             .padding(horizontal = 18.dp), singleLine = true, shape = RoundedCornerShape(18.dp),
             label = { Text(strings.search) }, leadingIcon = { Icon(Icons.Default.Search, null) })
@@ -1422,6 +1418,10 @@ fun FinancePage(
                 }
             }
         }
+        }
+        FloatingActionButton(Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(),
+            onClick = { edit = null; show = true }, containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, "افزودن") }
     }
     if (show) AddTransactionDialog(strings, cards, people, edit, { show = false }) { t ->
         val x = transactions.toMutableList()
@@ -1578,6 +1578,7 @@ fun WorkPage(
     workDays: List<WorkDay>,
     people: List<Person>,
     workplaces: List<Workplace>,
+    cards: List<BankCard>,
     onWorkChange: (MutableList<WorkDay>) -> Unit
 ) {
     var show by remember { mutableStateOf(false) }
@@ -1585,19 +1586,15 @@ fun WorkPage(
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
     val totalIncome = workDays.sumOf { it.income }
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(strings.work, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                Text("${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(strings.work, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(workDays.size.toString() + " روز کاری • " + String.format(Locale.US, "%.1f", totalHours) + " ساعت",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
             }
-            FloatingActionButton(modifier = Modifier.pressScale(), onClick = { edit = null; show = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape) { Icon(Icons.Default.Add, null) }
-        }
 
         Row(Modifier.padding(horizontal = 18.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1627,9 +1624,13 @@ fun WorkPage(
                 }
             }
         }
+        }
+        FloatingActionButton(Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(),
+            onClick = { edit = null; show = true }, containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, "افزودن") }
     }
 
-    if (show) AddWorkDialog(strings, people, workplaces, edit, { show = false }) { w ->
+    if (show) AddWorkDialog(strings, people, workplaces, cards, edit, { show = false }) { w ->
         val x = workDays.toMutableList()
         val i = x.indexOfFirst { it.id == w.id }
         if (i >= 0) x[i] = w else x.add(w)
@@ -1675,6 +1676,7 @@ fun WorkCard(work: WorkDay, onDelete: () -> Unit, onEdit: () -> Unit = {}) {
                 color = MaterialTheme.colorScheme.secondary, fontSize = 17.sp)
             if (work.person.isNotBlank()) Text("با: ${work.person}", fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (work.card.isNotBlank()) Text("واریز به: " + work.card, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
             if (work.description.isNotBlank()) Text(work.description, fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
         }
@@ -1795,75 +1797,49 @@ fun AddWorkDialog(
 // ---------------- REPORTS ----------------
 
 @Composable
-fun ReportsPage(
-    strings: AppStrings,
-    transactions: List<Transaction>,
-    workDays: List<WorkDay>,
-    cards: List<BankCard>
-) {
-    val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
-    val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
-    val openingBalance = cards.sumOf { it.balance }
-    val workIncome = workDays.sumOf { it.income }
-    val currentBalance = openingBalance + income + workIncome - expense
-    val hours = workDays.sumOf { calculateHours(it.start, it.end) }
-    val categories = transactions
-        .filter { it.type == "expense" }
-        .groupBy { it.category }
-        .entries
-        .sortedByDescending { it.value.sumOf { t -> t.amount } }
+fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: List<WorkDay>, cards: List<BankCard>) {
+    var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "") }
+    val selected = cards.firstOrNull { it.name == selectedCardName }
+    val cardTransactions = transactions.filter { it.card == selectedCardName }
+    val cardWork = workDays.filter { it.card == selectedCardName }
+    val income = cardTransactions.filter { it.type == "income" }.sumOf { it.amount }
+    val expense = cardTransactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val opening = selected?.balance ?: 0L
+    val workIncome = cardWork.sumOf { it.income }
+    val current = opening + income + workIncome - expense
+    val hours = cardWork.sumOf { calculateHours(it.start, it.end) }
 
-    LazyColumn(
-        Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 28.dp)
-    ) {
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 28.dp)) {
         item {
-            Column {
-                Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "خلاصه وضعیت مالی همه کارت‌ها و حساب‌ها",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        item { InfoCard("موجودی فعلی", money(currentBalance), Icons.Default.AccountBalance) }
-        item { InfoCard(strings.income, money(income), Icons.Default.TrendingUp) }
-        item { InfoCard(strings.expense, money(expense), Icons.Default.TrendingDown) }
-        item { InfoCard("موجودی اولیه کارت‌ها", money(openingBalance), Icons.Default.CreditCard) }
-        item { InfoCard("درآمد کاری", money(workIncome), Icons.Default.Work) }
-        item {
-            InfoCard(strings.hours, String.format(Locale.US, "%.1f ساعت", hours), Icons.Default.AccessTime)
+            Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+            Text("هر کارت را جداگانه بررسی کنید؛ گزارش‌ها شلوغ نمی‌شوند.",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
-            Text("دسته‌بندی هزینه‌ها", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-        if (categories.isEmpty()) {
-            item { EmptyState("هنوز هزینه‌ای ثبت نشده", Icons.Default.ReceiptLong) }
-        } else {
-            items(categories) { entry ->
-                Card(
-                    Modifier.fillMaxWidth().vsoftGlass(),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            Modifier.size(42.dp).clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = .12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.PieChart, null, tint = MaterialTheme.colorScheme.tertiary)
+            Card(Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.padding(14.dp)) {
+                    Text("انتخاب کارت", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(cards, key = { it.id }) { card ->
+                            FilterChip(card.name == selectedCardName, { selectedCardName = card.name },
+                                label = { Text(card.name) }, leadingIcon = { Icon(Icons.Default.CreditCard, null, Modifier.size(16.dp)) })
                         }
-                        Spacer(Modifier.width(12.dp))
-                        Text(entry.key.ifBlank { "بدون دسته‌بندی" }, Modifier.weight(1f))
-                        Text(money(entry.value.sumOf { it.amount }), fontWeight = FontWeight.Bold)
                     }
                 }
             }
+        }
+        if (selected == null) {
+            item { EmptyState("هنوز کارت بانکی ثبت نشده", Icons.Default.CreditCard) }
+        } else {
+            item { InfoCard("موجودی فعلی کارت", money(current), Icons.Default.AccountBalance) }
+            item { InfoCard("درآمد کارت", money(income), Icons.Default.TrendingUp) }
+            item { InfoCard("هزینه کارت", money(expense), Icons.Default.TrendingDown) }
+            item { InfoCard("موجودی اولیه", money(opening), Icons.Default.CreditCard) }
+            item { InfoCard("درآمد کاری واریزشده", money(workIncome), Icons.Default.Work) }
+            item { InfoCard("ساعات کاری مرتبط", String.format(Locale.US, "%.1f ساعت", hours), Icons.Default.AccessTime) }
         }
     }
 }
