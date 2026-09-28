@@ -1766,32 +1766,27 @@ fun SettingsPage(
 // ---------------- SETTINGS COMPONENTS ----------------
 
 @Composable
-fun SettingsSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-
-    Card(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-
-        Column(
-            Modifier.padding(16.dp),
-            content = {
-                Text(
-                    title,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                content()
+fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Column(Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(34.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(19.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
-        )
+            Spacer(Modifier.height(10.dp))
+            content()
+        }
     }
 }
+
 
 @Composable
 fun LanguageOption(
@@ -1850,38 +1845,54 @@ fun CardItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    var reveal by remember { mutableStateOf(false) }
+    val number = card.cardNumber.filter(Char::isDigit)
+    val displayNumber = if (number.isBlank()) "شماره کارت ثبت نشده"
+        else if (reveal) number.chunked(4).joinToString("  ")
+        else "••••  ••••  ••••  " + number.takeLast(4)
+
     Card(
-        Modifier
-            .fillMaxWidth()
-            .clickable { onEdit() },
-        shape = RoundedCornerShape(25.dp)
+        Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(48.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.CreditCard, null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(card.bank, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(card.name)
-                    if (card.cardNumber.isNotBlank()) {
-                        Text(
-                            card.cardNumber.filter(Char::isDigit).chunked(4).joinToString("  "),
-                            fontSize = 16.sp
-                        )
-                    } else if (card.last4.isNotBlank()) {
-                        Text("•••• •••• •••• " + card.last4)
-                    } else {
-                        Text("شماره کارت ثبت نشده", fontSize = 13.sp)
-                    }
-                    Spacer(Modifier.height(5.dp))
-                    Text(money(currentBalance), fontWeight = FontWeight.Bold)
-                    Text("برای ویرایش کارت ضربه بزنید", fontSize = 12.sp)
+                    Text(card.bank, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(card.name, fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = { reveal = !reveal }) {
+                    Icon(if (reveal) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        null)
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, null)
+                    Icon(Icons.Default.DeleteOutline, null)
                 }
+            }
+            Spacer(Modifier.height(18.dp))
+            Text(displayNumber, fontSize = 15.sp, letterSpacing = 1.2.sp)
+            Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Column(Modifier.weight(1f)) {
+                    Text("موجودی", fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(money(currentBalance), fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                Text("ویرایش ›", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
 }
+
 
 @Composable
 fun AddCardDialog(
