@@ -801,7 +801,7 @@ fun VsoftApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var language by remember { mutableStateOf("fa") }
+    var language by remember { mutableStateOf("en") }
     var theme by remember { mutableStateOf("system") }
     var glass by remember { mutableStateOf(false) }
     var font by remember { mutableStateOf("sans") }
@@ -834,7 +834,7 @@ fun VsoftApp() {
 
         val preferences = context.dataStore.data.first()
 
-        language = preferences[LANGUAGE_KEY] ?: "fa"
+        language = "en"
         theme = preferences[THEME_KEY] ?: "system"
         glass = false
         font = preferences[FONT_KEY] ?: "sans"
@@ -1973,8 +1973,8 @@ fun WorkPage(
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(strings.work, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(workDays.size.toString() + " روز کاری • " + String.format(Locale.US, "%.1f", totalHours) + " ساعت",
+                    
+                    Text(workDays.size.toString() + " workdays • " + String.format(Locale.US, "%.1f", totalHours) + " ساعت",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
