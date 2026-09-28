@@ -11,6 +11,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -965,6 +966,19 @@ fun AnimatedNavIcon(
     }
 }
 
+@Composable
+fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
+    val visible = remember { MutableTransitionState(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay((index * 55L).coerceAtMost(330L))
+        visible.targetState = true
+    }
+    AnimatedVisibility(
+        visibleState = visible,
+        enter = fadeIn(tween(360)) + slideInHorizontally(tween(420, easing = FastOutSlowInEasing)) { it / 14 }
+    ) { content() }
+}
+
 // ---------------- DASHBOARD ----------------
 
 @Composable
@@ -993,7 +1007,7 @@ fun DashboardPage(
                 Text("VSOFT", fontSize = 13.sp, fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary)
                 Text(strings.dashboard, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-                Text("وضعیت مالی و کاری شما در یک نگاه", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                VsoftEntrance(0) { Text("وضعیت مالی و کاری شما در یک نگاه", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
         item {
