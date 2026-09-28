@@ -1532,6 +1532,18 @@ fun DashboardPage(
     val monthWorkIncome = monthWorkDays.sumOf { it.income }
     val monthExpenses = transactions.filter { it.type == "expense" && it.date.startsWith(monthPrefix) }.sumOf { it.amount }
     val monthAverage = if (monthWorkDays.isEmpty()) 0L else monthWorkIncome / monthWorkDays.size
+    val currentMonthNet = monthWorkIncome + transactions.filter { it.type == "income" && it.date.startsWith(monthPrefix) }.sumOf { it.amount } - monthExpenses
+    val currentParts = currentJalali.split("/").mapNotNull { it.toIntOrNull() }
+    val currentYear = currentParts.getOrNull(0) ?: 1405
+    val currentMonth = currentParts.getOrNull(1) ?: 1
+    val previousYear = if (currentMonth == 1) currentYear - 1 else currentYear
+    val previousMonth = if (currentMonth == 1) 12 else currentMonth - 1
+    val previousPrefix = "%04d/%02d/".format(Locale.US, previousYear, previousMonth)
+    val previousWorkIncome = workDays.filter { it.date.startsWith(previousPrefix) }.sumOf { it.income }
+    val previousIncome = transactions.filter { it.type == "income" && it.date.startsWith(previousPrefix) }.sumOf { it.amount }
+    val previousExpenses = transactions.filter { it.type == "expense" && it.date.startsWith(previousPrefix) }.sumOf { it.amount }
+    val previousMonthNet = previousWorkIncome + previousIncome - previousExpenses
+    val netChangePercent = if (previousMonthNet != 0L) ((currentMonthNet - previousMonthNet).toDouble() / kotlin.math.abs(previousMonthNet.toDouble())) * 100.0 else null
     val animatedBalance by animateFloatAsState(balance.toFloat(), animationSpec = tween(650), label = "balance")
     val animatedIncome by animateFloatAsState((income + workIncome).toFloat(), animationSpec = tween(750), label = "income")
     val animatedExpense by animateFloatAsState(expense.toFloat(), animationSpec = tween(800), label = "expense")
@@ -1612,6 +1624,15 @@ fun DashboardPage(
             DashboardMetric(
                 if (LocalVsoftLanguage.current == "en") "Average workday income" else if (LocalVsoftLanguage.current == "ar") "متوسط دخل يوم العمل" else "میانگین درآمد هر روز کاری",
                 money(monthAverage), Icons.Default.AutoGraph, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            DashboardMetric(
+                "Profit vs last month",
+                netChangePercent?.let { "%+.1f%%".format(Locale.US, it) } ?: "—",
+                Icons.Default.ShowChart,
+                if ((netChangePercent ?: 0.0) >= 0.0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+                Modifier.fillMaxWidth()
             )
         }
         item { VsoftEntrance(4) { Text(uiText("کارت‌های بانکی"), fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
