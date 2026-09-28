@@ -240,8 +240,11 @@ class GroupedNumberVisualTransformation : VisualTransformation {
         val mapping = object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
                 val safe = offset.coerceIn(0, originalLength)
-                return (safe + commaPositions.count { it < safe + commaPositions.count { it < safe } })
-                    .coerceAtMost(transformedLength)
+                if (safe == 0) return 0
+                val commasBefore = (grouped.take(
+                    (safe + (originalLength - safe) / 3).coerceAtMost(transformedLength)
+                ).count { it == ',' })
+                return (safe + commasBefore).coerceAtMost(transformedLength)
             }
 
             override fun transformedToOriginal(offset: Int): Int {
@@ -260,23 +263,35 @@ fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): 
     if (!LocalVsoftGlass.current) return this
     return this
         .clip(shape)
+        .shadow(
+            elevation = 18.dp,
+            shape = shape,
+            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .12f),
+            spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = .10f)
+        )
         .background(
             Brush.linearGradient(
                 listOf(
-                    MaterialTheme.colorScheme.surface.copy(alpha = .72f),
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .34f),
-                    MaterialTheme.colorScheme.surface.copy(alpha = .54f)
+                    Color.White.copy(alpha = if (isSystemInDarkTheme()) .075f else .52f),
+                    MaterialTheme.colorScheme.surface.copy(alpha = if (isSystemInDarkTheme()) .56f else .70f),
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSystemInDarkTheme()) .30f else .34f),
+                    MaterialTheme.colorScheme.surface.copy(alpha = if (isSystemInDarkTheme()) .50f else .62f)
                 )
             )
         )
         .border(
-            1.dp,
-            MaterialTheme.colorScheme.onSurface.copy(alpha = .13f),
+            BorderStroke(
+                1.dp,
+                Brush.linearGradient(
+                    listOf(
+                        Color.White.copy(alpha = .30f),
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = .07f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = .14f)
+                    )
+                )
+            ),
             shape
         )
-        .shadow(12.dp, shape, ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .08f),
-            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = .10f))
-}
 
 fun money(value: Long): String {
     return NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
@@ -861,12 +876,15 @@ fun MainScreen(
         Modifier.fillMaxSize().background(
             if (glass) Brush.radialGradient(
                 colors = listOf(
-                    MaterialTheme.colorScheme.primary.copy(alpha = .18f),
-                    MaterialTheme.colorScheme.secondary.copy(alpha = .08f),
+                    MaterialTheme.colorScheme.primary.copy(alpha = .22f),
+                    MaterialTheme.colorScheme.secondary.copy(alpha = .10f),
+                    MaterialTheme.colorScheme.tertiary.copy(alpha = .045f),
                     Color.Transparent
                 ),
-                radius = 950f
-            ) else Brush.linearGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background))
+                radius = 1050f
+            ) else Brush.linearGradient(
+                listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background)
+            )
         )
     ) {
     Scaffold(
@@ -928,8 +946,31 @@ fun MainScreen(
                 modifier = if (glass) Modifier
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = .70f))
-                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = .12f), RoundedCornerShape(28.dp))
+                    .shadow(18.dp, RoundedCornerShape(28.dp),
+                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .12f),
+                        spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = .10f))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.White.copy(alpha = if (isSystemInDarkTheme()) .06f else .34f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = .66f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .42f)
+                            )
+                        )
+                    )
+                    .border(
+                        BorderStroke(
+                            1.dp,
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = .26f),
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = .08f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = .13f)
+                                )
+                            )
+                        ),
+                        RoundedCornerShape(28.dp)
+                    )
                 else Modifier,
                 containerColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.surface,
                 tonalElevation = if (glass) 0.dp else 10.dp
@@ -1150,7 +1191,8 @@ fun DashboardPage(
     val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
     val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
     val workIncome = workDays.sumOf { it.income }
-    val balance = income + workIncome - expense
+    val openingBalance = cards.sumOf { it.balance }
+    val balance = openingBalance + income + workIncome - expense
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
     val animatedBalance by animateFloatAsState(balance.toFloat(), animationSpec = tween(650), label = "balance")
     val animatedIncome by animateFloatAsState((income + workIncome).toFloat(), animationSpec = tween(750), label = "income")
@@ -2602,9 +2644,14 @@ fun JalaliDatePickerDialog(
 
 @Composable
 fun InfoCard(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+    Card(
+        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (LocalVsoftGlass.current) 0.dp else 2.dp)
+    ) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(46.dp).clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
