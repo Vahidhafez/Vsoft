@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -876,123 +877,149 @@ fun DashboardPage(
     workDays: List<WorkDay>,
     cards: List<BankCard>
 ) {
-
-    val income =
-        transactions
-            .filter { it.type == "income" }
-            .sumOf { it.amount }
-
-    val expense =
-        transactions
-            .filter { it.type == "expense" }
-            .sumOf { it.amount }
-
-    val workIncome =
-        workDays.sumOf { it.income }
-
-    val balance =
-        income + workIncome - expense
-
-    val totalHours =
-        workDays.sumOf {
-            calculateHours(it.start, it.end)
-        }
+    val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
+    val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val workIncome = workDays.sumOf { it.income }
+    val balance = income + workIncome - expense
+    val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
+    val animatedBalance by animateFloatAsState(balance.toFloat(), animationSpec = tween(650), label = "balance")
+    val animatedIncome by animateFloatAsState((income + workIncome).toFloat(), animationSpec = tween(750), label = "income")
+    val animatedExpense by animateFloatAsState(expense.toFloat(), animationSpec = tween(800), label = "expense")
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
         item {
-
-            Text(
-                "Vsoft",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                strings.dashboard,
-                fontSize = 16.sp
-            )
-        }
-
-        item {
-
-            InfoCard(
-                title = strings.balance,
-                value = money(balance),
-                icon = Icons.Default.AccountBalance
-            )
-        }
-
-        item {
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-
-                SmallInfoCard(
-                    modifier = Modifier.weight(1f),
-                    title = strings.income,
-                    value = money(income + workIncome),
-                    icon = Icons.Default.TrendingUp
-                )
-
-                SmallInfoCard(
-                    modifier = Modifier.weight(1f),
-                    title = strings.expense,
-                    value = money(expense),
-                    icon = Icons.Default.TrendingDown
-                )
+            Column {
+                Text("VSOFT", fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary)
+                Text(strings.dashboard, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                Text("وضعیت مالی و کاری شما در یک نگاه", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-
         item {
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-
-                SmallInfoCard(
-                    modifier = Modifier.weight(1f),
-                    title = strings.hours,
-                    value = String.format(
-                        Locale.US,
-                        "%.1f ساعت",
-                        totalHours
-                    ),
-                    icon = Icons.Default.AccessTime
-                )
-
-                SmallInfoCard(
-                    modifier = Modifier.weight(1f),
-                    title = strings.cards,
-                    value = cards.size.toString(),
-                    icon = Icons.Default.CreditCard
-                )
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)) {
+                Column(Modifier.padding(22.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(44.dp).clip(CircleShape)
+                            .background(Color.White.copy(alpha = .16f)),
+                            contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.AccountBalanceWallet, null, tint = Color.White)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text("موجودی کل", color = Color.White.copy(alpha = .82f), fontSize = 14.sp)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(money(animatedBalance.toLong()), color = Color.White,
+                        fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.height(14.dp))
+                    LinearProgressIndicator(
+                        progress = { 1f },
+                        Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(5.dp)),
+                        color = Color.White.copy(alpha = .72f),
+                        trackColor = Color.White.copy(alpha = .16f)
+                    )
+                }
             }
         }
-
         item {
-
-            SectionTitle("آخرین تراکنش‌ها")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DashboardMetric("درآمد", money(animatedIncome.toLong()), Icons.Default.TrendingUp,
+                    MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+                DashboardMetric("هزینه", money(animatedExpense.toLong()), Icons.Default.TrendingDown,
+                    MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
+            }
         }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DashboardMetric("ساعت کاری", String.format(Locale.US, "%.1f ساعت", totalHours),
+                    Icons.Default.AccessTime, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                DashboardMetric("کارت بانکی", cards.size.toString(),
+                    Icons.Default.CreditCard, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+            }
+        }
+        item { Text("کارت‌های بانکی", fontSize = 21.sp, fontWeight = FontWeight.Bold) }
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(cards, key = { it.id }) { card ->
+                    MiniBankCard(card, cardCurrentBalance(card, transactions))
+                }
+            }
+        }
+        item { Text("آخرین تراکنش‌ها", fontSize = 21.sp, fontWeight = FontWeight.Bold) }
+        if (transactions.isEmpty()) {
+            item { EmptyState("هنوز تراکنشی ثبت نشده", Icons.Default.ReceiptLong) }
+        } else {
+            items(transactions.sortedByDescending { it.id }.take(5), key = { it.id }) { t ->
+                TransactionCard(t, onDelete = {})
+            }
+        }
+    }
+}
 
-        items(
-            transactions
-                .sortedByDescending { it.id }
-                .take(5)
-        ) {
+@Composable
+fun DashboardMetric(
+    title: String, value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color, modifier: Modifier
+) {
+    Card(modifier, shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Column(Modifier.padding(16.dp)) {
+            Box(Modifier.size(36.dp).clip(CircleShape).background(accent.copy(alpha = .12f)),
+                contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(3.dp))
+            Text(value, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
 
-            TransactionCard(
-                transaction = it,
-                onDelete = {}
-            )
+@Composable
+fun MiniBankCard(card: BankCard, balance: Long) {
+    Card(Modifier.width(235.dp), shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.padding(17.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(38.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.CreditCard, null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(card.bank, fontWeight = FontWeight.Bold)
+                    Text(card.name, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Text(if (card.cardNumber.isNotBlank())
+                "••••  ••••  ••••  " + card.cardNumber.filter(Char::isDigit).takeLast(4)
+            else "••••  ••••  ••••  ••••", letterSpacing = 1.5.sp, fontSize = 14.sp)
+            Spacer(Modifier.height(10.dp))
+            Text(money(balance), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+@Composable
+fun EmptyState(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, null, modifier = Modifier.size(42.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(10.dp))
+            Text(title, fontWeight = FontWeight.Bold)
+            Text("با دکمه + اولین مورد را اضافه کنید",
+                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
     }
 }
@@ -1000,11 +1027,73 @@ fun DashboardPage(
 // ---------------- FINANCE ----------------
 
 @Composable
-fun FinancePage(strings: AppStrings,transactions: List<Transaction>,cards: List<BankCard>,people: List<Person>,onTransactionsChange:(MutableList<Transaction>)->Unit){
- var show by remember{mutableStateOf(false)};var edit by remember{mutableStateOf<Transaction?>(null)};var search by remember{mutableStateOf("")};var filter by remember{mutableStateOf("all")}
- val list=transactions.filter{(filter=="all"||it.type==filter)&&(search.isBlank()||it.description.contains(search,true)||it.category.contains(search,true)||it.person.contains(search,true)||it.card.contains(search,true))}.sortedByDescending{it.id}
- Column(Modifier.fillMaxSize().padding(16.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text(strings.finance,fontSize=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));FloatingActionButton(onClick={edit=null;show=true}){Icon(Icons.Default.Add,null)}};Spacer(Modifier.height(8.dp));OutlinedTextField(search,{search=it},modifier=Modifier.fillMaxWidth(),singleLine=true,label={Text(strings.search)},leadingIcon={Icon(Icons.Default.Search,null)});Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){FilterChip(filter=="all",{filter="all"},{Text("همه")});FilterChip(filter=="income",{filter="income"},{Text(strings.income)});FilterChip(filter=="expense",{filter="expense"},{Text(strings.expense)})};Spacer(Modifier.height(8.dp));LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)){items(list,key={it.id}){t->TransactionCard(t,{val x=transactions.toMutableList();x.removeAll{it.id==t.id};onTransactionsChange(x)},{edit=t;show=true})}}}
- if(show)AddTransactionDialog(strings,cards,people,edit,{show=false}){t->val x=transactions.toMutableList();val i=x.indexOfFirst{it.id==t.id};if(i>=0)x[i]=t else x.add(t);onTransactionsChange(x);show=false}
+fun FinancePage(
+    strings: AppStrings,
+    transactions: List<Transaction>,
+    cards: List<BankCard>,
+    people: List<Person>,
+    onTransactionsChange: (MutableList<Transaction>) -> Unit
+) {
+    var show by remember { mutableStateOf(false) }
+    var edit by remember { mutableStateOf<Transaction?>(null) }
+    var search by remember { mutableStateOf("") }
+    var filter by remember { mutableStateOf("all") }
+    val list = transactions.filter {
+        (filter == "all" || it.type == filter) &&
+        (search.isBlank() || it.description.contains(search, true) ||
+         it.category.contains(search, true) || it.person.contains(search, true) ||
+         it.card.contains(search, true))
+    }.sortedByDescending { it.id }
+
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(strings.finance, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                Text("${transactions.size} تراکنش ثبت شده",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            }
+            FloatingActionButton(onClick = { edit = null; show = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape) { Icon(Icons.Default.Add, null) }
+        }
+        OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = 18.dp), singleLine = true, shape = RoundedCornerShape(18.dp),
+            label = { Text(strings.search) }, leadingIcon = { Icon(Icons.Default.Search, null) })
+        Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            FilterChip(filter == "all", { filter = "all" }, label = { Text("همه") })
+            FilterChip(filter == "income", { filter = "income" }, label = { Text(strings.income) })
+            FilterChip(filter == "expense", { filter = "expense" }, label = { Text(strings.expense) })
+        }
+        if (list.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
+                EmptyState("تراکنشی با این فیلتر پیدا نشد", Icons.Default.SearchOff)
+            }
+        } else {
+            LazyColumn(Modifier.fillMaxSize().padding(horizontal = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)) {
+                items(list, key = { it.id }) { t ->
+                    TransactionCard(t,
+                        onDelete = {
+                            val x = transactions.toMutableList()
+                            x.removeAll { it.id == t.id }
+                            onTransactionsChange(x)
+                        },
+                        onEdit = { edit = t; show = true })
+                }
+            }
+        }
+    }
+    if (show) AddTransactionDialog(strings, cards, people, edit, { show = false }) { t ->
+        val x = transactions.toMutableList()
+        val i = x.indexOfFirst { it.id == t.id }
+        if (i >= 0) x[i] = t else x.add(t)
+        onTransactionsChange(x)
+        show = false
+    }
 }
 
 // ---------------- TRANSACTION CARD ----------------
@@ -1015,68 +1104,40 @@ fun TransactionCard(
     onDelete: () -> Unit,
     onEdit: () -> Unit = {}
 ) {
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
-    ) {
-
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            Icon(
-                if (transaction.type == "income")
-                    Icons.Default.TrendingUp
-                else
-                    Icons.Default.TrendingDown,
-                null,
-                modifier = Modifier.size(34.dp)
-            )
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(
-                Modifier.weight(1f)
-            ) {
-
-                Text(
-                    transaction.category,
-                    fontWeight = FontWeight.Bold
-                )
-
-                if (transaction.description.isNotBlank()) {
-
-                    Text(
-                        transaction.description,
-                        fontSize = 13.sp
-                    )
-                }
-
-                Text(
-                    transaction.date,
-                    fontSize = 12.sp
-                )
+    val isIncome = transaction.type == "income"
+    val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(46.dp).clip(CircleShape)
+                .background(accent.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
+                Icon(if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                    null, tint = accent)
             }
-
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
-
-                Text(
-                    money(transaction.amount),
-                    fontWeight = FontWeight.Bold
-                )
-
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(transaction.category, fontWeight = FontWeight.Bold)
+                if (transaction.description.isNotBlank())
+                    Text(transaction.description, fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(transaction.date, fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (transaction.card.isNotBlank())
+                        Text("• ${transaction.card}", fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text((if (isIncome) "+" else "−") + money(transaction.amount),
+                    color = accent, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                 Row {
-                    IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, null)
+                    IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
                     }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, null)
+                    IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
+                        Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -1084,6 +1145,7 @@ fun TransactionCard(
     }
 }
 
+// ---------------- ADD TRANSACTION ----------------
 // ---------------- ADD TRANSACTION ----------------
 
 @Composable
