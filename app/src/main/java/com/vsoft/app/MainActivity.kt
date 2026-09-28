@@ -41,6 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.draw.clip
@@ -50,6 +54,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.edit
@@ -201,15 +206,72 @@ fun normalizeDigits(value: String): String {
         .replace(",", "").replace("٬", "").replace(" ", "")
 }
 
+fun normalizeAmountInput(value: String): String {
+    return normalizeDigits(value).filter(Char::isDigit).trimStart('0').take(18)
+}
+
 fun formatNumberInput(value: String): String {
-    val digits = normalizeDigits(value).filter(Char::isDigit).trimStart('0')
+    val digits = normalizeAmountInput(value)
     if (digits.isBlank()) return ""
-    val safeDigits = digits.take(18)
     return try {
-        NumberFormat.getNumberInstance(Locale.US).format(java.math.BigInteger(safeDigits))
+        NumberFormat.getNumberInstance(Locale.US).format(java.math.BigInteger(digits))
     } catch (_: Exception) {
-        safeDigits
+        digits
     }
+}
+
+class GroupedNumberVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val raw = text.text.filter(Char::isDigit)
+        if (raw.isEmpty()) return TransformedText(text, OffsetMapping.Identity)
+
+        val grouped = raw.reversed().chunked(3).joinToString(",").reversed()
+        val commaPositions = grouped.mapIndexedNotNull { index, ch ->
+            if (ch == ',') index else null
+        }
+
+        val originalLength = raw.length
+        val transformedLength = grouped.length
+
+        val mapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                val safe = offset.coerceIn(0, originalLength)
+                return (safe + commaPositions.count { it < safe + commaPositions.count { it < safe } })
+                    .coerceAtMost(transformedLength)
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                val safe = offset.coerceIn(0, transformedLength)
+                return grouped.take(safe).count { it != ',' }.coerceIn(0, originalLength)
+            }
+        }
+        return TransformedText(AnnotatedString(grouped), mapping)
+    }
+}
+
+val LocalVsoftGlass = compositionLocalOf { false }
+
+@Composable
+fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier {
+    if (!LocalVsoftGlass.current) return this
+    return this
+        .clip(shape)
+        .background(
+            Brush.linearGradient(
+                listOf(
+                    MaterialTheme.colorScheme.surface.copy(alpha = .72f),
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .34f),
+                    MaterialTheme.colorScheme.surface.copy(alpha = .54f)
+                )
+            )
+        )
+        .border(
+            1.dp,
+            MaterialTheme.colorScheme.onSurface.copy(alpha = .13f),
+            shape
+        )
+        .shadow(12.dp, shape, ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .08f),
+            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = .10f))
 }
 
 fun money(value: Long): String {
@@ -657,6 +719,7 @@ fun VsoftApp() {
                 extraLarge = RoundedCornerShape(32.dp)
             )
         ) {
+            CompositionLocalProvider(LocalVsoftGlass provides glass) {
 
             MainScreen(
                 strings = appStrings,
@@ -746,6 +809,7 @@ fun VsoftApp() {
                     scope.launch { context.dataStore.edit { prefs -> prefs[FONT_KEY] = it } }
                 }
             )
+            }
         }
     }
 }
@@ -789,9 +853,25 @@ fun MainScreen(
         strings.people
     )
 
+    Box(
+        Modifier.fillMaxSize().background(
+            if (glass) Brush.radialGradient(
+                colors = listOf(
+                    MaterialTheme.colorScheme.primary.copy(alpha = .18f),
+                    MaterialTheme.colorScheme.secondary.copy(alpha = .08f),
+                    Color.Transparent
+                ),
+                radius = 950f
+            ) else Brush.linearGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background))
+        )
+    ) {
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.surface.copy(alpha = .98f)
+                ),
                 title = {
                     AnimatedContent(
                         targetState = pages[selectedPage],
@@ -841,8 +921,14 @@ fun MainScreen(
         bottomBar = {
 
             NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 10.dp
+                modifier = if (glass) Modifier
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = .70f))
+                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = .12f), RoundedCornerShape(28.dp))
+                else Modifier,
+                containerColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.surface,
+                tonalElevation = if (glass) 0.dp else 10.dp
             ) {
 
                 NavigationBarItem(
@@ -1142,8 +1228,8 @@ fun DashboardMetric(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     accent: Color, modifier: Modifier
 ) {
-    Card(modifier, shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    Card(modifier.vsoftGlass(RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
         Column(Modifier.padding(16.dp)) {
@@ -1330,9 +1416,10 @@ fun AddTransactionDialog(strings:AppStrings,cards:List<BankCard>,people:List<Per
  var type by remember{mutableStateOf(existing?.type?:"expense")};var amount by remember{mutableStateOf(existing?.amount?.toString()?.let(::formatNumberInput)?:"")};var category by remember{mutableStateOf(existing?.category?:"")};var description by remember{mutableStateOf(existing?.description?:"")};var date by remember{mutableStateOf(existing?.date?:today())};var card by remember{mutableStateOf(existing?.card?:"")};var person by remember{mutableStateOf(existing?.person?:"")};var dateOpen by remember{mutableStateOf(false)};var cardOpen by remember{mutableStateOf(false)};var personOpen by remember{mutableStateOf(false)}
  AlertDialog(onDismissRequest=onDismiss,confirmButton={TextButton(onClick={val v=normalizeDigits(amount).toLongOrNull()?:0L;if(v>0&&category.isNotBlank())onSave(Transaction(existing?.id?:System.currentTimeMillis(),type,v,category,description,date,card,person))}){Text(strings.save)}},dismissButton={TextButton(onClick=onDismiss){Text(strings.cancel)}},title={Text(if(existing==null)"تراکنش جدید" else "ویرایش تراکنش")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Row{FilterChip(type=="expense",{type="expense"},{Text(strings.expense)});Spacer(Modifier.width(8.dp));FilterChip(type=="income",{type="income"},{Text(strings.income)})};OutlinedTextField(
     value = amount,
-    onValueChange = { amount = formatNumberInput(it) },
+    onValueChange = { amount = normalizeAmountInput(it) },
     label = { Text(strings.amount) },
     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    visualTransformation = GroupedNumberVisualTransformation(),
     singleLine = true,
     modifier = Modifier.fillMaxWidth()
 );OutlinedTextField(category,{category=it},label={Text(strings.category)},modifier=Modifier.fillMaxWidth());OutlinedTextField(description,{description=it},label={Text(strings.description)},modifier=Modifier.fillMaxWidth());OutlinedButton(onClick={dateOpen=true},modifier=Modifier.fillMaxWidth()){Text(strings.date+" : "+date)};Box{OutlinedButton(onClick={cardOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(card.isBlank())"انتخاب کارت" else "کارت: "+card)};DropdownMenu(cardOpen,{cardOpen=false}){DropdownMenuItem(text={Text("بدون کارت")},onClick={cardOpen=false;card=""});cards.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={cardOpen=false;card=q.name})}}};Box{OutlinedButton(onClick={personOpen=true},modifier=Modifier.fillMaxWidth()){Text(if(person.isBlank())"انتخاب شخص" else "شخص: "+person)};DropdownMenu(personOpen,{personOpen=false}){DropdownMenuItem(text={Text("بدون شخص")},onClick={personOpen=false;person=""});people.forEach{q->DropdownMenuItem(text={Text(q.name)},onClick={personOpen=false;person=q.name})}}}}})
@@ -1569,9 +1656,10 @@ fun AddWorkDialog(
 
                 OutlinedTextField(
                     value = income,
-                    onValueChange = { income = formatNumberInput(it) },
+                    onValueChange = { income = normalizeAmountInput(it) },
                     label = { Text(strings.income) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1630,50 +1718,37 @@ fun ReportsPage(
     workDays: List<WorkDay>,
     cards: List<BankCard>
 ) {
-    val availableCards = cards.map { it.name }.distinct()
-    var selectedCard by remember { mutableStateOf("") }
-    val cardTransactions = if (selectedCard.isBlank()) transactions else transactions.filter { it.card == selectedCard }
-    val income = cardTransactions.filter { it.type == "income" }.sumOf { it.amount }
-    val expense = cardTransactions.filter { it.type == "expense" }.sumOf { it.amount }
-    val workIncome = if (selectedCard.isBlank()) workDays.sumOf { it.income } else 0L
+    val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
+    val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val openingBalance = cards.sumOf { it.balance }
+    val workIncome = workDays.sumOf { it.income }
+    val currentBalance = openingBalance + income + workIncome - expense
     val hours = workDays.sumOf { calculateHours(it.start, it.end) }
+    val categories = transactions
+        .filter { it.type == "expense" }
+        .groupBy { it.category }
+        .entries
+        .sortedByDescending { it.value.sumOf { t -> t.amount } }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 28.dp)
     ) {
         item {
-            Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { FilterChip(selectedCard.isBlank(), { selectedCard = "" }, label = { Text("همه کارت‌ها") }) }
-                items(availableCards) { cardName ->
-                    FilterChip(selectedCard == cardName, { selectedCard = cardName }, label = { Text(cardName) })
-                }
+            Column {
+                Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "خلاصه وضعیت مالی همه کارت‌ها و حساب‌ها",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
-        items(cards, key = { it.id }) { card ->
-            val ct = transactions.filter { it.card == card.name }
-            val ci = ct.filter { it.type == "income" }.sumOf { it.amount }
-            val ce = ct.filter { it.type == "expense" }.sumOf { it.amount }
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CreditCard, null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(10.dp))
-                        Text(card.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                        Text(money(cardCurrentBalance(card, transactions)), fontWeight = FontWeight.ExtraBold)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text("درآمد ${money(ci)}  •  هزینه ${money(ce)}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                }
-            }
-        }
-        item { InfoCard(strings.income, money(income + workIncome), Icons.Default.TrendingUp) }
+        item { InfoCard("موجودی فعلی", money(currentBalance), Icons.Default.AccountBalance) }
+        item { InfoCard(strings.income, money(income), Icons.Default.TrendingUp) }
         item { InfoCard(strings.expense, money(expense), Icons.Default.TrendingDown) }
-        item { InfoCard(strings.balance, money(income + workIncome - expense), Icons.Default.AccountBalance) }
+        item { InfoCard("موجودی اولیه کارت‌ها", money(openingBalance), Icons.Default.CreditCard) }
         item { InfoCard("درآمد کاری", money(workIncome), Icons.Default.Work) }
         item {
             InfoCard(strings.hours, String.format(Locale.US, "%.1f ساعت", hours), Icons.Default.AccessTime)
@@ -1681,12 +1756,29 @@ fun ReportsPage(
         item {
             Text("دسته‌بندی هزینه‌ها", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
-        val categories = cardTransactions.filter { it.type == "expense" }.groupBy { it.category }
-        items(categories.entries.toList()) { entry ->
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-                Row(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(entry.key, Modifier.weight(1f))
-                    Text(money(entry.value.sumOf { it.amount }), fontWeight = FontWeight.Bold)
+        if (categories.isEmpty()) {
+            item { EmptyState("هنوز هزینه‌ای ثبت نشده", Icons.Default.ReceiptLong) }
+        } else {
+            items(categories) { entry ->
+                Card(
+                    Modifier.fillMaxWidth().vsoftGlass(),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(42.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = .12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.PieChart, null, tint = MaterialTheme.colorScheme.tertiary)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(entry.key.ifBlank { "بدون دسته‌بندی" }, Modifier.weight(1f))
+                        Text(money(entry.value.sumOf { it.amount }), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -1851,8 +1943,8 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
 
 @Composable
 fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    Card(Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1926,11 +2018,11 @@ fun ThemeOption(
 fun bankCardColors(bank: String): Pair<Color, Color> {
     val name = bank.trim().lowercase()
     return when {
-        "ملی" in name -> Color(0xFF1769AA) to Color(0xFF4FC3F7)
-        "مسکن" in name -> Color(0xFF00695C) to Color(0xFF26A69A)
-        "بلو" in name -> Color(0xFF1565C0) to Color(0xFF42A5F5)
-        "رد" in name -> Color(0xFF7B1FA2) to Color(0xFFCE93D8)
-        "مهر" in name -> Color(0xFFE65100) to Color(0xFFFFB74D)
+        "ملی" in name -> Color(0xFF0D47A1) to Color(0xFF42A5F5)
+        "مسکن" in name -> Color(0xFF00695C) to Color(0xFF80CBC4)
+        "بلو" in name -> Color(0xFF0D47A1) to Color(0xFF00B8D4)
+        "رد" in name -> Color(0xFF6A1B9A) to Color(0xFFFF4081)
+        "مهر" in name -> Color(0xFFEF6C00) to Color(0xFFFFCA28)
         else -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.secondary
     }
 }
@@ -1961,8 +2053,12 @@ fun CardItem(
             .clickable { onEdit() }
             .animateContentSize(),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+        ),
+        border = if (LocalVsoftGlass.current)
+            BorderStroke(1.dp, Color.White.copy(alpha = .20f)) else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = if (LocalVsoftGlass.current) 10.dp else 6.dp)
     ) {
         Box(
             Modifier
@@ -1970,8 +2066,9 @@ fun CardItem(
                 .background(
                     Brush.linearGradient(
                         listOf(
-                            startColor.copy(alpha = if (!isSystemInDarkTheme()) .94f else .72f),
-                            endColor.copy(alpha = if (!isSystemInDarkTheme()) .76f else .52f)
+                            startColor.copy(alpha = if (LocalVsoftGlass.current) .62f else if (!isSystemInDarkTheme()) .94f else .72f),
+                            Color.White.copy(alpha = if (LocalVsoftGlass.current) .10f else .03f),
+                            endColor.copy(alpha = if (LocalVsoftGlass.current) .46f else if (!isSystemInDarkTheme()) .76f else .52f)
                         )
                     )
                 )
@@ -2097,22 +2194,29 @@ fun AddCardDialog(
             }) { Text("ذخیره") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
-        title = { Text("کارت بانکی جدید") },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
+        title = { Text("کارت بانکی جدید", fontWeight = FontWeight.ExtraBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(bank, { bank = it }, label = { Text("بانک") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(name, { name = it }, label = { Text("نام کارت") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(bank, { bank = it }, label = { Text("نام بانک") }, leadingIcon = { Icon(Icons.Default.AccountBalance, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, label = { Text("عنوان کارت") }, leadingIcon = { Icon(Icons.Default.CreditCard, null) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(
                     cardNumber,
                     { cardNumber = normalizeDigits(it).filter(Char::isDigit).take(16) },
                     label = { Text("شماره کامل کارت") },
+                    leadingIcon = { Icon(Icons.Default.CreditCard, null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    supportingText = { Text("۱۶ رقم") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = balance,
-                    onValueChange = { balance = formatNumberInput(it) },
+                    onValueChange = { balance = normalizeAmountInput(it) },
                     label = { Text("موجودی اولیه") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -2130,7 +2234,7 @@ fun EditCardDialog(
     var bank by remember { mutableStateOf(card.bank) }
     var name by remember { mutableStateOf(card.name) }
     var cardNumber by remember { mutableStateOf(card.cardNumber) }
-    var balance by remember { mutableStateOf(formatNumberInput(card.balance.toString())) }
+    var balance by remember { mutableStateOf(card.balance.toString()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2149,7 +2253,9 @@ fun EditCardDialog(
             }) { Text("ذخیره") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
-        title = { Text("ویرایش کارت") },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
+        title = { Text("ویرایش کارت", fontWeight = FontWeight.ExtraBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(bank, { bank = it }, label = { Text("بانک") }, modifier = Modifier.fillMaxWidth())
@@ -2162,8 +2268,10 @@ fun EditCardDialog(
                 )
                 OutlinedTextField(
                     balance,
-                    { balance = formatNumberInput(it) },
+                    { balance = normalizeAmountInput(it) },
                     label = { Text("موجودی اولیه") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -2187,12 +2295,17 @@ fun AddWorkplaceDialog(
             }) { Text("ذخیره") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("لغو") } },
-        title = { Text("محل کار جدید") },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
+        title = { Text("محل کار جدید", fontWeight = FontWeight.ExtraBold) },
         text = {
             OutlinedTextField(
-                name,
-                { name = it },
+                value = name,
+                onValueChange = { name = it },
                 label = { Text("نام محل کار") },
+                leadingIcon = { Icon(Icons.Default.Place, null) },
+                placeholder = { Text("مثلاً پروژه، شرکت یا کارگاه") },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -2210,8 +2323,13 @@ fun PersonItem(
     Card(
         Modifier
             .fillMaxWidth()
+            .vsoftGlass(RoundedCornerShape(22.dp))
             .animateContentSize(),
-        shape = RoundedCornerShape(22.dp)
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
     ) {
 
         Row(
@@ -2219,11 +2337,18 @@ fun PersonItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            Icon(
-                Icons.Default.Person,
-                null,
-                modifier = Modifier.size(35.dp)
-            )
+            Box(
+                Modifier.size(48.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Person,
+                    null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
 
             Spacer(Modifier.width(12.dp))
 
@@ -2306,8 +2431,10 @@ fun AddPersonDialog(
             }
         },
 
+        shape = RoundedCornerShape(28.dp),
+        containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
         title = {
-            Text("شخص جدید")
+            Text("شخص جدید", fontWeight = FontWeight.ExtraBold)
         },
 
         text = {
@@ -2317,31 +2444,40 @@ fun AddPersonDialog(
             ) {
 
                 OutlinedTextField(
-                    name,
-                    { name = it },
-                    label = {
-                        Text("نام")
-                    }
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("نام و نام خانوادگی") },
+                    leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 OutlinedTextField(
-                    phone,
-                    { phone = it },
-                    label = {
-                        Text("شماره تماس")
-                    }
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("شماره تماس") },
+                    leadingIcon = { Icon(Icons.Default.Phone, null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 OutlinedTextField(
-                    job,
-                    { job = it },
-                    label = { Text("شغل / نقش") }
+                    value = job,
+                    onValueChange = { job = it },
+                    label = { Text("شغل / نقش") },
+                    leadingIcon = { Icon(Icons.Default.Badge, null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 OutlinedTextField(
-                    note,
-                    { note = it },
-                    label = { Text("توضیحات") }
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("یادداشت") },
+                    leadingIcon = { Icon(Icons.Default.Notes, null) },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
