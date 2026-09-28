@@ -604,11 +604,6 @@ fun VsoftApp() {
 
         MaterialTheme(
             colorScheme = colors,
-            typography = Typography(
-                headlineLarge = LocalTextStyle.current.toTextStyle().copy(fontWeight = FontWeight.Bold),
-                titleLarge = LocalTextStyle.current.toTextStyle().copy(fontWeight = FontWeight.Bold),
-                bodyLarge = LocalTextStyle.current.toTextStyle()
-            ),
             shapes = Shapes(
                 extraSmall = RoundedCornerShape(10.dp),
                 small = RoundedCornerShape(14.dp),
