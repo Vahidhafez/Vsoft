@@ -1419,7 +1419,7 @@ fun FinancePage(
             }
         }
         }
-        FloatingActionButton(Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(),
+        FloatingActionButton(modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(),
             onClick = { edit = null; show = true }, containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, "افزودن") }
     }
@@ -1900,29 +1900,25 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, onCardsCha
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<BankCard?>(null) }
     Box(Modifier.fillMaxSize()) {
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 100.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+        LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 100.dp)) {
+            item {
+                Column {
                     Text("کارت‌های بانکی", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("${cards.size} کارت", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(cards.size.toString() + " کارت", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
-
+            }
+            items(cards, key = { it.id }) { card ->
+                CardItem(card, cardCurrentBalance(card, transactions),
+                    onEdit = { editing = card },
+                    onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
             }
         }
-        items(cards, key = { it.id }) { card ->
-            CardItem(card, cardCurrentBalance(card, transactions),
-                onEdit = { editing = card },
-                onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
-        }
+        FloatingActionButton(
+            modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
+            onClick = { show = true }, shape = RoundedCornerShape(18.dp)
+        ) { Icon(Icons.Default.Add, "افزودن کارت") }
     }
-    }
-    FloatingActionButton(
-        modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
-        onClick = { show = true }, shape = RoundedCornerShape(18.dp)
-    ) { Icon(Icons.Default.Add, "افزودن") }
-
     if (show) AddCardDialog(onDismiss = { show = false }, onSave = { newCard ->
         onCardsChange(cards.toMutableList().also { it.add(newCard) }); show = false
     })
@@ -1933,90 +1929,71 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, onCardsCha
     })
 }
 
-
-
 @Composable
 fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList<Workplace>) -> Unit) {
     var show by remember { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 100.dp)) {
+            item {
+                Column {
                     Text("محل‌های کار", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("${workplaces.size} محل", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(workplaces.size.toString() + " محل", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-
             }
-        }
-        itemsIndexed(workplaces, key = { _, it -> it.id }) { index, workplace ->
-            VsoftEntrance(index.coerceAtMost(7)) {
-                Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp)) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(46.dp).clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
-                            contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary)
+            itemsIndexed(workplaces, key = { _, it -> it.id }) { index, workplace ->
+                VsoftEntrance(index.coerceAtMost(7)) {
+                    Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp)) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(46.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                            IconButton(onClick = {
+                                onWorkplacesChange(workplaces.toMutableList().also { list -> list.removeAll { w -> w.id == workplace.id } })
+                            }) { Icon(Icons.Default.DeleteOutline, null) }
                         }
-                        Spacer(Modifier.width(12.dp))
-                        Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                        IconButton(onClick = {
-                            onWorkplacesChange(workplaces.toMutableList().also { list ->
-                                list.removeAll { w -> w.id == workplace.id }
-                            })
-                        }) { Icon(Icons.Default.DeleteOutline, null) }
                     }
                 }
             }
         }
+        FloatingActionButton(modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
+            onClick = { show = true }, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, "افزودن محل کار") }
     }
-    }
-    FloatingActionButton(
-        modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
-        onClick = { show = true }, shape = RoundedCornerShape(18.dp)
-    ) { Icon(Icons.Default.Add, "افزودن") }
-
     if (show) AddWorkplaceDialog(onDismiss = { show = false }, onSave = { newPlace ->
         onWorkplacesChange(workplaces.toMutableList().also { it.add(newPlace) }); show = false
     })
 }
 
-
-
 @Composable
 fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Unit) {
     var show by remember { mutableStateOf(false) }
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 100.dp)) {
+            item {
+                Column {
                     Text("افراد", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("${people.size} نفر", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(people.size.toString() + " نفر", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-
             }
-        }
-        itemsIndexed(people, key = { _, it -> it.id }) { index, person ->
-            VsoftEntrance(index.coerceAtMost(7)) {
-                PersonItem(person) {
-                    onPeopleChange(people.toMutableList().also { list ->
-                        list.removeAll { p -> p.id == person.id }
-                    })
+            itemsIndexed(people, key = { _, it -> it.id }) { index, person ->
+                VsoftEntrance(index.coerceAtMost(7)) {
+                    PersonItem(person) {
+                        onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
+                    }
                 }
             }
         }
+        FloatingActionButton(modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
+            onClick = { show = true }, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, "افزودن شخص") }
     }
-    }
-    FloatingActionButton(
-        modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
-        onClick = { show = true }, shape = RoundedCornerShape(18.dp)
-    ) { Icon(Icons.Default.Add, "افزودن") }
-
     if (show) AddPersonDialog(onDismiss = { show = false }, onSave = { newPerson ->
         onPeopleChange(people.toMutableList().also { it.add(newPerson) }); show = false
     })
 }
-
-
 
 // ---------------- SETTINGS COMPONENTS ----------------
 
