@@ -62,7 +62,7 @@ import org.json.JSONObject
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
+import java.util.Locale\nimport java.math.BigInteger
 
 private val android.content.Context.dataStore by preferencesDataStore("vsoft_data")
 
@@ -202,9 +202,14 @@ fun normalizeDigits(value: String): String {
 }
 
 fun formatNumberInput(value: String): String {
-    val digits = normalizeDigits(value).filter(Char::isDigit)
+    val digits = normalizeDigits(value).filter(Char::isDigit).trimStart('0')
     if (digits.isBlank()) return ""
-    return NumberFormat.getNumberInstance(Locale.US).format(digits.toLongOrNull() ?: 0L)
+    val safeDigits = digits.take(18)
+    return try {
+        NumberFormat.getNumberInstance(Locale.US).format(java.math.BigInteger(safeDigits))
+    } catch (_: Exception) {
+        safeDigits
+    }
 }
 
 fun money(value: Long): String {
