@@ -1553,6 +1553,12 @@ fun DashboardPage(
     val openingBalance = cards.sumOf { it.balance }
     val balance = openingBalance + income + workIncome - expense
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
+    val currentJalali = today()
+    val monthPrefix = currentJalali.substringBeforeLast("/") + "/"
+    val monthWorkDays = workDays.filter { it.date.startsWith(monthPrefix) }
+    val monthWorkIncome = monthWorkDays.sumOf { it.income }
+    val monthExpenses = transactions.filter { it.type == "expense" && it.date.startsWith(monthPrefix) }.sumOf { it.amount }
+    val monthAverage = if (monthWorkDays.isEmpty()) 0L else monthWorkIncome / monthWorkDays.size
     val animatedBalance by animateFloatAsState(balance.toFloat(), animationSpec = tween(650), label = "balance")
     val animatedIncome by animateFloatAsState((income + workIncome).toFloat(), animationSpec = tween(750), label = "income")
     val animatedExpense by animateFloatAsState(expense.toFloat(), animationSpec = tween(800), label = "expense")
@@ -1612,6 +1618,28 @@ fun DashboardPage(
                 DashboardMetric("کارت بانکی", cards.size.toString(),
                     Icons.Default.CreditCard, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
             }
+        }
+        item {
+            Text(if (LocalVsoftLanguage.current == "en") "This month" else if (LocalVsoftLanguage.current == "ar") "هذا الشهر" else "این ماه",
+                fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DashboardMetric(
+                    if (LocalVsoftLanguage.current == "en") "Work income" else if (LocalVsoftLanguage.current == "ar") "دخل العمل" else "درآمد کاری",
+                    money(monthWorkIncome), Icons.Default.Work, MaterialTheme.colorScheme.secondary, Modifier.weight(1f)
+                )
+                DashboardMetric(
+                    if (LocalVsoftLanguage.current == "en") "Expenses" else if (LocalVsoftLanguage.current == "ar") "المصروفات" else "هزینه‌ها",
+                    money(monthExpenses), Icons.Default.TrendingDown, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)
+                )
+            }
+        }
+        item {
+            DashboardMetric(
+                if (LocalVsoftLanguage.current == "en") "Average workday income" else if (LocalVsoftLanguage.current == "ar") "متوسط دخل يوم العمل" else "میانگین درآمد هر روز کاری",
+                money(monthAverage), Icons.Default.AutoGraph, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth()
+            )
         }
         item { VsoftEntrance(4) { Text(uiText("کارت‌های بانکی"), fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
         item {
