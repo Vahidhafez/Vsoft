@@ -1146,7 +1146,9 @@ fun MainScreen(
     onLanguageChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
     onGlassChange: (Boolean) -> Unit,
-    onFontChange: (String) -> Unit
+    onFontChange: (String) -> Unit,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit
 ) {
 
     var selectedPage by remember { mutableStateOf(0) }
@@ -1359,8 +1361,8 @@ fun MainScreen(
                     onLanguageChange, onThemeChange,
                     glass, onGlassChange,
                     font, onFontChange,
-                    onBackup = { backupLauncher.launch("Vsoft-Backup.json") },
-                    onRestore = { restoreLauncher.launch(arrayOf("application/json", "text/plain")) }
+                    onBackup = onBackup,
+                    onRestore = onRestore
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
