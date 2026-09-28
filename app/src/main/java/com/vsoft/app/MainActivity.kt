@@ -4,11 +4,24 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +34,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -567,17 +582,39 @@ fun VsoftApp() {
         LocalLayoutDirection provides layoutDirection
     ) {
 
-        MaterialTheme(
-            colorScheme =
-                if (darkTheme)
-                    darkColorScheme()
-                else
-                    lightColorScheme(),
+        val colors = if (darkTheme) {
+            darkColorScheme(
+                primary = Color(0xFF8AB4F8),
+                secondary = Color(0xFF9AD9C6),
+                tertiary = Color(0xFFFFB86B),
+                background = Color(0xFF0B0F14),
+                surface = Color(0xFF121820),
+                surfaceVariant = Color(0xFF1B2530)
+            )
+        } else {
+            lightColorScheme(
+                primary = Color(0xFF315EFB),
+                secondary = Color(0xFF168A72),
+                tertiary = Color(0xFFE28A2B),
+                background = Color(0xFFF6F8FC),
+                surface = Color(0xFFFFFFFF),
+                surfaceVariant = Color(0xFFEEF2F8)
+            )
+        }
 
+        MaterialTheme(
+            colorScheme = colors,
+            typography = Typography(
+                headlineLarge = LocalTextStyle.current.toTextStyle().copy(fontWeight = FontWeight.Bold),
+                titleLarge = LocalTextStyle.current.toTextStyle().copy(fontWeight = FontWeight.Bold),
+                bodyLarge = LocalTextStyle.current.toTextStyle()
+            ),
             shapes = Shapes(
-                small = RoundedCornerShape(18.dp),
-                medium = RoundedCornerShape(24.dp),
-                large = RoundedCornerShape(30.dp)
+                extraSmall = RoundedCornerShape(10.dp),
+                small = RoundedCornerShape(14.dp),
+                medium = RoundedCornerShape(20.dp),
+                large = RoundedCornerShape(28.dp),
+                extraLarge = RoundedCornerShape(32.dp)
             )
         ) {
 
@@ -713,7 +750,10 @@ fun MainScreen(
         },
         bottomBar = {
 
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 10.dp
+            ) {
 
                 NavigationBarItem(
                     selected = selectedPage == 0,
@@ -766,7 +806,15 @@ fun MainScreen(
         AnimatedContent(
             targetState = selectedPage,
             transitionSpec = {
-                fadeIn() togetherWith fadeOut()
+                val direction = if (targetState > initialState) 1 else -1
+                (slideInHorizontally(
+                    animationSpec = tween(280, easing = FastOutSlowInEasing),
+                    initialOffsetX = { direction * it / 5 }
+                ) + fadeIn(tween(220))) togetherWith
+                (slideOutHorizontally(
+                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                    targetOffsetX = { -direction * it / 8 }
+                ) + fadeOut(tween(160)))
             },
             modifier = Modifier
                 .padding(padding)
