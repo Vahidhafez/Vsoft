@@ -241,10 +241,12 @@ class GroupedNumberVisualTransformation : VisualTransformation {
             override fun originalToTransformed(offset: Int): Int {
                 val safe = offset.coerceIn(0, originalLength)
                 if (safe == 0) return 0
-                val commasBefore = (grouped.take(
-                    (safe + (originalLength - safe) / 3).coerceAtMost(transformedLength)
-                ).count { it == ',' })
-                return (safe + commasBefore).coerceAtMost(transformedLength)
+                var digitsSeen = 0
+                grouped.forEachIndexed { index, ch ->
+                    if (ch != ',') digitsSeen++
+                    if (digitsSeen == safe) return index + 1
+                }
+                return transformedLength
             }
 
             override fun transformedToOriginal(offset: Int): Int {
