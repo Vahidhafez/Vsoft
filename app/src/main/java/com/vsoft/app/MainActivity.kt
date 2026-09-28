@@ -1952,6 +1952,7 @@ fun ThemeOption(
 
 // ---------------- CARDS ----------------
 
+@Composable
 fun bankCardColors(bank: String): Pair<Color, Color> {
     val name = bank.trim().lowercase()
     return when {
