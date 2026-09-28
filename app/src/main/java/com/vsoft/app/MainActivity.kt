@@ -21,6 +21,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -761,7 +763,7 @@ fun MainScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { selectedPage = 4 }) {
+                    IconButton(modifier = Modifier.pressScale(0.92f), onClick = { selectedPage = 4 }) {
                         Box(
                             Modifier
                                 .size(40.dp)
@@ -894,6 +896,30 @@ fun MainScreen(
             }
         }
     }
+}
+
+
+@Composable
+fun Modifier.pressScale(
+    pressedScale: Float = 0.96f
+): Modifier {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) pressedScale else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+        label = "press_scale"
+    )
+    return this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = {}
+        )
 }
 
 @Composable
@@ -1125,7 +1151,7 @@ fun FinancePage(
                 Text("${transactions.size} تراکنش ثبت شده",
                     color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
-            FloatingActionButton(onClick = { edit = null; show = true },
+            FloatingActionButton(modifier = Modifier.pressScale(), onClick = { edit = null; show = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape) { Icon(Icons.Default.Add, null) }
