@@ -140,7 +140,17 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
     val incomeAt = INCOME_WORDS.map { lower.indexOf(it) }.filter { it >= 0 }.minOrNull()
     val expenseAt = EXPENSE_WORDS.map { lower.indexOf(it) }.filter { it >= 0 }.minOrNull()
     if (incomeAt == null && expenseAt == null) return null
+
+    // در پیام‌های انتقال، ممکن است واژه «انتقال» قبل از «واریز» بیاید.
+    // اگر پیام صراحتاً واریز/دریافت را اعلام کند، آن را ورودی در نظر می‌گیریم.
+    val explicitIncome = listOf("واریز", "دریافت", "افزایش موجودی", "deposit", "credit")
+        .any { lower.contains(it) }
+    val explicitExpense = listOf("برداشت", "خرید", "پرداخت", "کارمزد", "کسر", "withdraw", "purchase", "debit")
+        .any { lower.contains(it) }
+
     val type = when {
+        explicitIncome && !explicitExpense -> "income"
+        explicitExpense && !explicitIncome -> "expense"
         incomeAt == null -> "expense"
         expenseAt == null -> "income"
         incomeAt < expenseAt -> "income"
