@@ -32,6 +32,7 @@ data class PendingSms(
 private const val NUM = """(?<![*xX•\d,])(\d[\d,]*)(?![\d*•/:])"""
 
 private val PERSONAL_MOBILE = Regex("""^(\+98|0098|0)9\d{9}$""")
+private val BANK_SMS_SENDERS = setOf("09999987641", "+989999987641", "00989999987641")
 private val BALANCE_RE = Regex(
     """(?:مانده(?:\s+(?:حساب|کارت|حساب\s+شما))?|موجودی(?:\s+(?:حساب|کارت|حساب\s+شما))?|مانده\s+فعلی|موجودی\s+فعلی|available\s+balance|current\s+balance|balance)[^\d\n]{0,35}?$NUM""",
     RegexOption.IGNORE_CASE
@@ -131,7 +132,13 @@ private fun sha(s: String): String =
 
 fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
     val cleanSender = sender.replace(Regex("""[\s-]"""), "")
-    if (PERSONAL_MOBILE.matches(cleanSender)) return null
+    // بلوبانک از یک شماره موبایلی پیامک می‌فرستد؛ بنابراین شماره آن نباید
+    // به‌عنوان شماره شخصی و غیر بانکی فیلتر شود.
+    val normalizedSender = cleanSender
+        .replaceFirst(Regex("^\\+98"), "0")
+        .replaceFirst(Regex("^0098"), "0")
+    if (PERSONAL_MOBILE.matches(cleanSender) &&
+        normalizedSender !in BANK_SMS_SENDERS) return null
 
     val text = smsNormalize(rawBody)
     val lower = text.lowercase(Locale.ROOT)
