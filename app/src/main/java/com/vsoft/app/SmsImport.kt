@@ -22,7 +22,8 @@ data class PendingSms(
     val amountRial: Long,
     val balanceRial: Long,
     val last4: String,
-    val time: Long
+    val time: Long,
+    val bank: String = ""
 )
 
 private const val NUM = """(?<![*xX•\d,])(\d[\d,]*)(?![\d*•/:])"""
@@ -47,6 +48,13 @@ private val INCOME_WORDS = listOf("واریز", "دریافت", "افزایش م
 private val EXPENSE_WORDS = listOf(
     "برداشت", "خرید", "پرداخت", "کارمزد", "انتقال", "کسر", "قبض",
     "withdraw", "purchase", "debit"
+)
+
+val VSOFT_BANKS = listOf(
+    "بانک ملی", "بانک مسکن", "بلو بانک", "رد بانک", "بانک مهر",
+    "بانک صادرات", "بانک ملت", "بانک تجارت", "بانک سامان",
+    "بانک پاسارگاد", "بانک رفاه", "بانک کشاورزی", "بانک پارسیان",
+    "بانک اقتصاد نوین", "بانک دی", "بانک شهر"
 )
 
 fun smsNormalize(s: String): String {
@@ -150,6 +158,7 @@ private fun writePending(list: List<PendingSms>): String {
                 put("balanceRial", it.balanceRial)
                 put("last4", it.last4)
                 put("time", it.time)
+                put("bank", it.bank)
             }
         )
     }
@@ -172,7 +181,8 @@ private fun readPending(value: String?): List<PendingSms> {
                     amountRial = o.getLong("amountRial"),
                     balanceRial = o.optLong("balanceRial", -1L),
                     last4 = o.optString("last4", ""),
-                    time = o.optLong("time", 0L)
+                    time = o.optLong("time", 0L),
+                    bank = o.optString("bank", "")
                 )
             )
         }
@@ -181,7 +191,19 @@ private fun readPending(value: String?): List<PendingSms> {
     return out
 }
 
-private fun readStrings(value: String?): MutableList<String> {
+private fun readBankMap(value: String?): MutableMap<String, String> {
+    val out = mutableMapOf<String, String>()
+    try {
+        val obj = JSONObject(value ?: "{}")
+        obj.keys().forEach { key -> out[key] = obj.optString(key, "") }
+    } catch (_: Exception) {}
+    return out
+}
+
+private fun writeBankMap(map: Map<String, String>): String =
+    JSONObject().apply { map.forEach { (k, v) -> put(k, v) } }.toString()
+
+$rsm
     val out = mutableListOf<String>()
     try {
         val arr = JSONArray(value ?: "[]")
@@ -201,19 +223,24 @@ object SmsStore {
     private const val PREFS = "vsoft_sms"
     private const val PENDING = "pending"
     private const val SEEN = "seen"
+    private const val BANK_MAP = "bank_map"
 
     private fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+    private fun mappedBank(context: Context, sender: String): String =
+        readBankMap(prefs(context).getString(BANK_MAP, "{}"))[sender.trim()] ?: ""
+
     @Synchronized
     fun addIfBank(context: Context, sender: String, body: String, time: Long): Boolean {
         val parsed = parseBankSms(sender, body, time) ?: return false
+        val withBank = parsed.copy(bank = mappedBank(context, sender))
         val p = prefs(context)
         val seen = readStrings(p.getString(SEEN, "[]"))
-        if (seen.contains(parsed.hash)) return false
+        if (seen.contains(withBank.hash)) return false
         val pending = readPending(p.getString(PENDING, "[]")).toMutableList()
-        pending.add(parsed)
-        seen.add(parsed.hash)
+        pending.add(withBank)
+        seen.add(withBank.hash)
         p.edit()
             .putString(PENDING, writePending(pending))
             .putString(SEEN, writeStrings(seen.takeLast(3000)))
@@ -221,8 +248,27 @@ object SmsStore {
         return true
     }
 
-    fun pending(context: Context): List<PendingSms> =
-        readPending(prefs(context).getString(PENDING, "[]"))
+    fun pending(context: Context): List<PendingSms> {
+        val p = prefs(context)
+        val map = readBankMap(p.getString(BANK_MAP, "{}"))
+        return readPending(p.getString(PENDING, "[]")).map {
+            it.copy(bank = it.bank.ifBlank { map[it.sender.trim()] ?: "" })
+        }
+    }
+
+    @Synchronized
+    fun setBankForSender(context: Context, sender: String, bank: String) {
+        val p = prefs(context)
+        val map = readBankMap(p.getString(BANK_MAP, "{}"))
+        map[sender.trim()] = bank
+        val updated = readPending(p.getString(PENDING, "[]")).map {
+            if (it.sender.trim() == sender.trim()) it.copy(bank = bank) else it
+        }
+        p.edit()
+            .putString(BANK_MAP, writeBankMap(map))
+            .putString(PENDING, writePending(updated))
+            .apply()
+    }
 
     @Synchronized
     fun remove(context: Context, id: Long) {
