@@ -456,9 +456,14 @@ fun money(value: Long): String {
 }
 
 fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays: List<WorkDay>): Long {
-    val movement = transactions.filter { it.card == card.name }.sumOf {
-        if (it.type == "income") it.amount else -it.amount
-    }
+    // تراکنش‌های ثبت‌شده از پیامک بانکی، وقتی موجودی داخل همان پیامک وجود دارد،
+    // قبلاً موجودی واقعی کارت را مستقیماً به‌روزرسانی کرده‌اند؛ بنابراین نباید
+    // دوباره روی موجودی گزارش‌شده جمع/کم شوند.
+    val movement = transactions
+        .filter { it.card == card.name && !it.description.startsWith("ثبت خودکار از پیامک") }
+        .sumOf {
+            if (it.type == "income") it.amount else -it.amount
+        }
     val workIncome = workDays.filter { it.card == card.name }.sumOf { it.income }
     return card.balance + movement + workIncome
 }
