@@ -76,7 +76,7 @@ fun SmsImportPage(
                         Text("دسترسی پیامک فعال است؛ پیامک‌های بانکی جدید خودکار بررسی می‌شوند.", fontSize = 13.sp)
                         OutlinedButton(onClick = {
                             scope.launch {
-                                val n = withContext(Dispatchers.IO) { SmsStore.importInbox(context, 30) }
+                                val n = withContext(Dispatchers.IO) { SmsStore.importNewInbox(context) }
                                 message = when {
                                     n >= 0 -> "$n مورد جدید پیدا شد."
                                     n == -1 -> "دسترسی پیامک فعال نیست."
@@ -85,7 +85,7 @@ fun SmsImportPage(
                                 pending = SmsStore.pending(context)
                             }
                         }, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("خواندن پیامک‌های ۳۰ روز اخیر")
+                            Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("بررسی پیامک‌های جدید")
                         }
                     }
                     if (message.isNotBlank()) Text(message, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
