@@ -103,7 +103,7 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
                     val offset = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
                     val cells = buildList<Int?> {
                         repeat(offset) { add(null) }
-                        for (d in 1..jalaliMonthDays(month)) add(d)
+                        for (d in 1..jalaliMonthDays(year, month)) add(d)
                         while (size % 7 != 0) add(null)
                     }
                     cells.chunked(7).forEach { week ->

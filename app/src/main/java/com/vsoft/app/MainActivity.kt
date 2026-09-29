@@ -491,7 +491,10 @@ fun jalaliToGregorian(jy:Int,jm:Int,jd:Int):IntArray{
     var gm=0;while(g>=ms[gm]){g-=ms[gm];gm++}
     return intArrayOf(gy,gm+1,g+1)
 }
-fun jalaliMonthDays(m:Int)=if(m<=6)31 else if(m<=11)30 else 30
+fun isJalaliLeap(y: Int) = (25 * y + 11) % 33 < 8
+
+fun jalaliMonthDays(y: Int, m: Int) =
+    if (m <= 6) 31 else if (m <= 11) 30 else if (isJalaliLeap(y)) 30 else 29
 fun jalaliMonthName(m:Int)=listOf("فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند")[m-1]
 
 fun calculateHours(start: String, end: String): Double {
@@ -1675,7 +1678,7 @@ fun DashboardPage(
         } else {
             itemsIndexed(transactions.sortedByDescending { it.id }.take(5), key = { _, it -> it.id }) { index, t ->
                 VsoftEntrance(index.coerceAtMost(4)) {
-                    TransactionCard(t, onDelete = {})
+                    TransactionCard(t, onDelete = {}, showActions = false)
                 }
             }
         }
@@ -1825,7 +1828,8 @@ fun FinancePage(
 fun TransactionCard(
     transaction: Transaction,
     onDelete: () -> Unit,
-    onEdit: () -> Unit = {}
+    onEdit: () -> Unit = {},
+    showActions: Boolean = true
 ) {
     val isIncome = transaction.type == "income"
     val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary
@@ -1856,7 +1860,7 @@ fun TransactionCard(
             Column(horizontalAlignment = Alignment.End) {
                 Text((if (isIncome) "+" else "−") + money(transaction.amount),
                     color = accent, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
-                Row {
+                if (showActions) Row {
                     IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
                         Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
                     }
@@ -3056,7 +3060,7 @@ fun JalaliDatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
-                onSelected("%04d/%02d/%02d".format(Locale.US, year, month, day))
+                onSelected("%04d/%02d/%02d".format(Locale.US, year, month, day.coerceAtMost(jalaliMonthDays(year, month))))
             }) { Text(uiText("انتخاب")) }
         },
         dismissButton = {
@@ -3099,7 +3103,7 @@ fun JalaliDatePickerDialog(
 
                 val cells = mutableListOf<Int?>()
                 repeat(offset) { cells.add(null) }
-                for (i in 1..jalaliMonthDays(month)) cells.add(i)
+                for (i in 1..jalaliMonthDays(year, month)) cells.add(i)
                 while (cells.size % 7 != 0) cells.add(null)
 
                 cells.chunked(7).forEach { row ->
