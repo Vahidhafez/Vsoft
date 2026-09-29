@@ -57,6 +57,32 @@ val VSOFT_BANKS = listOf(
     "بانک اقتصاد نوین", "بانک دی", "بانک شهر"
 )
 
+private val BANK_HINTS = linkedMapOf(
+    "بانک ملی" to listOf("بانک ملی", "melli", "melli.ir", "bankmelli", "meli"),
+    "بانک مسکن" to listOf("بانک مسکن", "maskan", "bankmaskan"),
+    "بلو بانک" to listOf("بلو بانک", "بلو", "blubank", "bluebank"),
+    "رد بانک" to listOf("رد بانک", "redbank", "red bank"),
+    "بانک مهر" to listOf("بانک مهر", "mehr", "bankmehr"),
+    "بانک صادرات" to listOf("بانک صادرات", "saderat", "banksaderat"),
+    "بانک ملت" to listOf("بانک ملت", "mellat", "bankmellat"),
+    "بانک تجارت" to listOf("بانک تجارت", "tejarat", "banktejarat"),
+    "بانک سامان" to listOf("بانک سامان", "saman", "banksaman"),
+    "بانک پاسارگاد" to listOf("بانک پاسارگاد", "pasargad", "bankpasargad"),
+    "بانک رفاه" to listOf("بانک رفاه", "refah", "bankrefah"),
+    "بانک کشاورزی" to listOf("بانک کشاورزی", "keshavarzi", "bankkeshavarzi"),
+    "بانک پارسیان" to listOf("بانک پارسیان", "parsian", "bankparsian"),
+    "بانک اقتصاد نوین" to listOf("اقتصاد نوین", "eghtesadnovin", "enbank"),
+    "بانک دی" to listOf("بانک دی", "bankday", "daybank"),
+    "بانک شهر" to listOf("بانک شهر", "shahr", "bankshahr")
+)
+
+private fun detectBank(sender: String, body: String): String {
+    val source = smsNormalize("$sender $body").lowercase(Locale.ROOT)
+    return BANK_HINTS.entries
+        .firstOrNull { (_, hints) -> hints.any { source.contains(it.lowercase(Locale.ROOT)) } }
+        ?.key ?: ""
+}
+
 fun smsNormalize(s: String): String {
     val sb = StringBuilder(s.length)
     for (ch in s) {
@@ -231,10 +257,18 @@ object SmsStore {
     private fun mappedBank(context: Context, sender: String): String =
         readBankMap(prefs(context).getString(BANK_MAP, "{}"))[sender.trim()] ?: ""
 
+    fun bankFor(context: Context, sender: String, body: String, parsed: PendingSms): String {
+        val mapped = mappedBank(context, sender)
+        if (mapped.isNotBlank()) return mapped
+        if (parsed.bank.isNotBlank()) return parsed.bank
+        return detectBank(sender, body)
+    }
+
     @Synchronized
     fun addIfBank(context: Context, sender: String, body: String, time: Long): Boolean {
         val parsed = parseBankSms(sender, body, time) ?: return false
-        val withBank = parsed.copy(bank = mappedBank(context, sender))
+        val mapped = mappedBank(context, sender)
+        val withBank = parsed.copy(bank = mapped.ifBlank { detectBank(sender, body) })
         val p = prefs(context)
         val seen = readStrings(p.getString(SEEN, "[]"))
         if (seen.contains(withBank.hash)) return false
@@ -319,7 +353,13 @@ class SmsReceiver : BroadcastReceiver() {
             if (parts == null || parts.isEmpty()) return
             val sender = parts[0].originatingAddress ?: ""
             val body = parts.joinToString("") { it.messageBody ?: "" }
-            SmsStore.addIfBank(context, sender, body, System.currentTimeMillis())
+            val time = System.currentTimeMillis()
+            if (SmsStore.addIfBank(context, sender, body, time)) {
+                val parsed = parseBankSms(sender, body, time)
+                if (parsed != null) {
+                    autoRegisterSmsTransaction(context, parsed.copy(bank = SmsStore.bankFor(context, sender, body, parsed)))
+                }
+            }
         } catch (_: Exception) {
         }
     }
