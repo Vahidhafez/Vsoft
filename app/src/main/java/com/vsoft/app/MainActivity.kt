@@ -1328,7 +1328,6 @@ fun MainScreen(
 
         Box(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxSize()
                 .pointerInput(selectedPage) {
                     var dragDistance = 0f
@@ -1341,7 +1340,8 @@ fun MainScreen(
                                 val swipePages = listOf(0, 1, 2, 3, 8, 9)
                                 val currentIndex = swipePages.indexOf(selectedPage)
                                 if (currentIndex >= 0) {
-                                    val nextIndex = if (dragDistance < 0f) {
+                                    val goNext = if (language == "en") dragDistance < 0f else dragDistance > 0f
+                                    val nextIndex = if (goNext) {
                                         (currentIndex + 1).coerceAtMost(swipePages.lastIndex)
                                     } else {
                                         (currentIndex - 1).coerceAtLeast(0)
@@ -2263,32 +2263,24 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
 
 @Composable
 fun SettingsPage(
-    strings: AppStrings,
-    language: String,
-    theme: String,
-    currency: String,
-    onLanguageChange: (String) -> Unit,
-    onCurrencyChange: (String) -> Unit,
-    onThemeChange: (String) -> Unit,
-    glass: Boolean,
-    onGlassChange: (Boolean) -> Unit,
-    font: String,
-    onFontChange: (String) -> Unit,
-    onBackup: () -> Unit,
-    onRestore: () -> Unit,
-    firebaseUser: FirebaseUser?,
-    authError: String?,
-    onGoogleSignIn: () -> Unit,
-    onGoogleSignOut: () -> Unit
+    strings: AppStrings, language: String, theme: String, currency: String,
+    onLanguageChange: (String) -> Unit, onCurrencyChange: (String) -> Unit,
+    onThemeChange: (String) -> Unit, glass: Boolean, onGlassChange: (Boolean) -> Unit,
+    font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
+    firebaseUser: FirebaseUser?, authError: String?, onGoogleSignIn: () -> Unit, onGoogleSignOut: () -> Unit
 ) {
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Text(strings.settings, fontSize = 30.sp, fontWeight = FontWeight.Bold) }
-        item { SettingsSection(strings.language) {
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(bottom = 24.dp)
+    ) {
+        item { Text(strings.settings, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold) }
+        item { SettingsSection(uiText("زبان"), Icons.Default.Language) {
             LanguageOption("فارسی", "fa", language, onLanguageChange)
             LanguageOption("English", "en", language, onLanguageChange)
             LanguageOption("العربية", "ar", language, onLanguageChange)
         }}
-        item { SettingsSection(if (language == "fa") "واحد پول" else "Currency") {
+        item { SettingsSection(if (language == "fa") "واحد پول" else "Currency", Icons.Default.Payments) {
             ThemeOption("تومان — IR Toman", "IRT", currency, onCurrencyChange)
             ThemeOption("ریال — Iranian Rial", "IRR", currency, onCurrencyChange)
             ThemeOption("دلار آمریکا — US Dollar", "USD", currency, onCurrencyChange)
@@ -2297,69 +2289,42 @@ fun SettingsPage(
             ThemeOption("درهم — UAE Dirham", "AED", currency, onCurrencyChange)
             ThemeOption("لیر — Turkish Lira", "TRY", currency, onCurrencyChange)
         }}
-        item { SettingsSection(strings.theme) {
+        item { SettingsSection(strings.theme, Icons.Default.Palette) {
             ThemeOption(strings.light, "light", theme, onThemeChange)
             ThemeOption(strings.dark, "dark", theme, onThemeChange)
             ThemeOption(strings.system, "system", theme, onThemeChange)
         }}
-
-        item {
-            SettingsSection(uiText("حساب و همگام‌سازی")) {
-                if (firebaseUser == null) {
-                    Text(uiText("با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(10.dp))
-                    Button(onClick = onGoogleSignIn, modifier = Modifier.fillMaxWidth().pressScale()) {
-                        Icon(Icons.Default.AccountCircle, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(uiText("ورود با Google"))
-                    }
-                } else {
-                    Text(firebaseUser.displayName ?: uiText("حساب Google"), fontWeight = FontWeight.Bold)
-                    Text(firebaseUser.email ?: "", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedButton(onClick = onGoogleSignOut, modifier = Modifier.fillMaxWidth().pressScale()) {
-                        Icon(Icons.Default.Logout, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(uiText("خروج از حساب"))
-                    }
+        item { SettingsSection(uiText("حساب و همگام‌سازی"), Icons.Default.AccountCircle) {
+            if (firebaseUser == null) {
+                Text(uiText("با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onGoogleSignIn, modifier = Modifier.fillMaxWidth().pressScale()) {
+                    Icon(Icons.Default.AccountCircle, null); Spacer(Modifier.width(8.dp)); Text(uiText("ورود با Google"))
                 }
-                if (!authError.isNullOrBlank()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(authError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+            } else {
+                Text(firebaseUser.displayName ?: uiText("حساب Google"), fontWeight = FontWeight.Bold)
+                Text(firebaseUser.email ?: "", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = onGoogleSignOut, modifier = Modifier.fillMaxWidth().pressScale()) {
+                    Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text(uiText("خروج از حساب"))
                 }
             }
-        }
-        item {
-            SettingsSection(uiText("پشتیبان‌گیری و بازیابی")) {
-                Text(
-                    uiText("یک نسخه کامل از اطلاعات Vsoft روی گوشی ذخیره می‌شود و می‌توانی آن را بعداً روی همین یا یک گوشی دیگر بازیابی کنی."),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Button(
-                        onClick = onBackup,
-                        modifier = Modifier.weight(1f).pressScale()
-                    ) {
-                        Icon(Icons.Default.Upload, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(uiText("ایجاد پشتیبان"))
-                    }
-                    OutlinedButton(
-                        onClick = onRestore,
-                        modifier = Modifier.weight(1f).pressScale()
-                    ) {
-                        Icon(Icons.Default.Download, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(uiText("بازیابی"))
-                    }
+            if (!authError.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp)); Text(authError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+            }
+        }}
+        item { SettingsSection(uiText("پشتیبان‌گیری و بازیابی"), Icons.Default.Backup) {
+            Text(uiText("یک نسخه کامل از اطلاعات Vsoft روی گوشی ذخیره می‌شود و می‌توانی آن را بعداً روی همین یا یک گوشی دیگر بازیابی کنی."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = onBackup, modifier = Modifier.weight(1f).pressScale()) {
+                    Icon(Icons.Default.Upload, null); Spacer(Modifier.width(6.dp)); Text(uiText("ایجاد پشتیبان"))
+                }
+                OutlinedButton(onClick = onRestore, modifier = Modifier.weight(1f).pressScale()) {
+                    Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text(uiText("بازیابی"))
                 }
             }
-        }
-        item { SettingsSection(uiText("فونت برنامه")) {
+        }}
+        item { SettingsSection(uiText("فونت برنامه"), Icons.Default.FontDownload) {
             FontOption(uiText("مدرن و خوانا"), "sans", font, onFontChange)
             FontOption(uiText("کلاسیک"), "serif", font, onFontChange)
             FontOption(uiText("فنی"), "mono", font, onFontChange)
@@ -2481,22 +2446,30 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
 // ---------------- SETTINGS COMPONENTS ----------------
 
 @Composable
-fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Column(Modifier.padding(18.dp)) {
+fun SettingsSection(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(34.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
-                    contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(19.dp))
+                Box(
+                    Modifier.size(34.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
                 }
                 Spacer(Modifier.width(10.dp))
-                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
             content()
         }
     }
