@@ -43,6 +43,10 @@ private val KEYWORD_RE = Regex(
     RegexOption.IGNORE_CASE
 )
 private val UNIT_RE = Regex("""$NUM\s*(?:ریال|تومان|IRR|rial)""", RegexOption.IGNORE_CASE)
+private val TRANSFER_SIGN_RE = Regex(
+    """(?:انتقال(?:\s+اینترنتی)?|transfer)[^\d\n]{0,20}?$NUM\s*([+-])""",
+    RegexOption.IGNORE_CASE
+)
 private val LAST4_MASKED = Regex("""[*xX•]{2,}[\s-]*(\d{4})(?!\d)""")
 private val LAST4_FULL = Regex("""(?<!\d)\d{12}(\d{4})(?!\d)""")
 private val LAST4_LABEL = Regex("""کارت[^\d\n]{0,12}(\d{4})(?!\d)""")
@@ -155,7 +159,13 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
     val explicitExpense = listOf("برداشت", "خرید", "پرداخت", "کارمزد", "کسر", "withdraw", "purchase", "debit")
         .any { lower.contains(it) }
 
+    // بعضی بانک‌ها، مخصوصاً ملی و مسکن، برای «انتقال» نوع تراکنش را
+    // با علامت مبلغ مشخص می‌کنند: + یعنی واریز و - یعنی کسر.
+    // این علامت باید قبل از تشخیص عمومی «انتقال» بررسی شود.
+    val transferSign = TRANSFER_SIGN_RE.find(text)?.groupValues?.getOrNull(2)
     val type = when {
+        transferSign == "+" -> "income"
+        transferSign == "-" -> "expense"
         explicitIncome && !explicitExpense -> "income"
         explicitExpense && !explicitIncome -> "expense"
         incomeAt == null -> "expense"
