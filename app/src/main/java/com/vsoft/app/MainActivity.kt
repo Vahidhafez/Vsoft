@@ -800,7 +800,7 @@ suspend fun restoreBackup(context: Context, data: VsoftBackup) {
     }
 }
 
-suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms) {
+suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms): Boolean {
     val preferences = context.dataStore.data.first()
     val currency = preferences[CURRENCY_KEY] ?: "IRT"
     val transactions = decodeTransactions(preferences[TRANSACTIONS_KEY] ?: "[]")
@@ -815,10 +815,10 @@ suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms) {
         if (bankCards.size == 1) card = bankCards.first()
     }
 
-    if (card == null) return
+    if (card == null) return false
 
     val amount = if (currency == "IRT") sms.amountRial / 10 else sms.amountRial
-    if (amount <= 0L) return
+    if (amount <= 0L) return false
 
     val duplicate = transactions.any {
         it.card == card.name &&
@@ -827,7 +827,7 @@ suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms) {
             it.date == jalaliDateOf(sms.time) &&
             it.description.startsWith("ثبت خودکار از پیامک")
     }
-    if (duplicate) return
+    if (duplicate) return false
 
     val updatedTransactions = transactions.toMutableList()
     updatedTransactions.add(
@@ -864,6 +864,7 @@ suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms) {
         p[TRANSACTIONS_KEY] = encodeTransactions(updatedTransactions)
         p[CARDS_KEY] = encodeCards(updatedCards)
     }
+    return true
 }
 
 // ---------------- ACTIVITY ----------------
