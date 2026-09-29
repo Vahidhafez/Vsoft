@@ -25,6 +25,12 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: vsoft-debug-keystore-v1
+
       - name: Prepare stable signing (if configured)
         env:
           VSOFT_KEYSTORE_BASE64: ${{ secrets.VSOFT_KEYSTORE_BASE64 }}
