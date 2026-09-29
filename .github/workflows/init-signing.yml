@@ -1,0 +1,39 @@
+name: Initialize Vsoft Signing
+
+on:
+  workflow_dispatch:
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Generate signing key and store it as repository secrets
+        env:
+          GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "Missing UPDATE_TOKEN"
+            exit 1
+          fi
+
+          STORE_PASS="$(openssl rand -hex 24)"
+          KEY_PASS="$(openssl rand -hex 24)"
+          ALIAS="vsoft"
+
+          keytool -genkeypair -v             -keystore vsoft-release.jks             -storepass "$STORE_PASS"             -keypass "$KEY_PASS"             -alias "$ALIAS"             -keyalg RSA             -keysize 2048             -validity 10000             -dname "CN=Vsoft"
+
+          base64 -w 0 vsoft-release.jks > vsoft-release.b64
+
+          gh secret set VSOFT_KEYSTORE_BASE64 < vsoft-release.b64
+          printf '%s' "$STORE_PASS" | gh secret set VSOFT_KEYSTORE_PASSWORD
+          printf '%s' "$ALIAS" | gh secret set VSOFT_KEY_ALIAS
+          printf '%s' "$KEY_PASS" | gh secret set VSOFT_KEY_PASSWORD
+
+          rm -f vsoft-release.jks vsoft-release.b64
+
+          echo "Vsoft signing secrets initialized successfully."
