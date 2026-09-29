@@ -920,6 +920,8 @@ fun VsoftApp() {
 
     LaunchedEffect(Unit) {
 
+        SmsStore.initializeScanCursor(context)
+
         val preferences = context.dataStore.data.first()
 
         language = preferences[LANGUAGE_KEY] ?: "fa"
