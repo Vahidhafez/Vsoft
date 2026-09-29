@@ -738,6 +738,7 @@ data class VsoftBackup(
     val people: List<Person>,
     val workplaces: List<Workplace>,
     val language: String,
+    val currency: String,
     val theme: String,
     val glass: Boolean,
     val font: String
@@ -1178,6 +1179,7 @@ fun MainScreen(
     workplaces: List<Workplace>,
     onWorkplacesChange: (MutableList<Workplace>) -> Unit,
     onLanguageChange: (String) -> Unit,
+    onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
     onGlassChange: (Boolean) -> Unit,
     onFontChange: (String) -> Unit,
@@ -1402,8 +1404,8 @@ fun MainScreen(
                 3 -> ReportsPage(strings, transactions, workDays, cards)
 
                 4 -> SettingsPage(
-                    strings, language, theme,
-                    currency, onLanguageChange, onCurrencyChange,
+                    strings, language, theme, currency,
+                    onLanguageChange, onCurrencyChange, onThemeChange,
                     glass, onGlassChange,
                     font, onFontChange,
                     onBackup = onBackup,
