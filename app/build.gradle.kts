@@ -17,22 +17,31 @@ android {
         versionName = providers.gradleProperty("VSOFT_VERSION_NAME").orElse("1.0").get()
     }
 
-    signingConfigs {
-        create("vsoft") {
-            storeFile = file("signing/vsoft-release.jks")
-            storePassword = System.getenv("KSTOREPWD")
-            keyAlias = System.getenv("KEYALIAS")
-            keyPassword = System.getenv("KEYPWD")
+    val signingFile = file("signing/vsoft-release.jks")
+    val signingEnabled = System.getenv("VSOFT_SIGNING_ENABLED") == "true" && signingFile.exists()
+
+    if (signingEnabled) {
+        signingConfigs {
+            create("vsoft") {
+                storeFile = signingFile
+                storePassword = System.getenv("KSTOREPWD")
+                keyAlias = System.getenv("KEYALIAS")
+                keyPassword = System.getenv("KEYPWD")
+            }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("vsoft")
+            if (signingEnabled) {
+                signingConfig = signingConfigs.getByName("vsoft")
+            }
         }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("vsoft")
+            if (signingEnabled) {
+                signingConfig = signingConfigs.getByName("vsoft")
+            }
         }
     }
 
@@ -40,10 +49,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-}
 
-kotlin {
-    jvmToolchain(17)
+    kotlin {
+        jvmToolchain(17)
+    }
 }
 
 dependencies {
