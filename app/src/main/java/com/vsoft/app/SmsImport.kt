@@ -203,7 +203,7 @@ private fun readBankMap(value: String?): MutableMap<String, String> {
 private fun writeBankMap(map: Map<String, String>): String =
     JSONObject().apply { map.forEach { (k, v) -> put(k, v) } }.toString()
 
-$rsm
+private fun readStrings(value: String?): MutableList<String> {
     val out = mutableListOf<String>()
     try {
         val arr = JSONArray(value ?: "[]")
