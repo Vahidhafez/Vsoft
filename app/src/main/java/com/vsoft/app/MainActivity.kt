@@ -809,9 +809,16 @@ suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms): Boole
     var bank = sms.bank
     var card = cards.firstOrNull { sms.last4.isNotBlank() && it.last4 == sms.last4 }
 
+    fun sameBank(a: String, b: String): Boolean {
+        val x = smsNormalize(a).lowercase(Locale.ROOT).trim()
+        val y = smsNormalize(b).lowercase(Locale.ROOT).trim()
+        return x == y || x.removePrefix("بانک ") == y.removePrefix("بانک ") ||
+            x.contains(y) || y.contains(x)
+    }
+
     if (bank.isBlank() && card != null) bank = card.bank
     if (card == null && bank.isNotBlank()) {
-        val bankCards = cards.filter { it.bank == bank }
+        val bankCards = cards.filter { sameBank(it.bank, bank) }
         if (bankCards.size == 1) card = bankCards.first()
     }
 
@@ -846,17 +853,11 @@ suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms): Boole
     var updatedCards = cards.toMutableList()
     if (sms.balanceRial >= 0L) {
         val reportedBalance = if (currency == "IRT") sms.balanceRial / 10 else sms.balanceRial
-        val movementBefore = updatedTransactions
-            .filter { it.card == card.name && it.id != sms.id }
-            .sumOf { if (it.type == "income") it.amount else -it.amount }
-        val workIncome = decodeWork(preferences[WORK_KEY] ?: "[]")
-            .filter { it.card == card.name }
-            .sumOf { it.income }
-        val openingBalance = reportedBalance - movementBefore -
-            if (sms.type == "income") amount else -amount - workIncome
 
+        // موجودی درج‌شده در خود پیامک، موجودی فعلی کارت است؛
+        // بنابراین همان مقدار مستقیماً روی کارت ذخیره می‌شود.
         updatedCards = updatedCards.map {
-            if (it.id == card!!.id) it.copy(balance = openingBalance) else it
+            if (it.id == card!!.id) it.copy(balance = reportedBalance) else it
         }.toMutableList()
     }
 
