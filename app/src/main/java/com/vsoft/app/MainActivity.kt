@@ -1492,7 +1492,13 @@ fun MainScreen(
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
                 7 -> PeoplePage(people, onPeopleChange)
-                9 -> SmsImportPage(currency, cards, transactions, onTransactionsChange)
+                9 -> SmsImportPage(
+                    currency = currency,
+                    cards = cards,
+                    transactions = transactions,
+                    onTransactionsChange = onTransactionsChange,
+                    onCardsChange = onCardsChange
+                )
 
                 8 -> VsoftToolsPage(
                     language = language,
