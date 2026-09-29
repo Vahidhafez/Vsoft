@@ -12,6 +12,9 @@ import org.json.JSONObject
 import java.security.MessageDigest
 import java.util.Calendar
 import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 data class PendingSms(
     val id: Long,
@@ -348,12 +351,7 @@ object SmsStore {
                     val sender = c.getString(a) ?: ""
                     val body = c.getString(b) ?: ""
                     val time = c.getLong(d)
-                    if (addIfBank(context, sender, body, time)) {
-                        val parsed = parseBankSms(sender, body, time)
-                        if (parsed != null && autoRegisterSmsTransaction(context, parsed.copy(bank = bankFor(context, sender, body, parsed)))) {
-                            remove(context, parsed.id)
-                        }
-                    }
+                    if (addIfBank(context, sender, body, time)) count++
                 }
             }
             p.edit().putLong(LAST_SCAN, System.currentTimeMillis()).apply()
@@ -367,22 +365,27 @@ object SmsStore {
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-        try {
-            val parts = Telephony.Sms.Intents.getMessagesFromIntent(intent)
-            if (parts == null || parts.isEmpty()) return
-            val sender = parts[0].originatingAddress ?: ""
-            val body = parts.joinToString("") { it.messageBody ?: "" }
-            val time = System.currentTimeMillis()
-            if (SmsStore.addIfBank(context, sender, body, time)) {
-                val parsed = parseBankSms(sender, body, time)
-                if (parsed != null) {
-                    val autoSms = parsed.copy(bank = SmsStore.bankFor(context, sender, body, parsed))
-                    if (autoRegisterSmsTransaction(context, autoSms)) {
-                        SmsStore.remove(context, autoSms.id)
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val parts = Telephony.Sms.Intents.getMessagesFromIntent(intent)
+                if (parts == null || parts.isEmpty()) return@launch
+                val sender = parts[0].originatingAddress ?: ""
+                val body = parts.joinToString("") { it.messageBody ?: "" }
+                val time = System.currentTimeMillis()
+                if (SmsStore.addIfBank(context, sender, body, time)) {
+                    val parsed = parseBankSms(sender, body, time)
+                    if (parsed != null) {
+                        val autoSms = parsed.copy(bank = SmsStore.bankFor(context, sender, body, parsed))
+                        if (autoRegisterSmsTransaction(context, autoSms)) {
+                            SmsStore.remove(context, autoSms.id)
+                        }
                     }
                 }
+            } catch (_: Exception) {
+            } finally {
+                pendingResult.finish()
             }
-        } catch (_: Exception) {
         }
     }
 }
