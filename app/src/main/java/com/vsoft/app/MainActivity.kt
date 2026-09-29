@@ -185,7 +185,7 @@ fun strings(language: String): AppStrings {
         "en" -> AppStrings(
             "Dashboard", "Finance", "Work", "Reports", "Settings",
             "Balance", "Income", "Expense", "Add", "Delete", "Edit",
-            "Save", "Cancel", "Bank Cards", "People", "Language",
+            "Save", "Cancel", "Bank Cards", "People", "Language", "Currency",
             "Theme", "Light", "Dark", "System", "Search", "Category",
             "Description", "Date", "Amount", "Workplace", "Start",
             "End", "Hours", "No data", "Monthly Report"
@@ -194,7 +194,7 @@ fun strings(language: String): AppStrings {
         "ar" -> AppStrings(
             "الرئيسية", "المالية", "العمل", "التقارير", "الإعدادات",
             "الرصيد", "الدخل", "المصروف", "إضافة", "حذف", "تعديل",
-            "حفظ", "إلغاء", "البطاقات البنكية", "الأشخاص", "اللغة",
+            "حفظ", "إلغاء", "البطاقات البنكية", "الأشخاص", "اللغة", "العملة",
             "المظهر", "فاتح", "داكن", "النظام", "بحث", "الفئة",
             "الوصف", "التاريخ", "المبلغ", "مكان العمل", "البداية",
             "النهاية", "الساعات", "لا توجد بيانات", "التقرير الشهري"
@@ -203,7 +203,7 @@ fun strings(language: String): AppStrings {
         else -> AppStrings(
             "داشبورد", "مالی", "کار", "گزارش‌ها", "تنظیمات",
             "موجودی", "درآمد", "هزینه", "افزودن", "حذف", "ویرایش",
-            "ذخیره", "لغو", "کارت‌های بانکی", "اشخاص", "زبان",
+            "ذخیره", "لغو", "کارت‌های بانکی", "اشخاص", "زبان", "واحد پول",
             "تم", "روشن", "تاریک", "سیستم", "جستجو", "دسته‌بندی",
             "توضیحات", "تاریخ", "مبلغ", "محل کار", "شروع",
             "پایان", "ساعت", "اطلاعاتی وجود ندارد", "گزارش ماهانه"
