@@ -43,117 +43,101 @@ fun SmsImportPage(
         onDispose { SmsStore.unregister(context, listener) }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) {
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         granted = smsPermissionGranted(context)
     }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(vertical = 16.dp)
+        contentPadding = PaddingValues(vertical = 12.dp, bottom = 24.dp)
     ) {
         item {
             Text("پیامک بانکی", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
             Text(
-                "تراکنش‌های تشخیص‌داده‌شده از پیامک بانک اینجا می‌آیند و بعد از تأیید تو ثبت می‌شوند.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                "با تعیین بانک یک پیامک، تمام پیامک‌های همان فرستنده در همان بخش قرار می‌گیرند.",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)) {
+            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (!granted) {
                         Text("برای خواندن پیامک‌های بانکی، دسترسی پیامک لازم است.", fontWeight = FontWeight.Bold)
-                        Text(
-                            "اگر پنجره‌ی درخواست باز نشد یا گزینه خاکستری بود: تنظیمات گوشی ← برنامه‌ها ← Vsoft ← منوی ⋮ ← Allow restricted settings، سپس Permissions ← SMS ← Allow.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Button(
-                            onClick = {
-                                permissionLauncher.launch(
-                                    arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("درخواست دسترسی") }
-                        OutlinedButton(
-                            onClick = { granted = smsPermissionGranted(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("بررسی مجدد") }
+                        Text("اگر پنجره درخواست باز نشد، دسترسی SMS برنامه Vsoft را از تنظیمات گوشی فعال کن.",
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = {
+                            permissionLauncher.launch(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS))
+                        }, modifier = Modifier.fillMaxWidth()) { Text("درخواست دسترسی") }
+                        OutlinedButton(onClick = { granted = smsPermissionGranted(context) }, modifier = Modifier.fillMaxWidth()) {
+                            Text("بررسی مجدد")
+                        }
                     } else {
-                        Text(
-                            "دسترسی پیامک فعال است. پیامک‌های بانکی جدید خودکار به لیست اضافه می‌شوند.",
-                            fontSize = 13.sp
-                        )
-                        OutlinedButton(
-                            onClick = {
-                                scope.launch {
-                                    val n = withContext(Dispatchers.IO) { SmsStore.importInbox(context, 30) }
-                                    message = when {
-                                        n >= 0 -> "$n مورد جدید پیدا شد."
-                                        n == -1 -> "دسترسی پیامک فعال نیست."
-                                        else -> "خواندن پیامک‌ها با خطا روبه‌رو شد."
-                                    }
-                                    pending = SmsStore.pending(context)
+                        Text("دسترسی پیامک فعال است؛ پیامک‌های بانکی جدید خودکار بررسی می‌شوند.", fontSize = 13.sp)
+                        OutlinedButton(onClick = {
+                            scope.launch {
+                                val n = withContext(Dispatchers.IO) { SmsStore.importInbox(context, 30) }
+                                message = when {
+                                    n >= 0 -> "$n مورد جدید پیدا شد."
+                                    n == -1 -> "دسترسی پیامک فعال نیست."
+                                    else -> "خواندن پیامک‌ها با خطا روبه‌رو شد."
                                 }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.Download, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("خواندن پیامک‌های ۳۰ روز اخیر")
+                                pending = SmsStore.pending(context)
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("خواندن پیامک‌های ۳۰ روز اخیر")
                         }
                     }
-                    if (message.isNotBlank()) {
-                        Text(message, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                    }
+                    if (message.isNotBlank()) Text(message, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
+
+        val grouped = pending.sortedByDescending { it.time }.groupBy { it.bank.ifBlank { "مشخص نشده" } }
         if (pending.isEmpty()) {
-            item {
-                Text(
-                    "پیامکی در انتظار تأیید نیست.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
+            item { Text("پیامکی در انتظار تأیید نیست.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         } else {
-            item {
-                Text("در انتظار تأیید (" + pending.size + ")", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-            items(pending.sortedByDescending { it.time }, key = { it.id }) { p ->
-                SmsPendingCard(
-                    p = p,
-                    cards = cards,
-                    currency = currency,
-                    onReject = {
-                        SmsStore.remove(context, p.id)
-                        pending = SmsStore.pending(context)
-                    },
-                    onConfirm = { cardName ->
-                        val amount = if (currency == "IRT") p.amountRial / 10 else p.amountRial
-                        val t = Transaction(
-                            id = System.currentTimeMillis(),
-                            type = p.type,
-                            amount = amount,
-                            category = if (p.type == "income") "Other income — سایر درآمدها" else "Other expense — سایر هزینه‌ها",
-                            description = "ثبت خودکار از پیامک بانکی",
-                            date = jalaliDateOf(p.time),
-                            card = cardName,
-                            person = ""
-                        )
-                        val list = transactions.toMutableList()
-                        list.add(t)
-                        onTransactionsChange(list)
-                        SmsStore.remove(context, p.id)
-                        pending = SmsStore.pending(context)
+            item { Text("پیامک‌های مشخص‌شده", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+            grouped.forEach { (bank, bankItems) ->
+                item(key = "bank_$bank") {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.AccountBalance, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Text(bank, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.weight(1f))
+                        Text(bankItems.size.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                )
+                }
+                items(bankItems, key = { it.id }) { p ->
+                    SmsPendingCard(
+                        p = p, cards = cards, currency = currency,
+                        onBankSelected = { bankName ->
+                            SmsStore.setBankForSender(context, p.sender, bankName)
+                            pending = SmsStore.pending(context)
+                        },
+                        onReject = {
+                            SmsStore.remove(context, p.id)
+                            pending = SmsStore.pending(context)
+                        },
+                        onConfirm = { cardName ->
+                            val amount = if (currency == "IRT") p.amountRial / 10 else p.amountRial
+                            val list = transactions.toMutableList()
+                            list.add(Transaction(
+                                id = System.currentTimeMillis(),
+                                type = p.type,
+                                amount = amount,
+                                category = if (p.type == "income") "Other income — سایر درآمدها" else "Other expense — سایر هزینه‌ها",
+                                description = "ثبت خودکار از پیامک " + p.bank.ifBlank { "بانکی" },
+                                date = jalaliDateOf(p.time),
+                                card = cardName,
+                                person = ""
+                            ))
+                            onTransactionsChange(list)
+                            SmsStore.remove(context, p.id)
+                            pending = SmsStore.pending(context)
+                        }
+                    )
+                }
             }
         }
     }
@@ -161,74 +145,62 @@ fun SmsImportPage(
 
 @Composable
 private fun SmsPendingCard(
-    p: PendingSms,
-    cards: List<BankCard>,
-    currency: String,
-    onReject: () -> Unit,
-    onConfirm: (String) -> Unit
+    p: PendingSms, cards: List<BankCard>, currency: String,
+    onBankSelected: (String) -> Unit, onReject: () -> Unit, onConfirm: (String) -> Unit
 ) {
     val matched = cards.firstOrNull { p.last4.isNotEmpty() && it.last4 == p.last4 }
-    var selected by remember(p.id) { mutableStateOf(matched?.name ?: "") }
-    var open by remember { mutableStateOf(false) }
+    var selectedCard by remember(p.id) { mutableStateOf(matched?.name ?: "") }
+    var cardMenuOpen by remember { mutableStateOf(false) }
+    var bankMenuOpen by remember { mutableStateOf(false) }
     val isIncome = p.type == "income"
-    val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary
+    val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error
     val shownAmount = if (currency == "IRT") p.amountRial / 10 else p.amountRial
     val shownBalance = if (currency == "IRT") p.balanceRial / 10 else p.balanceRial
 
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp)) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                    null,
-                    tint = accent
-                )
+                Icon(if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown, null, tint = accent)
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    (if (isIncome) "+" else "−") + money(shownAmount),
-                    fontWeight = FontWeight.ExtraBold,
-                    color = accent,
-                    fontSize = 18.sp
-                )
+                Text((if (isIncome) "+" else "−") + money(shownAmount), fontWeight = FontWeight.ExtraBold, color = accent, fontSize = 18.sp)
             }
-            if (p.balanceRial >= 0) {
-                Text(
-                    "مانده: " + money(shownBalance),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                p.body,
-                fontSize = 12.sp,
-                maxLines = 4,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (p.balanceRial >= 0) Text("مانده پیامک: " + money(shownBalance), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(p.body, fontSize = 12.sp, maxLines = 4, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
             Box(Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = { open = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.CreditCard, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (selected.isBlank()) "انتخاب کارت" else selected)
+                OutlinedButton(onClick = { bankMenuOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.AccountBalance, null); Spacer(Modifier.width(8.dp))
+                    Text(if (p.bank.isBlank()) "این پیام مال کدام بانک است؟" else p.bank)
                 }
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                    DropdownMenuItem(
-                        text = { Text("بدون کارت") },
-                        onClick = { selected = ""; open = false }
-                    )
-                    cards.forEach { c ->
-                        DropdownMenuItem(
-                            text = { Text(c.name) },
-                            onClick = { selected = c.name; open = false }
-                        )
+                DropdownMenu(expanded = bankMenuOpen, onDismissRequest = { bankMenuOpen = false }) {
+                    VSOFT_BANKS.forEach { bank ->
+                        DropdownMenuItem(text = { Text(bank) }, onClick = {
+                            onBankSelected(bank); bankMenuOpen = false
+                        })
                     }
                 }
             }
+
+            Box(Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { cardMenuOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp))
+                    Text(if (selectedCard.isBlank()) "انتخاب کارت" else selectedCard)
+                }
+                DropdownMenu(expanded = cardMenuOpen, onDismissRequest = { cardMenuOpen = false }) {
+                    DropdownMenuItem(text = { Text("بدون کارت") }, onClick = { selectedCard = ""; cardMenuOpen = false })
+                    cards.filter { p.bank.isBlank() || it.bank == p.bank }.forEach { card ->
+                        DropdownMenuItem(text = { Text(card.name) }, onClick = {
+                            selectedCard = card.name; cardMenuOpen = false
+                        })
+                    }
+                }
+            }
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(onClick = onReject, modifier = Modifier.weight(1f)) { Text("رد") }
-                Button(onClick = { onConfirm(selected) }, modifier = Modifier.weight(1f)) { Text("تأیید و ثبت") }
+                Button(onClick = { onConfirm(selectedCard) }, enabled = selectedCard.isNotBlank(), modifier = Modifier.weight(1f)) {
+                    Text("تأیید و ثبت")
+                }
             }
         }
     }
