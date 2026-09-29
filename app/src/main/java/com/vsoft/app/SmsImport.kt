@@ -357,7 +357,10 @@ class SmsReceiver : BroadcastReceiver() {
             if (SmsStore.addIfBank(context, sender, body, time)) {
                 val parsed = parseBankSms(sender, body, time)
                 if (parsed != null) {
-                    autoRegisterSmsTransaction(context, parsed.copy(bank = SmsStore.bankFor(context, sender, body, parsed)))
+                    val autoSms = parsed.copy(bank = SmsStore.bankFor(context, sender, body, parsed))
+                    if (autoRegisterSmsTransaction(context, autoSms)) {
+                        SmsStore.remove(context, autoSms.id)
+                    }
                 }
             }
         } catch (_: Exception) {
