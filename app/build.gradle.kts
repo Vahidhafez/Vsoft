@@ -17,9 +17,22 @@ android {
         versionName = providers.gradleProperty("VSOFT_VERSION_NAME").orElse("1.0").get()
     }
 
+    signingConfigs {
+        create("vsoft") {
+            storeFile = file("signing/vsoft-release.jks")
+            storePassword = System.getenv("KSTOREPWD")
+            keyAlias = System.getenv("KEYALIAS")
+            keyPassword = System.getenv("KEYPWD")
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("vsoft")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("vsoft")
         }
     }
 
