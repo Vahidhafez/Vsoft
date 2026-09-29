@@ -800,6 +800,72 @@ suspend fun restoreBackup(context: Context, data: VsoftBackup) {
     }
 }
 
+suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms) {
+    val preferences = context.dataStore.data.first()
+    val currency = preferences[CURRENCY_KEY] ?: "IRT"
+    val transactions = decodeTransactions(preferences[TRANSACTIONS_KEY] ?: "[]")
+    val cards = decodeCards(preferences[CARDS_KEY] ?: "[]")
+
+    var bank = sms.bank
+    var card = cards.firstOrNull { sms.last4.isNotBlank() && it.last4 == sms.last4 }
+
+    if (bank.isBlank() && card != null) bank = card.bank
+    if (card == null && bank.isNotBlank()) {
+        val bankCards = cards.filter { it.bank == bank }
+        if (bankCards.size == 1) card = bankCards.first()
+    }
+
+    if (card == null) return
+
+    val amount = if (currency == "IRT") sms.amountRial / 10 else sms.amountRial
+    if (amount <= 0L) return
+
+    val duplicate = transactions.any {
+        it.card == card.name &&
+            it.amount == amount &&
+            it.type == sms.type &&
+            it.date == jalaliDateOf(sms.time) &&
+            it.description.startsWith("ثبت خودکار از پیامک")
+    }
+    if (duplicate) return
+
+    val updatedTransactions = transactions.toMutableList()
+    updatedTransactions.add(
+        Transaction(
+            id = sms.id,
+            type = sms.type,
+            amount = amount,
+            category = if (sms.type == "income") "Other income — سایر درآمدها" else "Other expense — سایر هزینه‌ها",
+            description = "ثبت خودکار از پیامک " + bank.ifBlank { "بانکی" },
+            date = jalaliDateOf(sms.time),
+            card = card.name,
+            person = ""
+        )
+    )
+
+    var updatedCards = cards.toMutableList()
+    if (sms.balanceRial >= 0L) {
+        val reportedBalance = if (currency == "IRT") sms.balanceRial / 10 else sms.balanceRial
+        val movementBefore = updatedTransactions
+            .filter { it.card == card.name && it.id != sms.id }
+            .sumOf { if (it.type == "income") it.amount else -it.amount }
+        val workIncome = decodeWork(preferences[WORK_KEY] ?: "[]")
+            .filter { it.card == card.name }
+            .sumOf { it.income }
+        val openingBalance = reportedBalance - movementBefore -
+            if (sms.type == "income") amount else -amount - workIncome
+
+        updatedCards = updatedCards.map {
+            if (it.id == card!!.id) it.copy(balance = openingBalance) else it
+        }.toMutableList()
+    }
+
+    context.dataStore.edit { p ->
+        p[TRANSACTIONS_KEY] = encodeTransactions(updatedTransactions)
+        p[CARDS_KEY] = encodeCards(updatedCards)
+    }
+}
+
 // ---------------- ACTIVITY ----------------
 
 class MainActivity : ComponentActivity() {
