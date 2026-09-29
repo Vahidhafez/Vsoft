@@ -89,6 +89,7 @@ private val CARDS_KEY = stringPreferencesKey("cards")
 private val PEOPLE_KEY = stringPreferencesKey("people")
 private val WORKPLACES_KEY = stringPreferencesKey("workplaces")
 private val LANGUAGE_KEY = stringPreferencesKey("language")
+private val CURRENCY_KEY = stringPreferencesKey("currency")
 private val THEME_KEY = stringPreferencesKey("theme")
 private val GLASS_KEY = stringPreferencesKey("glass")
 private val FONT_KEY = stringPreferencesKey("font")
@@ -161,6 +162,7 @@ data class AppStrings(
     val cards: String,
     val people: String,
     val language: String,
+    val currency: String,
     val theme: String,
     val light: String,
     val dark: String,
@@ -435,11 +437,21 @@ class GroupedNumberVisualTransformation : VisualTransformation {
 }
 
 val LocalVsoftGlass = compositionLocalOf { false }
+val LocalVsoftCurrency = compositionLocalOf { "IRT" }
 
 fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier = this
 
+@Composable
 fun money(value: Long): String {
-    return NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
+    return when (LocalVsoftCurrency.current) {
+        "USD" -> NumberFormat.getNumberInstance(Locale.US).format(value) + " $"
+        "EUR" -> NumberFormat.getNumberInstance(Locale.US).format(value) + " €"
+        "GBP" -> NumberFormat.getNumberInstance(Locale.UK).format(value) + " £"
+        "AED" -> NumberFormat.getNumberInstance(Locale.US).format(value) + " AED"
+        "TRY" -> NumberFormat.getNumberInstance(Locale.US).format(value) + " ₺"
+        "IRR" -> NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " ریال"
+        else -> NumberFormat.getNumberInstance(Locale("fa", "IR")).format(value) + " تومان"
+    }
 }
 
 fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays: List<WorkDay>): Long {
@@ -740,6 +752,7 @@ fun encodeBackup(data: VsoftBackup): String {
         put("people", JSONArray(encodePeople(data.people)))
         put("workplaces", JSONArray(encodeWorkplaces(data.workplaces)))
         put("language", data.language)
+        put("currency", data.currency)
         put("theme", data.theme)
         put("glass", data.glass)
         put("font", data.font)
@@ -757,6 +770,7 @@ fun decodeBackup(value: String): VsoftBackup? {
             decodePeople(o.optJSONArray("people")?.toString() ?: "[]"),
             decodeWorkplaces(o.optJSONArray("workplaces")?.toString() ?: "[]"),
             o.optString("language", "fa"),
+            o.optString("currency", "IRT"),
             o.optString("theme", "system"),
             o.optBoolean("glass", false),
             o.optString("font", "sans")
@@ -774,6 +788,7 @@ suspend fun restoreBackup(context: Context, data: VsoftBackup) {
         p[PEOPLE_KEY] = encodePeople(data.people)
         p[WORKPLACES_KEY] = encodeWorkplaces(data.workplaces)
         p[LANGUAGE_KEY] = data.language
+        p[CURRENCY_KEY] = data.currency
         p[THEME_KEY] = data.theme
         p[GLASS_KEY] = data.glass.toString()
         p[FONT_KEY] = data.font
@@ -801,7 +816,8 @@ fun VsoftApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var language by remember { mutableStateOf("en") }
+    var language by remember { mutableStateOf("fa") }
+    var currency by remember { mutableStateOf("IRT") }
     var theme by remember { mutableStateOf("system") }
     var glass by remember { mutableStateOf(false) }
     var font by remember { mutableStateOf("sans") }
@@ -834,7 +850,8 @@ fun VsoftApp() {
 
         val preferences = context.dataStore.data.first()
 
-        language = "en"
+        language = preferences[LANGUAGE_KEY] ?: "fa"
+        currency = preferences[CURRENCY_KEY] ?: "IRT"
         theme = preferences[THEME_KEY] ?: "system"
         glass = false
         font = preferences[FONT_KEY] ?: "sans"
@@ -891,7 +908,7 @@ fun VsoftApp() {
         if (uri != null) {
             val snapshot = VsoftBackup(
                 transactions, workDays, cards, people, workplaces,
-                language, theme, glass, font
+                language, currency, theme, glass, font
             )
             runCatching {
                 context.contentResolver.openOutputStream(uri)?.use {
@@ -921,6 +938,7 @@ fun VsoftApp() {
         people = data.people.toMutableList()
         workplaces = data.workplaces.toMutableList()
         language = data.language
+        currency = data.currency
         theme = data.theme
         glass = false
         font = data.font
@@ -954,7 +972,8 @@ fun VsoftApp() {
 
     CompositionLocalProvider(
         LocalLayoutDirection provides layoutDirection,
-        LocalVsoftLanguage provides language
+        LocalVsoftLanguage provides language,
+        LocalVsoftCurrency provides currency
     ) {
 
         val colors = if (darkTheme) {
@@ -1029,6 +1048,7 @@ fun VsoftApp() {
                 strings = appStrings,
                 language = language,
                 theme = theme,
+                currency = currency,
                 glass = glass,
                 font = font,
                 transactions = transactions,
@@ -1092,12 +1112,13 @@ fun VsoftApp() {
 
                 onLanguageChange = {
                     language = it
-
                     scope.launch {
-                        context.dataStore.edit { prefs ->
-                            prefs[LANGUAGE_KEY] = it
-                        }
+                        context.dataStore.edit { prefs -> prefs[LANGUAGE_KEY] = it }
                     }
+                },
+                onCurrencyChange = {
+                    currency = it
+                    scope.launch { context.dataStore.edit { prefs -> prefs[CURRENCY_KEY] = it } }
                 },
 
                 onThemeChange = {
@@ -1143,6 +1164,7 @@ fun MainScreen(
     strings: AppStrings,
     language: String,
     theme: String,
+    currency: String,
     glass: Boolean,
     font: String,
     transactions: List<Transaction>,
@@ -1381,7 +1403,7 @@ fun MainScreen(
 
                 4 -> SettingsPage(
                     strings, language, theme,
-                    onLanguageChange, onThemeChange,
+                    currency, onLanguageChange, onCurrencyChange,
                     glass, onGlassChange,
                     font, onFontChange,
                     onBackup = onBackup,
@@ -2237,7 +2259,9 @@ fun SettingsPage(
     strings: AppStrings,
     language: String,
     theme: String,
+    currency: String,
     onLanguageChange: (String) -> Unit,
+    onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
     glass: Boolean,
     onGlassChange: (Boolean) -> Unit,
@@ -2256,6 +2280,15 @@ fun SettingsPage(
             LanguageOption("فارسی", "fa", language, onLanguageChange)
             LanguageOption("English", "en", language, onLanguageChange)
             LanguageOption("العربية", "ar", language, onLanguageChange)
+        }}
+        item { SettingsSection(if (language == "fa") "واحد پول" else "Currency") {
+            ThemeOption("تومان — IR Toman", "IRT", currency, onCurrencyChange)
+            ThemeOption("ریال — Iranian Rial", "IRR", currency, onCurrencyChange)
+            ThemeOption("دلار آمریکا — US Dollar", "USD", currency, onCurrencyChange)
+            ThemeOption("یورو — Euro", "EUR", currency, onCurrencyChange)
+            ThemeOption("پوند — British Pound", "GBP", currency, onCurrencyChange)
+            ThemeOption("درهم — UAE Dirham", "AED", currency, onCurrencyChange)
+            ThemeOption("لیر — Turkish Lira", "TRY", currency, onCurrencyChange)
         }}
         item { SettingsSection(strings.theme) {
             ThemeOption(strings.light, "light", theme, onThemeChange)
