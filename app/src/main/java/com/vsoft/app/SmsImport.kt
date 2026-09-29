@@ -80,9 +80,24 @@ private val BANK_HINTS = linkedMapOf(
 )
 
 private fun detectBank(sender: String, body: String): String {
-    val source = smsNormalize("$sender $body").lowercase(Locale.ROOT)
+    // اول خود متن پیامک؛ اگر نام بانک داخل متن نبود، فرستنده بررسی می‌شود.
+    val bodySource = smsNormalize(body).lowercase(Locale.ROOT)
+    val bodyBank = BANK_HINTS.entries
+        .firstOrNull { (_, hints) ->
+            hints.any { hint ->
+                bodySource.contains(hint.lowercase(Locale.ROOT))
+            }
+        }
+        ?.key
+    if (!bodyBank.isNullOrBlank()) return bodyBank
+
+    val senderSource = smsNormalize(sender).lowercase(Locale.ROOT)
     return BANK_HINTS.entries
-        .firstOrNull { (_, hints) -> hints.any { source.contains(it.lowercase(Locale.ROOT)) } }
+        .firstOrNull { (_, hints) ->
+            hints.any { hint ->
+                senderSource.contains(hint.lowercase(Locale.ROOT))
+            }
+        }
         ?.key ?: ""
 }
 
