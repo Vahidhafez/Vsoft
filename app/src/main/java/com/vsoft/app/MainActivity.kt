@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.LayoutDirection
@@ -1209,25 +1210,13 @@ fun MainScreen(
         "پیامک بانکی"
     )
 
-    Box(
-        Modifier.fillMaxSize().background(
-            if (glass) Brush.verticalGradient(
-                colors = listOf(
-                    MaterialTheme.colorScheme.surface.copy(alpha = .78f),
-                    MaterialTheme.colorScheme.background.copy(alpha = .96f),
-                    MaterialTheme.colorScheme.background
-                )
-            ) else Brush.linearGradient(
-                listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background)
-            )
-        )
-    ) {
     Scaffold(
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.surface.copy(alpha = .98f)
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
                 ),
                 title = {
                     AnimatedContent(
@@ -1279,37 +1268,13 @@ fun MainScreen(
         bottomBar = {
 
             NavigationBar(
-                modifier = if (glass) Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .shadow(18.dp, RoundedCornerShape(28.dp),
-                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = .12f),
-                        spotColor = MaterialTheme.colorScheme.secondary.copy(alpha = .10f))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Color.White.copy(alpha = if (isSystemInDarkTheme()) .06f else .34f),
-                                MaterialTheme.colorScheme.surface.copy(alpha = .66f),
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .42f)
-                            )
-                        )
-                    )
+                modifier = Modifier
+                    .fillMaxWidth()
                     .border(
-                        BorderStroke(
-                            1.dp,
-                            Brush.horizontalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = .26f),
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = .08f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = .13f)
-                                )
-                            )
-                        ),
-                        RoundedCornerShape(28.dp)
-                    )
-                else Modifier,
-                containerColor = if (glass) Color.Transparent else MaterialTheme.colorScheme.surface,
-                tonalElevation = if (glass) 0.dp else 10.dp
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .10f))
+                    ),
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
             ) {
 
                 NavigationBarItem(
@@ -1361,6 +1326,35 @@ fun MainScreen(
         }
     ) { padding ->
 
+        Box(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .pointerInput(selectedPage) {
+                    var dragDistance = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { _, dragAmount ->
+                            dragDistance += dragAmount
+                        },
+                        onDragEnd = {
+                            if (kotlin.math.abs(dragDistance) >= 80f) {
+                                val swipePages = listOf(0, 1, 2, 3, 8, 9)
+                                val currentIndex = swipePages.indexOf(selectedPage)
+                                if (currentIndex >= 0) {
+                                    val nextIndex = if (dragDistance < 0f) {
+                                        (currentIndex + 1).coerceAtMost(swipePages.lastIndex)
+                                    } else {
+                                        (currentIndex - 1).coerceAtLeast(0)
+                                    }
+                                    selectedPage = swipePages[nextIndex]
+                                }
+                            }
+                            dragDistance = 0f
+                        },
+                        onDragCancel = { dragDistance = 0f }
+                    )
+                }
+        ) {
         AnimatedContent(
             targetState = selectedPage,
             transitionSpec = {
@@ -1435,7 +1429,7 @@ fun MainScreen(
                 )
             }
         }
-    }
+        }
     }
 }
 
@@ -2308,16 +2302,7 @@ fun SettingsPage(
             ThemeOption(strings.dark, "dark", theme, onThemeChange)
             ThemeOption(strings.system, "system", theme, onThemeChange)
         }}
-        item { SettingsSection(uiText("تم شیشه‌ای / Liquid Glass")) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(uiText("ظاهر شفاف و چندلایه"))
-                    Text(uiText("شفافیت کنترل‌شده با حرکت و عمق بیشتر"),
-                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = glass, onCheckedChange = onGlassChange)
-            }
-        }}
+
         item {
             SettingsSection(uiText("حساب و همگام‌سازی")) {
                 if (firebaseUser == null) {
@@ -2400,8 +2385,8 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
             contentPadding = PaddingValues(bottom = 100.dp)) {
             item {
                 Column {
-                    Text("Bank cards", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(cards.size.toString() + " cards", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(uiText("کارت‌های بانکی"), fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(cards.size.toString() + " " + uiText("کارت"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
             itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
