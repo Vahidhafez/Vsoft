@@ -250,9 +250,17 @@ object SmsStore {
     private const val PENDING = "pending"
     private const val SEEN = "seen"
     private const val BANK_MAP = "bank_map"
+    private const val LAST_SCAN = "last_scan"
 
     private fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    fun initializeScanCursor(context: Context) {
+        val p = prefs(context)
+        if (!p.contains(LAST_SCAN)) {
+            p.edit().putLong(LAST_SCAN, System.currentTimeMillis()).apply()
+        }
+    }
 
     private fun mappedBank(context: Context, sender: String): String =
         readBankMap(prefs(context).getString(BANK_MAP, "{}"))[sender.trim()] ?: ""
@@ -319,15 +327,17 @@ object SmsStore {
         prefs(context).unregisterOnSharedPreferenceChangeListener(l)
     }
 
-    fun importInbox(context: Context, days: Int): Int {
+    fun importNewInbox(context: Context): Int {
         if (!smsPermissionGranted(context)) return -1
-        val since = System.currentTimeMillis() - days * 24L * 60L * 60L * 1000L
+        initializeScanCursor(context)
+        val p = prefs(context)
+        val since = p.getLong(LAST_SCAN, System.currentTimeMillis())
         var count = 0
         try {
             context.contentResolver.query(
                 Telephony.Sms.Inbox.CONTENT_URI,
                 arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
-                Telephony.Sms.DATE + " >= ?",
+                Telephony.Sms.DATE + " > ?",
                 arrayOf(since.toString()),
                 Telephony.Sms.DATE + " ASC"
             )?.use { c ->
@@ -335,9 +345,18 @@ object SmsStore {
                 val b = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
                 val d = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
                 while (c.moveToNext()) {
-                    if (addIfBank(context, c.getString(a) ?: "", c.getString(b) ?: "", c.getLong(d))) count++
+                    val sender = c.getString(a) ?: ""
+                    val body = c.getString(b) ?: ""
+                    val time = c.getLong(d)
+                    if (addIfBank(context, sender, body, time)) {
+                        val parsed = parseBankSms(sender, body, time)
+                        if (parsed != null && autoRegisterSmsTransaction(context, parsed.copy(bank = bankFor(context, sender, body, parsed)))) {
+                            remove(context, parsed.id)
+                        }
+                    }
                 }
             }
+            p.edit().putLong(LAST_SCAN, System.currentTimeMillis()).apply()
         } catch (_: Exception) {
             return -2
         }
