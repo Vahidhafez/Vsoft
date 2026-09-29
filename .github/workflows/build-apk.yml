@@ -25,18 +25,37 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Prepare debug keystore
+      - name: Prepare stable signing keystore
+        env:
+          VSOFT_KEYSTORE_BASE64: ${{ secrets.VSOFT_KEYSTORE_BASE64 }}
         run: |
-          mkdir -p ~/.config/.android
-          if [ ! -f ~/.config/.android/debug.keystore ]; then
-            keytool -genkeypair -v               -keystore ~/.config/.android/debug.keystore               -storepass android               -alias AndroidDebugKey               -keypass android               -keyalg RSA               -keysize 2048               -validity 10000               -dname "CN=Android Debug,O=Android,C=US"
+          if [ -z "$VSOFT_KEYSTORE_BASE64" ]; then
+            echo "Missing GitHub Secret: VSOFT_KEYSTORE_BASE64"
+            exit 1
           fi
+          mkdir -p app/signing
+          echo "$VSOFT_KEYSTORE_BASE64" | base64 --decode > app/signing/vsoft-release.jks
 
       - name: Show signing fingerprints
-        run: gradle signingReport --no-daemon
+        env:
+          KSTOREPWD: ${{ secrets.VSOFT_KEYSTORE_PASSWORD }}
+          KEYALIAS: ${{ secrets.VSOFT_KEY_ALIAS }}
+          KEYPWD: ${{ secrets.VSOFT_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KSTOREPWD" ] || [ -z "$KEYALIAS" ] || [ -z "$KEYPWD" ]; then
+            echo "Missing one or more signing secrets: VSOFT_KEYSTORE_PASSWORD, VSOFT_KEY_ALIAS, VSOFT_KEY_PASSWORD"
+            exit 1
+          fi
+          keytool -list -v -keystore app/signing/vsoft-release.jks -storepass "$KSTOREPWD" -alias "$KEYALIAS" | grep -E "SHA1:|SHA256:"
+          gradle signingReport --no-daemon
 
       - name: Build APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+        env:
+          KSTOREPWD: ${{ secrets.VSOFT_KEYSTORE_PASSWORD }}
+          KEYALIAS: ${{ secrets.VSOFT_KEY_ALIAS }}
+          KEYPWD: ${{ secrets.VSOFT_KEY_PASSWORD }}
+        run: |
+          gradle assembleDebug --no-daemon --stacktrace -PVSOFT_VERSION_CODE=${{ github.run_number }} -PVSOFT_VERSION_NAME=1.0.${{ github.run_number }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
