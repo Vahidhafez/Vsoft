@@ -1887,14 +1887,18 @@ fun AddTransactionDialog(
     var categoryOpen by remember { mutableStateOf(false) }
     var personOpen by remember { mutableStateOf(false) }
     val financeCategories = listOf(
-        "Salary", "Freelance", "Project income", "Business income", "Bonus", "Gift",
-        "Investment return", "Interest", "Refund", "Transfer", "Other income",
-        "Food & groceries", "Restaurant & cafe", "Transport", "Fuel", "Taxi & ride-hailing",
-        "Rent & housing", "Utilities", "Internet & mobile", "Subscriptions", "Shopping",
-        "Clothing", "Health & medicine", "Education", "Entertainment", "Travel",
-        "Insurance", "Bank fees", "Loan payment", "Debt repayment", "Family",
-        "Home", "Electronics", "Personal care", "Charity", "Taxes", "Work expenses",
-        "Tools & equipment", "Maintenance", "Other expense"
+        "Salary — حقوق", "Freelance — فریلنسری", "Project income — درآمد پروژه", "Business income — درآمد کسب‌وکار",
+        "Bonus — پاداش", "Gift — هدیه", "Investment return — سود سرمایه‌گذاری", "Interest — سود بانکی",
+        "Refund — بازگشت وجه", "Transfer — انتقال وجه", "Other income — سایر درآمدها",
+        "Food & groceries — غذا و خرید روزمره", "Restaurant & cafe — رستوران و کافه", "Transport — حمل‌ونقل",
+        "Fuel — سوخت", "Taxi & ride-hailing — تاکسی و تاکسی اینترنتی", "Rent & housing — اجاره و مسکن",
+        "Utilities — آب، برق و گاز", "Internet & mobile — اینترنت و موبایل", "Subscriptions — اشتراک‌ها",
+        "Shopping — خرید", "Clothing — پوشاک", "Health & medicine — سلامت و دارو", "Education — آموزش",
+        "Entertainment — سرگرمی", "Travel — سفر", "Insurance — بیمه", "Bank fees — کارمزد بانکی",
+        "Loan payment — پرداخت وام", "Debt repayment — بازپرداخت بدهی", "Family — خانواده",
+        "Home — خانه", "Electronics — لوازم الکترونیکی", "Personal care — مراقبت شخصی",
+        "Charity — خیریه", "Taxes — مالیات", "Work expenses — هزینه‌های کاری",
+        "Tools & equipment — ابزار و تجهیزات", "Maintenance — تعمیر و نگهداری", "Other expense — سایر هزینه‌ها"
     )
 
     Dialog(onDismissRequest = onDismiss) {
@@ -1929,7 +1933,7 @@ fun AddTransactionDialog(
                     OutlinedButton({ categoryOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
                         Icon(Icons.Default.Label, null)
                         Spacer(Modifier.width(8.dp))
-                        Text(if (category.isBlank()) "Select category" else category)
+                        Text(if (category.isBlank()) "دسته‌بندی / Category" else category)
                     }
                     DropdownMenu(categoryOpen, { categoryOpen = false }) {
                         financeCategories.forEach { item ->
