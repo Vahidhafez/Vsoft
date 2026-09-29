@@ -32,7 +32,10 @@ data class PendingSms(
 private const val NUM = """(?<![*xX•\d,])(\d[\d,]*)(?![\d*•/:])"""
 
 private val PERSONAL_MOBILE = Regex("""^(\+98|0098|0)9\d{9}$""")
-private val BALANCE_RE = Regex("""(?:مانده|موجودی|balance)[^\d\n]{0,25}?$NUM""", RegexOption.IGNORE_CASE)
+private val BALANCE_RE = Regex(
+    """(?:مانده(?:\s+(?:حساب|کارت|حساب\s+شما))?|موجودی(?:\s+(?:حساب|کارت|حساب\s+شما))?|مانده\s+فعلی|موجودی\s+فعلی|available\s+balance|current\s+balance|balance)[^\d\n]{0,35}?$NUM""",
+    RegexOption.IGNORE_CASE
+)
 private val LABELED_RE = Regex("""مبلغ[^\d\n]{0,25}?([+-]?)\s*$NUM\s*([+-]?)""")
 private val KEYWORD_RE = Regex(
     """(?:برداشت|واریز|خرید|پرداخت|کارمزد|انتقال|دریافت|کسر|deposit|withdraw|purchase)[^\d\n]{0,20}?([+-]?)\s*$NUM\s*([+-]?)""",
@@ -284,17 +287,23 @@ object SmsStore {
         readBankMap(prefs(context).getString(BANK_MAP, "{}"))[sender.trim()] ?: ""
 
     fun bankFor(context: Context, sender: String, body: String, parsed: PendingSms): String {
+        // نام بانک داخل متن پیامک همیشه اولویت دارد؛ mapping فرستنده فقط fallback است.
+        val fromText = detectBank("", body)
+        if (fromText.isNotBlank()) return fromText
+        if (parsed.bank.isNotBlank()) return parsed.bank
         val mapped = mappedBank(context, sender)
         if (mapped.isNotBlank()) return mapped
-        if (parsed.bank.isNotBlank()) return parsed.bank
-        return detectBank(sender, body)
+        return detectBank(sender, "")
     }
 
     @Synchronized
     fun addIfBank(context: Context, sender: String, body: String, time: Long): Boolean {
         val parsed = parseBankSms(sender, body, time) ?: return false
+        val detectedFromText = detectBank("", body)
         val mapped = mappedBank(context, sender)
-        val withBank = parsed.copy(bank = mapped.ifBlank { detectBank(sender, body) })
+        val withBank = parsed.copy(
+            bank = detectedFromText.ifBlank { mapped }.ifBlank { detectBank(sender, "") }
+        )
         val p = prefs(context)
         val seen = readStrings(p.getString(SEEN, "[]"))
         if (seen.contains(withBank.hash)) return false
