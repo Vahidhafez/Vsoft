@@ -1205,7 +1205,8 @@ fun MainScreen(
         "کارت‌ها",
         "محل‌های کار",
         strings.people,
-        if (language == "en") "Tools" else if (language == "ar") "الأدوات" else "ابزارها"
+        if (language == "en") "Tools" else if (language == "ar") "الأدوات" else "ابزارها",
+        "پیامک بانکی"
     )
 
     Box(
@@ -1253,6 +1254,7 @@ fun MainScreen(
                     TopActionIcon(Icons.Default.CreditCard, "کارت‌ها", selectedPage == 5) { selectedPage = 5 }
                     TopActionIcon(Icons.Default.Place, "محل‌های کار", selectedPage == 6) { selectedPage = 6 }
                     TopActionIcon(Icons.Default.Person, "افراد", selectedPage == 7) { selectedPage = 7 }
+                    TopActionIcon(Icons.Default.Sms, "پیامک", selectedPage == 9) { selectedPage = 9 }
                 },
                 navigationIcon = {
                     IconButton(modifier = Modifier.pressScale(0.92f), onClick = { selectedPage = 4 }) {
@@ -1421,6 +1423,7 @@ fun MainScreen(
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
                 7 -> PeoplePage(people, onPeopleChange)
+                9 -> SmsImportPage(currency, cards, transactions, onTransactionsChange)
 
                 8 -> VsoftToolsPage(
                     language = language,
