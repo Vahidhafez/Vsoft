@@ -5,7 +5,7 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
@@ -18,9 +18,24 @@ import kotlin.coroutines.suspendCoroutine
 suspend fun signInWithGoogle(context: Context, serverClientId: String): FirebaseUser {
     require(serverClientId.isNotBlank()) { "Google server client ID is missing" }
     val credentialManager = CredentialManager.create(context)
-    val googleOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
-    val request = GetCredentialRequest.Builder().addCredentialOption(googleOption).build()
-    val result = credentialManager.getCredential(context = context, request = request)
+    suspend fun requestGoogle(filter: Boolean) =
+        credentialManager.getCredential(
+            context = context,
+            request = GetCredentialRequest.Builder()
+                .addCredentialOption(
+                    GetGoogleIdOption.Builder()
+                        .setServerClientId(serverClientId)
+                        .setFilterByAuthorizedAccounts(filter)
+                        .build()
+                )
+                .build()
+        )
+
+    val result = try {
+        requestGoogle(true)
+    } catch (_: androidx.credentials.exceptions.NoCredentialException) {
+        requestGoogle(false)
+    }
     val credential = result.credential
     if (credential !is CustomCredential ||
         credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
