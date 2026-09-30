@@ -2,6 +2,9 @@ package com.vsoft.app
 
 import android.os.Bundle
 import android.content.Context
+import android.app.Activity
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
@@ -976,6 +979,30 @@ fun VsoftApp() {
     var firebaseUser by remember { mutableStateOf<FirebaseUser?>(firebaseAuth.currentUser) }
     var authError by remember { mutableStateOf<String?>(null) }
 
+    val googleClient = remember(context) {
+        createGoogleSignInClient(context, context.getString(R.string.default_web_client_id))
+    }
+
+    val googleLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        scope.launch {
+            authError = null
+            if (result.resultCode != Activity.RESULT_OK) {
+                authError = "Google sign-in was cancelled"
+                return@launch
+            }
+            runCatching {
+                val account = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                    .getResult(ApiException::class.java)
+                val idToken = account.idToken ?: error("Google did not return an ID token")
+                firebaseSignInWithGoogleIdToken(idToken)
+            }.onFailure {
+                authError = "Google sign-in failed: " + (it.message ?: it.javaClass.simpleName)
+            }
+        }
+    }
+
     DisposableEffect(firebaseAuth) {
         val listener = FirebaseAuth.AuthStateListener { auth -> firebaseUser = auth.currentUser }
         firebaseAuth.addAuthStateListener(listener)
@@ -1218,17 +1245,13 @@ fun VsoftApp() {
                 firebaseUser = firebaseUser,
                 authError = authError,
                 onGoogleSignIn = {
-                    scope.launch {
-                        authError = null
-                        runCatching { signInWithGoogle(context, context.getString(R.string.default_web_client_id)) }
-                            .onFailure { authError = it.message ?: "Google sign-in failed" }
-                    }
+                    authError = null
+                    googleLauncher.launch(googleClient.signInIntent)
                 },
                 onGoogleSignOut = {
-                    scope.launch {
-                        runCatching { signOutFromGoogle(context) }
-                            .onFailure { authError = it.message ?: "Sign-out failed" }
-                    }
+                    authError = null
+                    runCatching { signOutFromGoogle(context) }
+                        .onFailure { authError = it.message ?: "Sign-out failed" }
                 }
             )
             }
