@@ -25,6 +25,14 @@
         {
           "client_id": "433386567946-ldesugcucfocolmunsfu210ou8254kiv.apps.googleusercontent.com",
           "client_type": 3
+        },
+        {
+          "client_id": "433386567946-b8nuprpb6ccphb8t0rk7ig13vghfl0g8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vsoft.app",
+            "certificate_hash": "078536678cb8375a53b22cfdadea829365b7721f"
+          }
         }
       ],
       "api_key": [
