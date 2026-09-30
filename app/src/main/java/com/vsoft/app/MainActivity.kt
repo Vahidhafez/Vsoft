@@ -988,17 +988,26 @@ fun VsoftApp() {
     ) { result ->
         scope.launch {
             authError = null
-            if (result.resultCode != Activity.RESULT_OK) {
-                authError = "Google sign-in was cancelled"
-                return@launch
-            }
+            val intent = result.data
+            val signInTask = GoogleSignIn.getSignedInAccountFromIntent(intent)
+
             runCatching {
-                val account = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                    .getResult(ApiException::class.java)
+                val account = signInTask.getResult(ApiException::class.java)
                 val idToken = account.idToken ?: error("Google did not return an ID token")
                 firebaseSignInWithGoogleIdToken(idToken)
-            }.onFailure {
-                authError = "Google sign-in failed: " + (it.message ?: it.javaClass.simpleName)
+            }.onFailure { error ->
+                val apiError = error as? ApiException
+                val statusCode = apiError?.statusCode
+                val statusMessage = apiError?.status?.statusMessage
+                authError = buildString {
+                    append("Google sign-in failed")
+                    if (statusCode != null) append(" (code $statusCode)")
+                    if (!statusMessage.isNullOrBlank()) append(": $statusMessage")
+                    else if (!error.message.isNullOrBlank()) append(": " + error.message)
+                    if (result.resultCode != Activity.RESULT_OK) {
+                        append(" [resultCode=" + result.resultCode + "]")
+                    }
+                }
             }
         }
     }
