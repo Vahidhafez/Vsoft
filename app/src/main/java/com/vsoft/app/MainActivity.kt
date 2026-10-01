@@ -3194,18 +3194,93 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
-            Card(Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface)) {
-                Column(Modifier.padding(14.dp)) {
-                    Text(uiText("انتخاب کارت"), fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
+            Card(
+                Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(26.dp)),
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(40.dp).clip(RoundedCornerShape(13.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Analytics, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(uiText("انتخاب کارت"), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                            Text(
+                                if (selected != null) selected.bank + " • " + selected.name else uiText("هنوز کارت بانکی ثبت نشده"),
+                                fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1
+                            )
+                        }
+                    }
                     if (cards.isEmpty()) {
-                        Text(uiText("هنوز کارت بانکی ثبت نشده"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Surface(
+                            Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f)
+                        ) {
+                            Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CreditCardOff, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(8.dp))
+                                Text(uiText("هنوز کارت بانکی ثبت نشده"), fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     } else {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             items(cards, key = { it.id }) { card ->
-                                FilterChip(card.name == selectedCardName, { selectedCardName = card.name },
-                                    label = { Text(card.name) }, leadingIcon = { Icon(Icons.Default.CreditCard, null, Modifier.size(16.dp)) })
+                                val cardColors = bankCardColors(card.bank)
+                                val isSelected = card.name == selectedCardName
+                                Surface(
+                                    onClick = { selectedCardName = card.name },
+                                    modifier = Modifier.width(176.dp).pressScale(0.985f),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = Color.Transparent,
+                                    border = BorderStroke(
+                                        1.5.dp,
+                                        if (isSelected) cardColors.first else MaterialTheme.colorScheme.outline.copy(alpha = .10f)
+                                    )
+                                ) {
+                                    Box(
+                                        Modifier.background(
+                                            Brush.linearGradient(
+                                                listOf(
+                                                    cardColors.first.copy(alpha = if (isSelected) .96f else .72f),
+                                                    cardColors.second.copy(alpha = if (isSelected) .92f else .68f)
+                                                )
+                                            )
+                                        ).padding(13.dp)
+                                    ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.CreditCard, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                                Spacer(Modifier.width(7.dp))
+                                                Text(card.bank, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, maxLines = 1)
+                                            }
+                                            Text(card.name, color = Color.White.copy(alpha = .82f), fontSize = 10.sp, maxLines = 1)
+                                            Text(
+                                                "•••• " + card.last4.ifBlank { card.cardNumber.takeLast(4) },
+                                                color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
+                                            )
+                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    money(cardCurrentBalance(card, transactions, workDays)),
+                                                    color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                if (isSelected) {
+                                                    Icon(Icons.Default.CheckCircle, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
