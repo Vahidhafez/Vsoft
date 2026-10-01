@@ -2876,58 +2876,101 @@ private fun ReportStatTile(title: String, value: String, icon: androidx.compose.
 private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
     val maxValue = monthly.flatMap { listOf(it.second, it.third) }.maxOrNull()?.coerceAtLeast(1L) ?: 1L
     Card(
-        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
+        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(26.dp)),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
         )
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(uiText("روند ۶ ماهه"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Spacer(Modifier.height(4.dp))
-            Text(uiText("درآمد و هزینه هر ماه"), fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(14.dp))
+        Column(Modifier.padding(18.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(uiText("روند ۶ ماهه"), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                    Spacer(Modifier.height(3.dp))
+                    Text(uiText("درآمد و هزینه هر ماه"), fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Box(
+                    Modifier.size(36.dp).clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.BarChart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
+                }
+            }
+            Spacer(Modifier.height(16.dp))
             Row(
-                Modifier.fillMaxWidth().height(170.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                Modifier.fillMaxWidth().height(178.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
-                monthly.forEach { point ->
-                    val incomeFraction = (point.second.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
-                    val expenseFraction = (point.third.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
+                monthly.forEachIndexed { index, point ->
+                    val targetIncome = (point.second.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
+                    val targetExpense = (point.third.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
+                    val incomeFraction by animateFloatAsState(
+                        targetValue = targetIncome,
+                        animationSpec = tween(650, delayMillis = index * 70, easing = FastOutSlowInEasing),
+                        label = "report_income_bar_$index"
+                    )
+                    val expenseFraction by animateFloatAsState(
+                        targetValue = targetExpense,
+                        animationSpec = tween(650, delayMillis = index * 70 + 45, easing = FastOutSlowInEasing),
+                        label = "report_expense_bar_$index"
+                    )
                     val month = point.first.substringAfterLast("/").toIntOrNull() ?: 1
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Row(
-                            Modifier.height(135.dp),
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            verticalAlignment = Alignment.Bottom
+                        Box(
+                            Modifier.fillMaxWidth().height(140.dp),
+                            contentAlignment = Alignment.BottomCenter
                         ) {
-                            Box(
-                                Modifier.width(13.dp).fillMaxHeight(incomeFraction)
-                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                            )
-                            Box(
-                                Modifier.width(13.dp).fillMaxHeight(expenseFraction)
-                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                    .background(MaterialTheme.colorScheme.error)
-                            )
+                            Row(
+                                Modifier.fillMaxWidth().height(140.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Box(
+                                    Modifier.width(15.dp).height(140.dp * incomeFraction)
+                                        .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
+                                        .background(MaterialTheme.colorScheme.primary)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Box(
+                                    Modifier.width(15.dp).height(140.dp * expenseFraction)
+                                        .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
+                                        .background(MaterialTheme.colorScheme.error)
+                                )
+                            }
                         }
-                        Spacer(Modifier.height(7.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(jalaliMonthName(month).take(3), fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1)
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                VsoftChartLegend(MaterialTheme.colorScheme.primary, uiText("درآمد"))
-                VsoftChartLegend(MaterialTheme.colorScheme.error, uiText("هزینه"))
+            Spacer(Modifier.height(12.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    VsoftChartLegend(MaterialTheme.colorScheme.primary, uiText("درآمد"))
+                    VsoftChartLegend(MaterialTheme.colorScheme.error, uiText("هزینه"))
+                }
+                val totalIncome = monthly.sumOf { it.second }
+                val totalExpense = monthly.sumOf { it.third }
+                Text(
+                    money(totalIncome - totalExpense),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (totalIncome >= totalExpense) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                )
             }
         }
     }
