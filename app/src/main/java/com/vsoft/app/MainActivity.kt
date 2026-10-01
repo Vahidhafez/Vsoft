@@ -1556,6 +1556,7 @@ fun Modifier.pressScale(
         animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
         label = "press_scale"
     )
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     return this
         .graphicsLayer {
             scaleX = scale
@@ -1565,6 +1566,7 @@ fun Modifier.pressScale(
             detectTapGestures(
                 onPress = {
                     scaleState.floatValue = pressedScale
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                     try {
                         tryAwaitRelease()
                     } finally {
@@ -1873,11 +1875,15 @@ fun FinancePage(
     var edit by remember { mutableStateOf<Transaction?>(null) }
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("all") }
+    val normalizedSearch = normalizeVsoftSearch(search)
     val list = transactions.filter {
         (filter == "all" || it.type == filter) &&
-        (search.isBlank() || it.description.contains(search, true) ||
-         it.category.contains(search, true) || it.person.contains(search, true) ||
-         it.card.contains(search, true))
+        (normalizedSearch.isBlank() ||
+            normalizeVsoftSearch(it.description).contains(normalizedSearch) ||
+            normalizeVsoftSearch(it.category).contains(normalizedSearch) ||
+            normalizeVsoftSearch(it.person).contains(normalizedSearch) ||
+            normalizeVsoftSearch(it.card).contains(normalizedSearch) ||
+            normalizeVsoftSearch(it.date).contains(normalizedSearch))
     }.sortedByDescending { it.id }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -1907,13 +1913,23 @@ fun FinancePage(
                 contentPadding = PaddingValues(bottom = 24.dp)) {
                 itemsIndexed(list, key = { _, it -> it.id }) { index, t ->
                     VsoftEntrance(index.coerceAtMost(7)) {
-                        TransactionCard(t,
+                        VsoftSwipeToDelete(
                             onDelete = {
                                 val x = transactions.toMutableList()
                                 x.removeAll { it.id == t.id }
                                 onTransactionsChange(x)
-                            },
-                            onEdit = { edit = t; show = true })
+                            }
+                        ) {
+                            TransactionCard(
+                                t,
+                                onDelete = {
+                                    val x = transactions.toMutableList()
+                                    x.removeAll { it.id == t.id }
+                                    onTransactionsChange(x)
+                                },
+                                onEdit = { edit = t; show = true }
+                            )
+                        }
                     }
                 }
             }
