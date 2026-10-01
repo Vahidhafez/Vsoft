@@ -2436,16 +2436,28 @@ fun AddTransactionDialog(
         "Charity — خیریه", "Taxes — مالیات", "Work expenses — هزینه‌های کاری",
         "Tools & equipment — ابزار و تجهیزات", "Maintenance — تعمیر و نگهداری", "Other expense — سایر هزینه‌ها"
     )
-
+    val typeColor by animateColorAsState(
+        if (type == "income") MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+        label = "transaction_type_color"
+    )
     Dialog(onDismissRequest = onDismiss) {
-        Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp), shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp, shadowElevation = 18.dp) {
-            Column(Modifier.padding(22.dp).heightIn(max = 620.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(13.dp)) {
+        Surface(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(30.dp),
+            color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .94f) else MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp, shadowElevation = 20.dp
+        ) {
+            Column(
+                Modifier.padding(22.dp).heightIn(max = 680.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(13.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary)
+                    Box(
+                        Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                            .background(typeColor.copy(alpha = .13f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.ReceiptLong, null, tint = typeColor, modifier = Modifier.size(24.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -2454,61 +2466,169 @@ fun AddTransactionDialog(
                     }
                     IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, uiText("بستن")) }
                 }
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .72f)).padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    FilterChip(type == "expense", { type = "expense" }, label = { Text(strings.expense) },
-                        leadingIcon = { Icon(Icons.Default.TrendingDown, null, Modifier.size(17.dp)) }, modifier = Modifier.weight(1f))
-                    FilterChip(type == "income", { type = "income" }, label = { Text(strings.income) },
-                        leadingIcon = { Icon(Icons.Default.TrendingUp, null, Modifier.size(17.dp)) }, modifier = Modifier.weight(1f))
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .62f)).padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    FilterChip(
+                        selected = type == "expense", onClick = { type = "expense" },
+                        label = { Text(strings.expense, fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = { Icon(Icons.Default.TrendingDown, null, Modifier.size(17.dp)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = type == "income", onClick = { type = "income" },
+                        label = { Text(strings.income, fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = { Icon(Icons.Default.TrendingUp, null, Modifier.size(17.dp)) },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
-                OutlinedTextField(amount, { amount = normalizeAmountInput(it) }, label = { Text(strings.amount) },
-                    leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
-                Box(Modifier.fillMaxWidth()) {
-                    OutlinedButton({ categoryOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Label, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (category.isBlank()) "دسته‌بندی / Category" else category)
-                    }
-                    DropdownMenu(categoryOpen, { categoryOpen = false }) {
-                        financeCategories.forEach { item ->
-                            DropdownMenuItem(text = { Text(item) }, onClick = { category = item; categoryOpen = false })
+                AnimatedContent(
+                    targetState = type,
+                    transitionSpec = { fadeIn(tween(150)) togetherWith fadeOut(tween(90)) },
+                    label = "transaction_type_hint"
+                ) { currentType ->
+                    Surface(
+                        Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
+                        color = if (currentType == "income") MaterialTheme.colorScheme.secondary.copy(alpha = .08f)
+                        else MaterialTheme.colorScheme.error.copy(alpha = .08f)
+                    ) {
+                        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                if (currentType == "income") Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                null,
+                                tint = if (currentType == "income") MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                if (currentType == "income") "این مورد به عنوان درآمد ثبت می‌شود" else "این مورد به عنوان هزینه ثبت می‌شود",
+                                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
-                OutlinedTextField(description, { description = it }, label = { Text(strings.description) },
-                    leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 2, maxLines = 3, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
-                OutlinedButton({ dateOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                    Icon(Icons.Default.CalendarMonth, null); Spacer(Modifier.width(8.dp)); Text("${strings.date}: ${date}")
+                OutlinedTextField(
+                    amount, { amount = normalizeAmountInput(it) }, label = { Text(strings.amount) },
+                    leadingIcon = { Icon(Icons.Default.Payments, null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true,
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                )
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        { categoryOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp)
+                    ) {
+                        Icon(Icons.Default.Label, null, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                            Text(if (category.isBlank()) "دسته‌بندی / Category" else category,
+                                fontWeight = if (category.isBlank()) FontWeight.Normal else FontWeight.SemiBold, maxLines = 1)
+                            if (category.isNotBlank()) Text("دسته‌بندی انتخاب شد", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.ExpandMore, null)
+                    }
+                    DropdownMenu(categoryOpen, { categoryOpen = false }) {
+                        financeCategories.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) }, leadingIcon = { Icon(Icons.Default.Label, null, Modifier.size(18.dp)) },
+                                onClick = { category = item; categoryOpen = false }
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    description, { description = it }, label = { Text(strings.description) },
+                    leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 2, maxLines = 3,
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                )
+                OutlinedButton(
+                    { dateOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
+                ) {
+                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(9.dp))
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                        Text(strings.date, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(date, fontWeight = FontWeight.Bold)
+                    }
+                    Icon(if (LocalLayoutDirection.current == LayoutDirection.Rtl) Icons.Default.ChevronLeft else Icons.Default.ChevronRight, null)
+                }
+                val selectedCard = cards.firstOrNull { it.name == card }
+                if (selectedCard != null) {
+                    val colors = bankCardColors(selectedCard.bank)
+                    Box(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                            .background(Brush.linearGradient(listOf(colors.first.copy(alpha = .94f), colors.second.copy(alpha = .90f))))
+                            .padding(13.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CreditCard, null, tint = Color.White, modifier = Modifier.size(21.dp)); Spacer(Modifier.width(9.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(selectedCard.bank, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text(selectedCard.name, color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                            }
+                            Text("•••• " + selectedCard.last4.ifBlank { selectedCard.cardNumber.takeLast(4) }, color = Color.White, fontSize = 12.sp)
+                        }
+                    }
                 }
                 Box(Modifier.fillMaxWidth()) {
-                    OutlinedButton({ cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) uiText("انتخاب کارت مبدا / مقصد") else "کارت: ${card}")
+                    OutlinedButton(
+                        { cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)
+                    ) {
+                        Icon(Icons.Default.CreditCard, null, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                            Text(if (card.isBlank()) uiText("انتخاب کارت مبدا / مقصد") else card,
+                                fontWeight = if (card.isBlank()) FontWeight.Normal else FontWeight.SemiBold)
+                            Text(if (card.isBlank()) "برای محاسبه موجودی، کارت را مشخص کنید" else "کارت انتخاب‌شده",
+                                fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.ExpandMore, null)
                     }
                     DropdownMenu(cardOpen, { cardOpen = false }) {
-                        DropdownMenuItem({ Text(uiText("بدون کارت")) }, { card = ""; cardOpen = false })
-                        cards.forEach { q -> DropdownMenuItem({ Text(q.name) }, { card = q.name; cardOpen = false }) }
+                        DropdownMenuItem(text = { Text(uiText("بدون کارت")) }, leadingIcon = { Icon(Icons.Default.Block, null, Modifier.size(18.dp)) },
+                            onClick = { card = ""; cardOpen = false })
+                        cards.forEach { q ->
+                            DropdownMenuItem(text = { Text(q.name) }, leadingIcon = { Icon(Icons.Default.CreditCard, null, Modifier.size(18.dp)) },
+                                onClick = { card = q.name; cardOpen = false })
+                        }
                     }
                 }
                 Box(Modifier.fillMaxWidth()) {
-                    OutlinedButton({ personOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (person.isBlank()) uiText("انتخاب شخص") else "شخص: ${person}")
+                    OutlinedButton(
+                        { personOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)
+                    ) {
+                        Icon(Icons.Default.Person, null, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                            Text(if (person.isBlank()) uiText("انتخاب شخص") else person,
+                                fontWeight = if (person.isBlank()) FontWeight.Normal else FontWeight.SemiBold)
+                            Text(if (person.isBlank()) "اختیاری" else "شخص مرتبط با تراکنش",
+                                fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.ExpandMore, null)
                     }
                     DropdownMenu(personOpen, { personOpen = false }) {
-                        DropdownMenuItem({ Text(uiText("بدون شخص")) }, { person = ""; personOpen = false })
-                        people.forEach { q -> DropdownMenuItem({ Text(q.name) }, { person = q.name; personOpen = false }) }
+                        DropdownMenuItem(text = { Text(uiText("بدون شخص")) }, leadingIcon = { Icon(Icons.Default.PersonOff, null, Modifier.size(18.dp)) },
+                            onClick = { person = ""; personOpen = false })
+                        people.forEach { q ->
+                            DropdownMenuItem(text = { Text(q.name) }, leadingIcon = { Icon(Icons.Default.Person, null, Modifier.size(18.dp)) },
+                                onClick = { person = q.name; personOpen = false })
+                        }
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
-                    Button(onClick = {
-                        val v = normalizeDigits(amount).toLongOrNull() ?: 0L
-                        if (v > 0 && category.isNotBlank())
-                            onSave(Transaction(existing?.id ?: System.currentTimeMillis(), type, v, category, description, date, card, person))
-                    }, Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save)
-                    }
+                    Button(
+                        onClick = {
+                            val v = normalizeDigits(amount).toLongOrNull() ?: 0L
+                            if (v > 0 && category.isNotBlank())
+                                onSave(Transaction(existing?.id ?: System.currentTimeMillis(), type, v, category, description, date, card, person))
+                        },
+                        enabled = normalizeDigits(amount).toLongOrNull()?.let { it > 0 } == true && category.isNotBlank(),
+                        modifier = Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)
+                    ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save) }
                 }
             }
         }
@@ -2676,18 +2796,29 @@ fun AddWorkDialog(
     var description by remember { mutableStateOf(existing?.description ?: "") }
     var person by remember { mutableStateOf(existing?.person ?: "") }
     var card by remember { mutableStateOf(existing?.card ?: "") }
-    var dateOpen by remember { mutableStateOf(false) }; var endDateOpen by remember { mutableStateOf(false) }
-    var placeOpen by remember { mutableStateOf(false) }; var personOpen by remember { mutableStateOf(false) }; var cardOpen by remember { mutableStateOf(false) }
+    var dateOpen by remember { mutableStateOf(false) }
+    var endDateOpen by remember { mutableStateOf(false) }
+    var placeOpen by remember { mutableStateOf(false) }
+    var personOpen by remember { mutableStateOf(false) }
+    var cardOpen by remember { mutableStateOf(false) }
+    val duration = calculateHours(start, end)
+    val selectedCard = cards.firstOrNull { it.name == card }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp), shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp, shadowElevation = 18.dp) {
-            Column(Modifier.padding(22.dp).heightIn(max = 650.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(13.dp)) {
+        Surface(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(30.dp),
+            color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .94f) else MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp, shadowElevation = 20.dp
+        ) {
+            Column(
+                Modifier.padding(22.dp).heightIn(max = 700.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(13.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp))
+                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.secondary.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Work, null, tint = MaterialTheme.colorScheme.secondary)
+                        Icon(Icons.Default.Work, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(24.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -2697,57 +2828,160 @@ fun AddWorkDialog(
                     IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, uiText("بستن")) }
                 }
                 Box(Modifier.fillMaxWidth()) {
-                    OutlinedButton({ placeOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Place, null); Spacer(Modifier.width(8.dp)); Text(if (place.isBlank()) uiText("انتخاب محل کار") else place)
+                    OutlinedButton({ placeOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)) {
+                        Icon(Icons.Default.Place, null, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                            Text(if (place.isBlank()) uiText("انتخاب محل کار") else place,
+                                fontWeight = if (place.isBlank()) FontWeight.Normal else FontWeight.SemiBold)
+                            Text(if (place.isBlank()) "محل اجرای کار را مشخص کنید" else "محل کار انتخاب‌شده",
+                                fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.ExpandMore, null)
                     }
-                    DropdownMenu(placeOpen, { placeOpen = false }) { workplaces.forEach { q -> DropdownMenuItem({ Text(q.name) }, { place = q.name; placeOpen = false }) } }
+                    DropdownMenu(placeOpen, { placeOpen = false }) {
+                        if (workplaces.isEmpty()) {
+                            DropdownMenuItem(text = { Text("هنوز محل کاری ثبت نشده") }, onClick = { placeOpen = false })
+                        } else {
+                            workplaces.forEach { q ->
+                                DropdownMenuItem(text = { Text(q.name) }, leadingIcon = { Icon(Icons.Default.Place, null, Modifier.size(18.dp)) },
+                                    onClick = { place = q.name; placeOpen = false })
+                            }
+                        }
+                    }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton({ dateOpen = true }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text("شروع: ${startDate}") }
-                    OutlinedButton({ endDateOpen = true }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text("پایان: ${endDate}") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton({ dateOpen = true }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp)) {
+                        Icon(Icons.Default.CalendarToday, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text("شروع", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(startDate, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+                    OutlinedButton({ endDateOpen = true }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp)) {
+                        Icon(Icons.Default.Event, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text("پایان", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(endDate, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton({
                         android.app.TimePickerDialog(ctx, { _, h, m -> start = "%02d:%02d".format(h, m) },
                             start.substringBefore(":").toIntOrNull() ?: 8, start.substringAfter(":").toIntOrNull() ?: 0, true).show()
-                    }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Login, null); Spacer(Modifier.width(5.dp)); Text("شروع ${start}") }
+                    }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp)) {
+                        Icon(if (LocalLayoutDirection.current == LayoutDirection.Rtl) Icons.Default.Login else Icons.Default.Logout, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text("شروع", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(start, fontWeight = FontWeight.Bold)
+                        }
+                    }
                     OutlinedButton({
                         android.app.TimePickerDialog(ctx, { _, h, m -> end = "%02d:%02d".format(h, m) },
                             end.substringBefore(":").toIntOrNull() ?: 16, end.substringAfter(":").toIntOrNull() ?: 0, true).show()
-                    }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Icon(Icons.Default.Logout, null); Spacer(Modifier.width(5.dp)); Text("پایان ${end}") }
+                    }, Modifier.weight(1f), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 11.dp)) {
+                        Icon(if (LocalLayoutDirection.current == LayoutDirection.Rtl) Icons.Default.Logout else Icons.Default.Login, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text("پایان", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(end, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
-                OutlinedTextField(income, { income = normalizeAmountInput(it) }, label = { Text(uiText("درآمد کار")) },
+                Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = .08f)) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("مدت کار", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(String.format(Locale.US, "%.1f ساعت", duration), fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                        }
+                        Icon(Icons.Default.Timer, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = .7f))
+                    }
+                }
+                OutlinedTextField(
+                    income, { income = normalizeAmountInput(it) }, label = { Text(uiText("درآمد کار")) },
                     leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp))
+                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                )
+                if (selectedCard != null) {
+                    val colors = bankCardColors(selectedCard.bank)
+                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                        .background(Brush.linearGradient(listOf(colors.first.copy(alpha = .94f), colors.second.copy(alpha = .90f)))).padding(13.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CreditCard, null, tint = Color.White, modifier = Modifier.size(21.dp)); Spacer(Modifier.width(9.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(selectedCard.bank, color = Color.White, fontWeight = FontWeight.ExtraBold)
+                                Text("واریز درآمد کار", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                            }
+                            Text("•••• " + selectedCard.last4.ifBlank { selectedCard.cardNumber.takeLast(4) }, color = Color.White, fontSize = 12.sp)
+                        }
+                    }
+                }
                 Box(Modifier.fillMaxWidth()) {
-                    OutlinedButton({ cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) uiText("درآمد به کدام کارت برود؟") else "واریز به: ${card}")
+                    OutlinedButton({ cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)) {
+                        Icon(Icons.Default.CreditCard, null, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                            Text(if (card.isBlank()) uiText("درآمد به کدام کارت برود؟") else card,
+                                fontWeight = if (card.isBlank()) FontWeight.Normal else FontWeight.SemiBold)
+                            Text(if (card.isBlank()) "اختیاری؛ برای ثبت واریز انتخاب کنید" else "کارت مقصد درآمد",
+                                fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.ExpandMore, null)
                     }
                     DropdownMenu(cardOpen, { cardOpen = false }) {
-                        DropdownMenuItem({ Text(uiText("بدون کارت")) }, { card = ""; cardOpen = false })
-                        cards.forEach { q -> DropdownMenuItem({ Text(q.name) }, { card = q.name; cardOpen = false }) }
+                        DropdownMenuItem(text = { Text(uiText("بدون کارت")) }, leadingIcon = { Icon(Icons.Default.Block, null, Modifier.size(18.dp)) },
+                            onClick = { card = ""; cardOpen = false })
+                        cards.forEach { q ->
+                            DropdownMenuItem(text = { Text(q.name) }, leadingIcon = { Icon(Icons.Default.CreditCard, null, Modifier.size(18.dp)) },
+                                onClick = { card = q.name; cardOpen = false })
+                        }
                     }
                 }
                 Box(Modifier.fillMaxWidth()) {
-                    OutlinedButton({ personOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Person, null); Spacer(Modifier.width(8.dp)); Text(if (person.isBlank()) uiText("انتخاب شخص / کارفرما") else person)
+                    OutlinedButton({ personOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)) {
+                        Icon(Icons.Default.Person, null, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                            Text(if (person.isBlank()) uiText("انتخاب شخص / کارفرما") else person,
+                                fontWeight = if (person.isBlank()) FontWeight.Normal else FontWeight.SemiBold)
+                            Text(if (person.isBlank()) "اختیاری" else "شخص یا کارفرمای مرتبط",
+                                fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Default.ExpandMore, null)
                     }
                     DropdownMenu(personOpen, { personOpen = false }) {
-                        DropdownMenuItem({ Text(uiText("بدون شخص")) }, { person = ""; personOpen = false })
-                        people.forEach { q -> DropdownMenuItem({ Text(q.name) }, { person = q.name; personOpen = false }) }
+                        DropdownMenuItem(text = { Text(uiText("بدون شخص")) }, leadingIcon = { Icon(Icons.Default.PersonOff, null, Modifier.size(18.dp)) },
+                            onClick = { person = ""; personOpen = false })
+                        people.forEach { q ->
+                            DropdownMenuItem(text = { Text(q.name) }, leadingIcon = { Icon(Icons.Default.Person, null, Modifier.size(18.dp)) },
+                                onClick = { person = q.name; personOpen = false })
+                        }
                     }
                 }
-                OutlinedTextField(description, { description = it }, label = { Text(uiText("شرح کار")) },
+                OutlinedTextField(
+                    description, { description = it }, label = { Text(uiText("شرح کار")) },
                     leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 3, maxLines = 5, modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(17.dp), placeholder = { Text(uiText("مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی...")) })
+                    shape = RoundedCornerShape(17.dp), placeholder = { Text(uiText("مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی...")) }
+                )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
-                    Button(onClick = {
-                        onSave(WorkDay(existing?.id ?: System.currentTimeMillis(), place, startDate, start, end,
-                            normalizeDigits(income).toLongOrNull() ?: 0L, description, person, startDate, endDate, card))
-                    }, Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)) {
-                        Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save)
-                    }
+                    Button(
+                        onClick = {
+                            onSave(WorkDay(
+                                existing?.id ?: System.currentTimeMillis(), place, startDate, start, end,
+                                normalizeDigits(income).toLongOrNull() ?: 0L, description, person, startDate, endDate, card
+                            ))
+                        },
+                        enabled = place.isNotBlank() && startDate.isNotBlank() && endDate.isNotBlank(),
+                        modifier = Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)
+                    ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save) }
                 }
             }
         }
