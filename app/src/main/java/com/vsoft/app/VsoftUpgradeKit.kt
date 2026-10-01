@@ -170,15 +170,23 @@ fun Modifier.vsoftScrollToTopOnDoubleTap(
 /** Native Material pull-to-refresh container used by Vsoft's local-first screens. */
 @Composable
 fun VsoftPullToRefresh(
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
+    onRefresh: suspend () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val state = rememberPullToRefreshState()
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
+        onRefresh = {
+            if (isRefreshing) return@PullToRefreshBox
+            scope.launch {
+                isRefreshing = true
+                runCatching { onRefresh() }
+                isRefreshing = false
+            }
+        },
         state = state,
         modifier = modifier,
         indicator = {
