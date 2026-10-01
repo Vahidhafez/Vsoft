@@ -6,6 +6,8 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.security.KeyStore
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -18,7 +20,18 @@ private const val BACKUP_FILE = "vsoft-auto-backup.enc"
 private fun vsoftSecretKey(): SecretKey {
     val ks = KeyStore.getInstance(KEYSTORE).apply { load(null) }
     (ks.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
-    return KeyGenerator.getInstance("AES", KEYSTORE).apply { init(256) }.generateKey()
+    return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE).apply {
+        init(
+            KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setKeySize(256)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .build()
+        )
+    }.generateKey()
 }
 
 fun encryptVsoftAutoBackup(plain: ByteArray): ByteArray {
