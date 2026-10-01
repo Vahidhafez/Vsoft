@@ -89,18 +89,18 @@ import java.util.Date
 import java.util.Locale
 import java.math.BigInteger
 
-private val android.content.Context.dataStore by preferencesDataStore("vsoft_data")
+val android.content.Context.dataStore by preferencesDataStore("vsoft_data")
 
-private val TRANSACTIONS_KEY = stringPreferencesKey("transactions")
-private val WORK_KEY = stringPreferencesKey("work_days")
-private val CARDS_KEY = stringPreferencesKey("cards")
-private val PEOPLE_KEY = stringPreferencesKey("people")
-private val WORKPLACES_KEY = stringPreferencesKey("workplaces")
-private val LANGUAGE_KEY = stringPreferencesKey("language")
-private val CURRENCY_KEY = stringPreferencesKey("currency")
-private val THEME_KEY = stringPreferencesKey("theme")
-private val GLASS_KEY = stringPreferencesKey("glass")
-private val FONT_KEY = stringPreferencesKey("font")
+val TRANSACTIONS_KEY = stringPreferencesKey("transactions")
+val WORK_KEY = stringPreferencesKey("work_days")
+val CARDS_KEY = stringPreferencesKey("cards")
+val PEOPLE_KEY = stringPreferencesKey("people")
+val WORKPLACES_KEY = stringPreferencesKey("workplaces")
+val LANGUAGE_KEY = stringPreferencesKey("language")
+val CURRENCY_KEY = stringPreferencesKey("currency")
+val THEME_KEY = stringPreferencesKey("theme")
+val GLASS_KEY = stringPreferencesKey("glass")
+val FONT_KEY = stringPreferencesKey("font")
 
 // ---------------- MODELS ----------------
 
