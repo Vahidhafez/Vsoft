@@ -2656,6 +2656,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
 @Composable
 fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList<Workplace>) -> Unit) {
     var show by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<Workplace?>(null) }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
@@ -2672,15 +2673,15 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                     }) {
                         Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp)) {
                             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(46.dp).clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
+                                Box(Modifier.size(46.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
                                     Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary)
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                                IconButton(onClick = { editing = workplace }) { Icon(Icons.Default.Edit, contentDescription = uiText("ویرایش")) }
                                 IconButton(onClick = {
                                     onWorkplacesChange(workplaces.toMutableList().also { list -> list.removeAll { w -> w.id == workplace.id } })
-                                }) { Icon(Icons.Default.DeleteOutline, null) }
+                                }) { Icon(Icons.Default.DeleteOutline, contentDescription = uiText("حذف")) }
                             }
                         }
                     }
@@ -2693,11 +2694,39 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
     if (show) AddWorkplaceDialog(onDismiss = { show = false }, onSave = { newPlace ->
         onWorkplacesChange(workplaces.toMutableList().also { it.add(newPlace) }); show = false
     })
+    editing?.let { place ->
+        EditWorkplaceDialog(place, onDismiss = { editing = null }) { updated ->
+            onWorkplacesChange(workplaces.toMutableList().also { list ->
+                val i = list.indexOfFirst { it.id == updated.id }
+                if (i >= 0) list[i] = updated
+            })
+            editing = null
+        }
+    }
 }
+
+@Composable
+fun EditWorkplaceDialog(place: Workplace, onDismiss: () -> Unit, onSave: (Workplace) -> Unit) {
+    var name by remember(place.id) { mutableStateOf(place.name) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onSave(place.copy(name = name.trim())) }) { Text(uiText("ذخیره")) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
+        shape = RoundedCornerShape(28.dp),
+        title = { Text(uiText("ویرایش محل کار"), fontWeight = FontWeight.ExtraBold) },
+        text = {
+            OutlinedTextField(name, { name = it }, label = { Text(uiText("نام محل کار")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+    )
+}
+
 
 @Composable
 fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Unit) {
     var show by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<Person?>(null) }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
@@ -2712,9 +2741,12 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     VsoftSwipeToDelete(onDelete = {
                         onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
                     }) {
-                        PersonItem(person) {
-                            onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
-                        }
+                        PersonItem(person,
+                            onDelete = {
+                                onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
+                            },
+                            onEdit = { editing = person }
+                        )
                     }
                 }
             }
@@ -2725,7 +2757,44 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
     if (show) AddPersonDialog(onDismiss = { show = false }, onSave = { newPerson ->
         onPeopleChange(people.toMutableList().also { it.add(newPerson) }); show = false
     })
+    editing?.let { person ->
+        EditPersonDialog(person, onDismiss = { editing = null }) { updated ->
+            onPeopleChange(people.toMutableList().also { list ->
+                val i = list.indexOfFirst { it.id == updated.id }
+                if (i >= 0) list[i] = updated
+            })
+            editing = null
+        }
+    }
 }
+
+@Composable
+fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> Unit) {
+    var name by remember(person.id) { mutableStateOf(person.name) }
+    var phone by remember(person.id) { mutableStateOf(person.phone) }
+    var job by remember(person.id) { mutableStateOf(person.job) }
+    var note by remember(person.id) { mutableStateOf(person.note) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                if (name.isNotBlank()) onSave(person.copy(name = name.trim(), phone = phone.trim(), job = job.trim(), note = note.trim()))
+            }) { Text(uiText("ذخیره")) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
+        shape = RoundedCornerShape(28.dp),
+        title = { Text(uiText("ویرایش شخص"), fontWeight = FontWeight.ExtraBold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it }, label = { Text(uiText("نام و نام خانوادگی")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(phone, { phone = it }, label = { Text(uiText("شماره تماس")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(job, { job = it }, label = { Text(uiText("شغل / نقش")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(note, { note = it }, label = { Text(uiText("یادداشت")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+            }
+        }
+    )
+}
+
 
 // ---------------- SETTINGS COMPONENTS ----------------
 
@@ -3123,7 +3192,8 @@ fun AddWorkplaceDialog(
 @Composable
 fun PersonItem(
     person: Person,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit = {}
 ) {
 
     Card(
@@ -3181,10 +3251,11 @@ fun PersonItem(
                 }
             }
 
-            IconButton(
-                onClick = onDelete
-            ) {
-                Icon(Icons.Default.Delete, null)
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, contentDescription = uiText("ویرایش"))
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.DeleteOutline, contentDescription = uiText("حذف"))
             }
         }
     }
