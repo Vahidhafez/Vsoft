@@ -2534,8 +2534,13 @@ fun WorkPage(
             Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     
-                    Text(workDays.size.toString() + " workdays • " + String.format(Locale.US, "%.1f", totalHours) + " ساعت",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(
+                        if (LocalVsoftLanguage.current == "en")
+                            "${workDays.size} workdays • ${String.format(Locale.US, "%.1f", totalHours)} hours"
+                        else
+                            "${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp
+                    )
                 }
             }
 
@@ -2614,14 +2619,15 @@ fun WorkCard(work: WorkDay, onDelete: () -> Unit, onEdit: () -> Unit = {}) {
                     Text(work.place.ifBlank { "محل کار ثبت نشده" },
                         fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text(if (work.startDate.isNotBlank() && work.endDate.isNotBlank())
-                        "${work.startDate} → ${work.endDate}" else work.date,
+                        if (LocalLayoutDirection.current == LayoutDirection.Rtl) "${work.startDate} ← ${work.endDate}" else "${work.startDate} → ${work.endDate}"
+                        else work.date,
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, null) }
             }
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                WorkMeta(Icons.Default.Schedule, "${work.start} → ${work.end}", Modifier.weight(1f))
+                WorkMeta(Icons.Default.Schedule, if (LocalLayoutDirection.current == LayoutDirection.Rtl) "${work.start} ← ${work.end}" else "${work.start} → ${work.end}", Modifier.weight(1f))
                 WorkMeta(Icons.Default.Timer, String.format(Locale.US, "%.1f ساعت", hours), Modifier.weight(1f))
             }
             Spacer(Modifier.height(9.dp))
