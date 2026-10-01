@@ -155,6 +155,7 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
 @Composable
 private fun VsoftSearchContent(language: String, transactions: List<Transaction>, workDays: List<WorkDay>, cards: List<BankCard>, people: List<Person>, workplaces: List<Workplace>) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var debouncedQuery by remember { mutableStateOf("") }
     var recentSearches by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -186,7 +187,7 @@ private fun VsoftSearchContent(language: String, transactions: List<Transaction>
         if (clean.isBlank()) return
         val updated = listOf(clean) + recentSearches.filterNot { normalizeVsoftSearch(it) == normalizeVsoftSearch(clean) }
         recentSearches = updated.take(8)
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
             context.vsoftSearchStore.edit { it[RECENT_SEARCHES_KEY] = updated.take(8).joinToString("|") }
         }
     }
@@ -214,7 +215,7 @@ private fun VsoftSearchContent(language: String, transactions: List<Transaction>
                     Text(if (language == "en") "Recent searches" else if (language == "ar") "عمليات البحث الأخيرة" else "جستجوهای اخیر", fontWeight = FontWeight.Bold)
                     TextButton(onClick = {
                         recentSearches = emptyList()
-                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                             context.vsoftSearchStore.edit { it.remove(RECENT_SEARCHES_KEY) }
                         }
                     }) { Text(if (language == "en") "Clear" else if (language == "ar") "مسح" else "پاک کردن") }
