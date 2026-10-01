@@ -1,10 +1,11 @@
-name: Build Vsoft APK
+name: Build and Release Vsoft APK
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -25,40 +26,47 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Restore stable debug signing key
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: vsoft-debug-keystore-v1
-
-      - name: Prepare stable signing (if configured)
+      - name: Prepare release keystore
         env:
-          VSOFT_KEYSTORE_BASE64: ${{ secrets.VSOFT_KEYSTORE_BASE64 }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          if [ -n "$VSOFT_KEYSTORE_BASE64" ]; then
-            mkdir -p app/signing
-            echo "$VSOFT_KEYSTORE_BASE64" | base64 --decode > app/signing/vsoft-release.jks
-            echo "VSOFT_SIGNING_ENABLED=true" >> "$GITHUB_ENV"
-          else
-            echo "VSOFT_SIGNING_ENABLED=false" >> "$GITHUB_ENV"
-            echo "Stable signing is not configured; using the standard debug signing key."
-          fi
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          mkdir -p app/signing
+          echo "$KEYSTORE_BASE64" | base64 --decode > app/signing/vsoft-release.jks
+          test -s app/signing/vsoft-release.jks
 
-      - name: Build APK
+      - name: Build signed release APK
         env:
-          KSTOREPWD: ${{ secrets.VSOFT_KEYSTORE_PASSWORD }}
-          KEYALIAS: ${{ secrets.VSOFT_KEY_ALIAS }}
-          KEYPWD: ${{ secrets.VSOFT_KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          gradle assembleDebug --no-daemon --stacktrace -PVSOFT_VERSION_CODE=${{ github.run_number }} -PVSOFT_VERSION_NAME=1.0.${{ github.run_number }}
+          set -euo pipefail
+          gradle assembleRelease --no-daemon --stacktrace \
+            -PVSOFT_VERSION_CODE=${{ github.run_number }} \
+            -PVSOFT_VERSION_NAME=1.0.${{ github.run_number }}
 
-      - name: Show APK signing certificate
+      - name: Verify APK signature
         run: |
+          set -euo pipefail
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
-          "$APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk
+          "$APKSIGNER" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
 
-      - name: Upload APK
+      - name: Upload signed APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Vsoft-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: Vsoft-APK-${{ github.run_number }}
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v1.0.${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" app/build/outputs/apk/release/app-release.apk \
+            --title "Vsoft $RELEASE_TAG" \
+            --generate-notes
