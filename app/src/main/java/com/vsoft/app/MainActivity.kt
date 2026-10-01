@@ -3248,18 +3248,33 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
 @Composable
 fun EditWorkplaceDialog(place: Workplace, onDismiss: () -> Unit, onSave: (Workplace) -> Unit) {
     var name by remember(place.id) { mutableStateOf(place.name) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = { if (name.isNotBlank()) onSave(place.copy(name = name.trim())) }) { Text(uiText("ذخیره")) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
-        shape = RoundedCornerShape(28.dp),
-        title = { Text(uiText("ویرایش محل کار"), fontWeight = FontWeight.ExtraBold) },
-        text = {
-            OutlinedTextField(name, { name = it }, label = { Text(uiText("نام محل کار")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp), shape = RoundedCornerShape(30.dp),
+            color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .94f) else MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp, shadowElevation = 18.dp) {
+            Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)), contentAlignment=Alignment.Center) {
+                        Icon(Icons.Default.Edit, null, tint=MaterialTheme.colorScheme.primary, modifier=Modifier.size(23.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(uiText("ویرایش محل کار"), fontSize=21.sp, fontWeight=FontWeight.ExtraBold)
+                        Text(uiText("نام محل کار را به‌روزرسانی کنید"), fontSize=12.sp, color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    IconButton(onClick=onDismiss){Icon(Icons.Default.Close, uiText("بستن"))}
+                }
+                OutlinedTextField(name,{name=it},label={Text(uiText("نام محل کار"))},leadingIcon={Icon(Icons.Default.Place,null)},
+                    singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))}
+                    Button(onClick={if(name.isNotBlank()) onSave(place.copy(name=name.trim()))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){
+                        Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))
+                    }
+                }
+            }
         }
-    )
+    }
 }
 
 
