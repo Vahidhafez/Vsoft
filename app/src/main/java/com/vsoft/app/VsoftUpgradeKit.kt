@@ -169,6 +169,35 @@ fun Modifier.vsoftScrollToTopOnDoubleTap(
 }
 
 
+/** Floating action button for returning a LazyColumn to its first item. */
+@Composable
+fun VsoftScrollToTopFab(
+    state: LazyListState,
+    scope: kotlinx.coroutines.CoroutineScope,
+    modifier: Modifier = Modifier
+) {
+    val show by remember {
+        derivedStateOf { state.firstVisibleItemIndex > 1 || state.firstVisibleItemScrollOffset > 500 }
+    }
+    AnimatedVisibility(
+        visible = show,
+        enter = fadeIn(tween(180)) + androidx.compose.animation.scaleIn(tween(180), initialScale = 0.8f),
+        exit = fadeOut(tween(120)) + androidx.compose.animation.scaleOut(tween(120), targetScale = 0.8f),
+        modifier = modifier
+    ) {
+        SmallFloatingActionButton(
+            onClick = { scope.launch { state.animateScrollToItem(0) } },
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ) {
+            Icon(
+                imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowUp,
+                contentDescription = uiText("بازگشت به بالا")
+            )
+        }
+    }
+}
+
 /** Native Material pull-to-refresh container used by Vsoft's local-first screens. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
