@@ -1332,9 +1332,20 @@ fun MainScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .vsoftGlass(RoundedCornerShape(24.dp))
+                    .border(
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
+                        RoundedCornerShape(24.dp)
+                    ),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                    containerColor = if (LocalVsoftGlass.current)
+                        Color.Transparent
+                    else MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = if (LocalVsoftGlass.current)
+                        Color.Transparent
+                    else MaterialTheme.colorScheme.surface
                 ),
                 title = {
                     AnimatedContent(
@@ -1393,17 +1404,16 @@ fun MainScreen(
 
             NavigationBar(
                 modifier = Modifier
-                    .padding(8.dp)
-                    .padding(horizontal = 2.dp)
-                    .clip(RoundedCornerShape(28.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .vsoftGlass(RoundedCornerShape(30.dp))
                     .border(
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .10f)),
-                        RoundedCornerShape(28.dp)
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
+                        RoundedCornerShape(30.dp)
                     ),
                 containerColor = if (LocalVsoftGlass.current)
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+                    Color.Transparent
                 else MaterialTheme.colorScheme.surface,
-                tonalElevation = 3.dp
+                tonalElevation = if (LocalVsoftGlass.current) 0.dp else 3.dp
             ) {
 
                 NavigationBarItem(
