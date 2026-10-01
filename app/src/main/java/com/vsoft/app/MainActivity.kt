@@ -2359,11 +2359,30 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
     val current = opening + income + workIncome - expense
     val hours = cardWork.sumOf { calculateHours(it.start, it.end) }
 
+    val now = today().split("/").mapNotNull { it.toIntOrNull() }
+    val nowYear = now.getOrNull(0) ?: 1405
+    val nowMonth = now.getOrNull(1) ?: 1
+    val monthly = remember(selectedCardName, transactions, workDays) {
+        (0..5).map { back ->
+            var y = nowYear
+            var m = nowMonth - back
+            while (m < 1) { m += 12; y-- }
+            val prefix = "%04d/%02d/".format(Locale.US, y, m)
+            val tx = transactions.filter { it.card == selectedCardName && it.date.startsWith(prefix) }
+            val wd = workDays.filter { it.card == selectedCardName && it.date.startsWith(prefix) }
+            Triple(
+                "$y/$m",
+                tx.filter { it.type == "income" }.sumOf { it.amount } + wd.sumOf { it.income },
+                tx.filter { it.type == "expense" }.sumOf { it.amount }
+            )
+        }.reversed()
+    }
+
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(bottom = 28.dp)) {
         item {
             Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-            Text(uiText("هر کارت را جداگانه بررسی کنید؛ گزارش‌ها شلوغ نمی‌شوند."),
+            Text(uiText("گزارش مالی، روند ماهانه و عملکرد کارت را یکجا ببینید."),
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         item {
@@ -2372,10 +2391,14 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                 Column(Modifier.padding(14.dp)) {
                     Text(uiText("انتخاب کارت"), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(cards, key = { it.id }) { card ->
-                            FilterChip(card.name == selectedCardName, { selectedCardName = card.name },
-                                label = { Text(card.name) }, leadingIcon = { Icon(Icons.Default.CreditCard, null, Modifier.size(16.dp)) })
+                    if (cards.isEmpty()) {
+                        Text(uiText("هنوز کارت بانکی ثبت نشده"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(cards, key = { it.id }) { card ->
+                                FilterChip(card.name == selectedCardName, { selectedCardName = card.name },
+                                    label = { Text(card.name) }, leadingIcon = { Icon(Icons.Default.CreditCard, null, Modifier.size(16.dp)) })
+                            }
                         }
                     }
                 }
@@ -2390,7 +2413,121 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
             item { InfoCard(uiText("موجودی اولیه"), money(opening), Icons.Default.CreditCard) }
             item { InfoCard(uiText("درآمد کاری واریزشده"), money(workIncome), Icons.Default.Work) }
             item { InfoCard(uiText("ساعات کاری مرتبط"), String.format(Locale.US, "%.1f ساعت", hours), Icons.Default.AccessTime) }
+            item { VsoftReportMonthlyChart(monthly) }
+            item {
+                val categories = cardTransactions
+                    .filter { it.type == "expense" && it.category.isNotBlank() }
+                    .groupingBy { it.category.trim() }
+                    .fold(0L) { acc, t -> acc + t.amount }
+                    .entries
+                    .sortedByDescending { it.value }
+                    .take(5)
+
+                Card(
+                    Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(uiText("دسته‌بندی هزینه‌ها"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(Modifier.height(10.dp))
+                        if (categories.isEmpty()) {
+                            Text(uiText("هنوز هزینه‌ای با دسته‌بندی ثبت نشده"),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        } else {
+                            val max = categories.maxOf { it.value }.coerceAtLeast(1L)
+                            categories.forEach { entry ->
+                                val fraction = (entry.value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+                                Column(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Text(entry.key, Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                                        Text(money(entry.value), fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Spacer(Modifier.height(5.dp))
+                                    LinearProgressIndicator(
+                                        progress = { fraction },
+                                        Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(8.dp))
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
+    val maxValue = monthly.flatMap { listOf(it.second, it.third) }.maxOrNull()?.coerceAtLeast(1L) ?: 1L
+    Card(
+        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(uiText("روند ۶ ماهه"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(uiText("درآمد و هزینه هر ماه"), fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(14.dp))
+            Row(
+                Modifier.fillMaxWidth().height(170.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                monthly.forEach { point ->
+                    val incomeFraction = (point.second.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
+                    val expenseFraction = (point.third.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
+                    val month = point.first.substringAfterLast("/").toIntOrNull() ?: 1
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            Modifier.height(135.dp),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Box(
+                                Modifier.width(13.dp).fillMaxHeight(incomeFraction)
+                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Box(
+                                Modifier.width(13.dp).fillMaxHeight(expenseFraction)
+                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                    .background(MaterialTheme.colorScheme.error)
+                            )
+                        }
+                        Spacer(Modifier.height(7.dp))
+                        Text(jalaliMonthName(month).take(3), fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                VsoftChartLegend(MaterialTheme.colorScheme.primary, uiText("درآمد"))
+                VsoftChartLegend(MaterialTheme.colorScheme.error, uiText("هزینه"))
+            }
+        }
+    }
+}
+
+@Composable
+private fun VsoftChartLegend(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(9.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.width(6.dp))
+        Text(label, fontSize = 12.sp)
     }
 }
 
