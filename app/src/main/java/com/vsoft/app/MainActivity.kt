@@ -3644,36 +3644,15 @@ fun EditCardDialog(card:BankCard,onDismiss:()->Unit,onSave:(BankCard)->Unit){
 }
 
 @Composable
-fun AddWorkplaceDialog(
-    onDismiss: () -> Unit,
-    onSave: (Workplace) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                if (name.isNotBlank()) {
-                    onSave(Workplace(System.currentTimeMillis(), name.trim()))
-                }
-            }) { Text(uiText("ذخیره")) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
-        shape = RoundedCornerShape(28.dp),
-        containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
-        title = { Text(uiText("محل کار جدید"), fontWeight = FontWeight.ExtraBold) },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(uiText("نام محل کار")) },
-                leadingIcon = { Icon(Icons.Default.Place, null) },
-                placeholder = { Text(uiText("مثلاً پروژه، شرکت یا کارگاه")) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    )
+fun AddWorkplaceDialog(onDismiss:()->Unit,onSave:(Workplace)->Unit){
+ var name by remember{mutableStateOf("")}
+ Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
+  Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.Place,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("محل کار جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("محل کار مورد استفاده را اضافه کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   OutlinedTextField(name,{name=it},label={Text(uiText("نام محل کار"))},leadingIcon={Icon(Icons.Default.Place,null)},placeholder={Text(uiText("مثلاً پروژه، شرکت یا کارگاه"))},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={onSave(Workplace(System.currentTimeMillis(),name.trim()))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
+  }
+ }}
 }
 
 // ---------------- PEOPLE ----------------
@@ -3749,103 +3728,18 @@ fun PersonItem(
     }
 }
 @Composable
-fun AddPersonDialog(
-    onDismiss: () -> Unit,
-    onSave: (Person) -> Unit
-) {
-
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var job by remember { mutableStateOf("") }
-
-    AlertDialog(
-
-        onDismissRequest = onDismiss,
-
-        confirmButton = {
-
-            TextButton(
-                onClick = {
-
-                    if (name.isNotBlank()) {
-
-                        onSave(
-                            Person(
-                                id = System.currentTimeMillis(),
-                                name = name,
-                                phone = phone,
-                                note = note,
-                                job = job
-                            )
-                        )
-                    }
-                }
-            ) {
-                Text(uiText("ذخیره"))
-            }
-        },
-
-        dismissButton = {
-
-            TextButton(
-                onClick = onDismiss
-            ) {
-                Text(uiText("لغو"))
-            }
-        },
-
-        shape = RoundedCornerShape(28.dp),
-        containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
-        title = {
-            Text(uiText("شخص جدید"), fontWeight = FontWeight.ExtraBold)
-        },
-
-        text = {
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(uiText("نام و نام خانوادگی")) },
-                    leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    label = { Text(uiText("شماره تماس")) },
-                    leadingIcon = { Icon(Icons.Default.Phone, null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = job,
-                    onValueChange = { job = it },
-                    label = { Text(uiText("شغل / نقش")) },
-                    leadingIcon = { Icon(Icons.Default.Badge, null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text(uiText("یادداشت")) },
-                    leadingIcon = { Icon(Icons.Default.Notes, null) },
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    )
+fun AddPersonDialog(onDismiss:()->Unit,onSave:(Person)->Unit){
+ var name by remember{mutableStateOf("")};var phone by remember{mutableStateOf("")};var job by remember{mutableStateOf("")};var note by remember{mutableStateOf("")}
+ Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
+  Column(Modifier.padding(22.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(11.dp)){
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.secondary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.PersonAdd,null,tint=MaterialTheme.colorScheme.secondary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("شخص جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("اطلاعات فرد را برای کار و مالی ثبت کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   OutlinedTextField(name,{name=it},label={Text(uiText("نام و نام خانوادگی"))},leadingIcon={Icon(Icons.Default.PersonOutline,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(phone,{phone=it},label={Text(uiText("شماره تماس"))},leadingIcon={Icon(Icons.Default.Phone,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(job,{job=it},label={Text(uiText("شغل / نقش"))},leadingIcon={Icon(Icons.Default.Badge,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Employer / Electrician" else "مثلاً کارفرما / برق‌کش")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(note,{note=it},label={Text(uiText("یادداشت"))},leadingIcon={Icon(Icons.Default.Notes,null)},minLines=2,maxLines=3,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={onSave(Person(System.currentTimeMillis(),name.trim(),phone.trim(),note.trim(),job.trim()))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
+  }
+ }}
 }
 
 @Composable
