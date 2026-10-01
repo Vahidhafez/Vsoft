@@ -2225,32 +2225,106 @@ fun FinancePage(
         compareByDescending<Transaction> { it.date }
             .thenByDescending { it.id }
     )
+    val incomeTotal = transactions.filter { it.type == "income" }.sumOf { it.amount }
+    val expenseTotal = transactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val netTotal = incomeTotal - expenseTotal
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column(Modifier.weight(1f)) {
-                    
-                    Text(transactions.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "transactions" else "تراکنش", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(
+                        uiText("مدیریت تراکنش‌ها"),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        transactions.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "transactions" else "تراکنش",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = .10f)
+                ) {
+                    Icon(
+                        Icons.Default.AccountBalanceWallet,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(10.dp).size(20.dp)
+                    )
                 }
             }
-        OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth()
-            .padding(horizontal = 18.dp), singleLine = true, shape = RoundedCornerShape(18.dp),
-            label = { Text(strings.search) }, leadingIcon = { Icon(Icons.Default.Search, null) })
-        Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            FilterChip(filter == "all", { filter = "all" }, label = { Text(if (LocalVsoftLanguage.current == "en") "All" else "همه") })
-            FilterChip(filter == "income", { filter = "income" }, label = { Text(strings.income) })
-            FilterChip(filter == "expense", { filter = "expense" }, label = { Text(strings.expense) })
-        }
-        if (list.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
-                EmptyState(uiText("تراکنشی با این فیلتر پیدا نشد"), Icons.Default.SearchOff)
+
+            Card(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp).vsoftGlass(RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DashboardMiniStat(
+                            uiText("درآمد"),
+                            money(incomeTotal),
+                            Icons.Default.TrendingUp,
+                            MaterialTheme.colorScheme.secondary,
+                            Modifier.weight(1f)
+                        )
+                        DashboardMiniStat(
+                            uiText("هزینه"),
+                            money(expenseTotal),
+                            Icons.Default.TrendingDown,
+                            MaterialTheme.colorScheme.error,
+                            Modifier.weight(1f)
+                        )
+                        DashboardMiniStat(
+                            uiText("خالص"),
+                            money(netTotal),
+                            Icons.Default.AccountBalanceWallet,
+                            if (netTotal >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            Modifier.weight(1f)
+                        )
+                    }
+                }
             }
-        } else {
-            LazyColumn(Modifier.fillMaxSize().padding(horizontal = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)) {
+
+            OutlinedTextField(
+                search, { search = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+                label = { Text(strings.search) },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                trailingIcon = if (search.isNotBlank()) ({
+                    IconButton(onClick = { search = "" }) {
+                        Icon(Icons.Default.Close, uiText("پاک کردن"))
+                    }
+                }) else null
+            )
+            Row(
+                Modifier.padding(horizontal = 18.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                FilterChip(filter == "all", { filter = "all" }, label = { Text(if (LocalVsoftLanguage.current == "en") "All" else "همه") })
+                FilterChip(filter == "income", { filter = "income" }, label = { Text(strings.income) })
+                FilterChip(filter == "expense", { filter = "expense" }, label = { Text(strings.expense) })
+            }
+            if (list.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth().padding(18.dp), contentAlignment = Alignment.Center) {
+                    EmptyState(uiText("تراکنشی با این فیلتر پیدا نشد"), Icons.Default.SearchOff)
+                }
+            } else {
+                LazyColumn(
+                    Modifier.weight(1f).fillMaxWidth().padding(horizontal = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)
+                ) {
                 itemsIndexed(list, key = { _, it -> it.id }) { index, t ->
                     VsoftEntrance(index.coerceAtMost(7)) {
                         VsoftSwipeToDelete(
