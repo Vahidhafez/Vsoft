@@ -3188,14 +3188,37 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                     VsoftSwipeToDelete(onDelete = {
                         onWorkplacesChange(workplaces.toMutableList().also { list -> list.removeAll { w -> w.id == workplace.id } })
                     }) {
-                        Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp)) {
-                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(46.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary)
+                        Card(
+                            Modifier.fillMaxWidth().animateContentSize().pressScale(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    Modifier.size(50.dp).clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .11f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(25.dp))
                                 }
-                                Spacer(Modifier.width(12.dp))
-                                Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                                IconButton(onClick = { editing = workplace }) { Icon(Icons.Default.Edit, contentDescription = uiText("ویرایش")) }
+                                Spacer(Modifier.width(13.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(workplace.name, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                                    Text(
+                                        uiText("محل کار"),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(onClick = { editing = workplace }) {
+                                    Icon(Icons.Default.Edit, contentDescription = uiText("ویرایش"))
+                                }
                                 IconButton(onClick = {
                                     onWorkplacesChange(workplaces.toMutableList().also { list -> list.removeAll { w -> w.id == workplace.id } })
                                 }) { Icon(Icons.Default.DeleteOutline, contentDescription = uiText("حذف")) }
@@ -3747,62 +3770,61 @@ fun PersonItem(
     onDelete: () -> Unit,
     onEdit: () -> Unit = {}
 ) {
-
     Card(
         Modifier
             .fillMaxWidth()
-            .vsoftGlass(RoundedCornerShape(22.dp))
-            .animateContentSize(),
-        shape = RoundedCornerShape(22.dp),
+            .vsoftGlass(RoundedCornerShape(24.dp))
+            .animateContentSize()
+            .pressScale(),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
     ) {
-
         Row(
-            Modifier.padding(16.dp),
+            Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
+            val avatarColor = MaterialTheme.colorScheme.primary
             Box(
-                Modifier.size(48.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)),
+                Modifier.size(52.dp).clip(CircleShape)
+                    .background(avatarColor.copy(alpha = .12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Person,
-                    null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(
-                Modifier.weight(1f)
-            ) {
-
                 Text(
-                    person.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
+                    person.name.trim().firstOrNull()?.toString() ?: "؟",
+                    color = avatarColor,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 20.sp
                 )
-
-                if (person.phone.isNotBlank()) {
-                    Text(person.phone)
-                }
-
+            }
+            Spacer(Modifier.width(13.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(person.name, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
                 if (person.job.isNotBlank()) {
-                    Text(person.job)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Badge, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(4.dp))
+                        Text(person.job, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+                    }
                 }
-
+                if (person.phone.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Phone, null, modifier = Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(4.dp))
+                        Text(person.phone, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 if (person.note.isNotBlank()) {
-                    Text(person.note)
+                    Text(
+                        person.note,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
                 }
             }
-
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, contentDescription = uiText("ویرایش"))
             }
@@ -3812,7 +3834,6 @@ fun PersonItem(
         }
     }
 }
-
 @Composable
 fun AddPersonDialog(
     onDismiss: () -> Unit,
