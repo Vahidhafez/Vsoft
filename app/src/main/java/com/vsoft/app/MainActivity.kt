@@ -3612,136 +3612,35 @@ fun CardItem(
 }
 
 @Composable
-fun AddCardDialog(
-    onDismiss: () -> Unit,
-    onSave: (BankCard) -> Unit
-) {
-    var bank by remember { mutableStateOf("") }
-    var name by remember { mutableStateOf("") }
-    var cardNumber by remember { mutableStateOf("") }
-    var balance by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            Button(
-                onClick = {
-                    val normalized = normalizeDigits(cardNumber).filter(Char::isDigit).take(16)
-                    if (bank.isNotBlank()) {
-                        onSave(BankCard(
-                            id = System.currentTimeMillis(),
-                            bank = bank.trim(),
-                            name = name.trim().ifBlank { bank.trim() },
-                            cardNumber = normalized,
-                            last4 = normalized.takeLast(4),
-                            balance = normalizeDigits(balance).toLongOrNull() ?: 0L
-                        ))
-                    }
-                },
-                shape = RoundedCornerShape(14.dp)
-            ) { Text(uiText("ذخیره")) }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss, shape = RoundedCornerShape(14.dp)) { Text(uiText("لغو")) }
-        },
-        shape = RoundedCornerShape(30.dp),
-        containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .92f) else MaterialTheme.colorScheme.surface,
-        title = {
-            Column {
-                Text(uiText("کارت بانکی جدید"), fontWeight = FontWeight.ExtraBold, fontSize = 21.sp)
-                Spacer(Modifier.height(3.dp))
-                Text("مشخصات کارت را وارد کنید", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = bank, onValueChange = { bank = it },
-                    label = { Text(uiText("نام بانک")) },
-                    leadingIcon = { Icon(Icons.Default.AccountBalance, null) },
-                    singleLine = true, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = name, onValueChange = { name = it },
-                    label = { Text(uiText("عنوان کارت")) },
-                    leadingIcon = { Icon(Icons.Default.CreditCard, null) },
-                    placeholder = { Text("مثلاً کارت شخصی") },
-                    singleLine = true, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = cardNumber,
-                    onValueChange = { cardNumber = normalizeDigits(it).filter(Char::isDigit).take(16) },
-                    label = { Text(uiText("شماره کامل کارت")) },
-                    leadingIcon = { Icon(Icons.Default.CreditCard, null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true, supportingText = { Text(cardNumber.length.toString() + " / 16") },
-                    shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = balance, onValueChange = { balance = normalizeAmountInput(it) },
-                    label = { Text(uiText("موجودی اولیه")) },
-                    leadingIcon = { Icon(Icons.Default.AccountBalanceWallet, null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(),
-                    singleLine = true, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    )
+fun AddCardDialog(onDismiss:()->Unit,onSave:(BankCard)->Unit){
+ var bank by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var cardNumber by remember{mutableStateOf("")};var balance by remember{mutableStateOf("")}
+ Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
+  Column(Modifier.padding(22.dp).heightIn(max=660.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.CreditCard,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("کارت بانکی جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("مشخصات کارت را وارد کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   AnimatedVisibility(cardNumber.isNotBlank()){val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=.92f),c.second.copy(alpha=.88f)))).padding(16.dp)){Column{Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.ExtraBold);Spacer(Modifier.height(13.dp));Text(if(cardNumber.length>=4)"••••  ••••  ••••  "+cardNumber.takeLast(4)else cardNumber,color=Color.White,fontSize=14.sp,letterSpacing=1.5.sp);Spacer(Modifier.height(7.dp));Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=.72f),fontSize=11.sp)}}}
+   OutlinedTextField(bank,{bank=it},label={Text(uiText("نام بانک"))},leadingIcon={Icon(Icons.Default.AccountBalance,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(name,{name=it},label={Text(uiText("عنوان کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Personal card" else "مثلاً کارت شخصی")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(cardNumber,{cardNumber=normalizeDigits(it).filter(Char::isDigit).take(16)},label={Text(uiText("شماره کامل کارت"))},leadingIcon={Icon(Icons.Default.Numbers,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,supportingText={Text(cardNumber.length.toString()+" / 16")},shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(balance,{balance=normalizeAmountInput(it)},label={Text(uiText("موجودی اولیه"))},leadingIcon={Icon(Icons.Default.AccountBalanceWallet,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),visualTransformation=GroupedNumberVisualTransformation(),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={val n=normalizeDigits(cardNumber).filter(Char::isDigit).take(16);onSave(BankCard(System.currentTimeMillis(),bank.trim(),name.trim().ifBlank{bank.trim()},n,n.takeLast(4),normalizeDigits(balance).toLongOrNull()?:0L))},enabled=bank.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
+  }
+ }}
 }
 
 @Composable
-fun EditCardDialog(
-    card: BankCard,
-    onDismiss: () -> Unit,
-    onSave: (BankCard) -> Unit
-) {
-    var bank by remember { mutableStateOf(card.bank) }
-    var name by remember { mutableStateOf(card.name) }
-    var cardNumber by remember { mutableStateOf(card.cardNumber) }
-    var balance by remember { mutableStateOf(card.balance.toString()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                val normalized = normalizeDigits(cardNumber).filter(Char::isDigit).take(16)
-                onSave(
-                    card.copy(
-                        bank = bank,
-                        name = name,
-                        cardNumber = normalized,
-                        last4 = normalized.takeLast(4),
-                        balance = normalizeDigits(balance).toLongOrNull() ?: 0L
-                    )
-                )
-            }) { Text(uiText("ذخیره")) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
-        shape = RoundedCornerShape(28.dp),
-        containerColor = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .82f) else MaterialTheme.colorScheme.surface,
-        title = { Text(uiText("ویرایش کارت"), fontWeight = FontWeight.ExtraBold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(bank, { bank = it }, label = { Text(uiText("بانک")) }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(name, { name = it }, label = { Text(uiText("نام کارت")) }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(
-                    cardNumber,
-                    { cardNumber = normalizeDigits(it).filter(Char::isDigit).take(16) },
-                    label = { Text(uiText("شماره کامل کارت")) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    balance,
-                    { balance = normalizeAmountInput(it) },
-                    label = { Text(uiText("موجودی اولیه")) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    )
+fun EditCardDialog(card:BankCard,onDismiss:()->Unit,onSave:(BankCard)->Unit){
+ var bank by remember(card.id){mutableStateOf(card.bank)};var name by remember(card.id){mutableStateOf(card.name)};var num by remember(card.id){mutableStateOf(card.cardNumber)};var balance by remember(card.id){mutableStateOf(card.balance.toString())}
+ Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
+  Column(Modifier.padding(22.dp).heightIn(max=650.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.Edit,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("ویرایش کارت"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("اطلاعات کارت را به‌روزرسانی کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=.92f),c.second.copy(alpha=.88f)))).padding(15.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.CreditCard,null,tint=Color.White);Spacer(Modifier.width(9.dp));Column(Modifier.weight(1f)){Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.ExtraBold);Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=.72f),fontSize=11.sp)};Text("•••• "+num.filter(Char::isDigit).takeLast(4),color=Color.White,fontSize=12.sp)}}
+   OutlinedTextField(bank,{bank=it},label={Text(uiText("بانک"))},leadingIcon={Icon(Icons.Default.AccountBalance,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(name,{name=it},label={Text(uiText("نام کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(num,{num=normalizeDigits(it).filter(Char::isDigit).take(16)},label={Text(uiText("شماره کامل کارت"))},leadingIcon={Icon(Icons.Default.Numbers,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,supportingText={Text(num.length.toString()+" / 16")},shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(balance,{balance=normalizeAmountInput(it)},label={Text(uiText("موجودی اولیه"))},leadingIcon={Icon(Icons.Default.AccountBalanceWallet,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),visualTransformation=GroupedNumberVisualTransformation(),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={val n=normalizeDigits(num).filter(Char::isDigit).take(16);onSave(card.copy(bank=bank.trim(),name=name.trim().ifBlank{bank.trim()},cardNumber=n,last4=n.takeLast(4),balance=normalizeDigits(balance).toLongOrNull()?:0L))},enabled=bank.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
+  }
+ }}
 }
 
 @Composable
