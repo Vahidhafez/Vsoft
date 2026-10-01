@@ -2227,7 +2227,7 @@ fun FinancePage(
             Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     
-                    Text(transactions.size.toString() + " " + if (language == "en") "transactions" else "تراکنش", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(transactions.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "transactions" else "تراکنش", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
         OutlinedTextField(search, { search = it }, modifier = Modifier.fillMaxWidth()
@@ -2235,7 +2235,7 @@ fun FinancePage(
             label = { Text(strings.search) }, leadingIcon = { Icon(Icons.Default.Search, null) })
         Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            FilterChip(filter == "all", { filter = "all" }, label = { Text(if (language == "en") "All" else "همه") })
+            FilterChip(filter == "all", { filter = "all" }, label = { Text(if (LocalVsoftLanguage.current == "en") "All" else "همه") })
             FilterChip(filter == "income", { filter = "income" }, label = { Text(strings.income) })
             FilterChip(filter == "expense", { filter = "expense" }, label = { Text(strings.expense) })
         }
