@@ -1509,20 +1509,20 @@ fun MainScreen(
                 }
                 (slideInHorizontally(
                     animationSpec = spring(
-                        dampingRatio = 0.86f,
-                        stiffness = 420f
+                        dampingRatio = 0.9f,
+                        stiffness = 520f
                     ),
-                    initialOffsetX = { direction * it / 2 }
-                ) + fadeIn(tween(260)) + scaleIn(
-                    animationSpec = spring(dampingRatio = 0.88f, stiffness = 420f),
-                    initialScale = 0.975f
+                    initialOffsetX = { direction * it / 3 }
+                ) + fadeIn(tween(180)) + scaleIn(
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = 520f),
+                    initialScale = 0.985f
                 )) togetherWith
                 (slideOutHorizontally(
-                    animationSpec = tween(260, easing = FastOutSlowInEasing),
-                    targetOffsetX = { -direction * it / 6 }
-                ) + fadeOut(tween(180)) + scaleOut(
-                    animationSpec = tween(240, easing = FastOutSlowInEasing),
-                    targetScale = 0.985f
+                    animationSpec = tween(170, easing = FastOutSlowInEasing),
+                    targetOffsetX = { -direction * it / 8 }
+                ) + fadeOut(tween(120)) + scaleOut(
+                    animationSpec = tween(160, easing = FastOutSlowInEasing),
+                    targetScale = 0.99f
                 ))
             },
             modifier = Modifier
@@ -1692,15 +1692,15 @@ fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
     val visible = remember { MutableTransitionState(false) }
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay((index * 55L).coerceAtMost(330L))
+        kotlinx.coroutines.delay((index * 42L).coerceAtMost(250L))
         visible.targetState = true
     }
     AnimatedVisibility(
         visibleState = visible,
         enter = fadeIn(tween(320)) + slideInHorizontally(
-            animationSpec = tween(420, easing = FastOutSlowInEasing)
+            animationSpec = tween(300, easing = FastOutSlowInEasing)
         ) { direction * it / 14 } + scaleIn(
-            animationSpec = spring(dampingRatio = 0.88f, stiffness = 380f),
+            animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
             initialScale = 0.985f
         ),
         exit = fadeOut(tween(160)) + scaleOut(
