@@ -3344,25 +3344,160 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
     var phone by remember(person.id) { mutableStateOf(person.phone) }
     var job by remember(person.id) { mutableStateOf(person.job) }
     var note by remember(person.id) { mutableStateOf(person.note) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                if (name.isNotBlank()) onSave(person.copy(name = name.trim(), phone = phone.trim(), job = job.trim(), note = note.trim()))
-            }) { Text(uiText("ذخیره")) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(uiText("لغو")) } },
-        shape = RoundedCornerShape(28.dp),
-        title = { Text(uiText("ویرایش شخص"), fontWeight = FontWeight.ExtraBold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text(uiText("نام و نام خانوادگی")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(phone, { phone = it }, label = { Text(uiText("شماره تماس")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(job, { job = it }, label = { Text(uiText("شغل / نقش")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(note, { note = it }, label = { Text(uiText("یادداشت")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            Modifier.fillMaxWidth().padding(8.dp),
+            shape = RoundedCornerShape(30.dp),
+            color = if (LocalVsoftGlass.current)
+                MaterialTheme.colorScheme.surface.copy(alpha = .94f)
+            else MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            shadowElevation = 18.dp
+        ) {
+            Column(
+                Modifier.padding(22.dp)
+                    .heightIn(max = 620.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(11.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier.size(48.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = .12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            uiText("ویرایش شخص"),
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            uiText("اطلاعات فرد را به‌روزرسانی کنید"),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, uiText("بستن"))
+                    }
+                }
+
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = .08f))
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier.size(46.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = .14f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            name.trim().firstOrNull()?.toString() ?: "؟",
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 19.sp
+                        )
+                    }
+                    Spacer(Modifier.width(11.dp))
+                    Column {
+                        Text(
+                            name.ifBlank { uiText("نام و نام خانوادگی") },
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            job.ifBlank { uiText("شغل / نقش") },
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    name, { name = it },
+                    label = { Text(uiText("نام و نام خانوادگی")) },
+                    leadingIcon = { Icon(Icons.Default.PersonOutline, null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    phone, { phone = it },
+                    label = { Text(uiText("شماره تماس")) },
+                    leadingIcon = { Icon(Icons.Default.Phone, null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    job, { job = it },
+                    label = { Text(uiText("شغل / نقش")) },
+                    leadingIcon = { Icon(Icons.Default.Badge, null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    note, { note = it },
+                    label = { Text(uiText("یادداشت")) },
+                    leadingIcon = { Icon(Icons.Default.Notes, null) },
+                    minLines = 2,
+                    maxLines = 3,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp)
+                    ) { Text(uiText("لغو")) }
+
+                    Button(
+                        onClick = {
+                            onSave(
+                                person.copy(
+                                    name = name.trim(),
+                                    phone = phone.trim(),
+                                    job = job.trim(),
+                                    note = note.trim()
+                                )
+                            )
+                        },
+                        enabled = name.isNotBlank(),
+                        modifier = Modifier.weight(1f).pressScale(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("ذخیره"))
+                    }
+                }
             }
         }
-    )
+    }
 }
 
 
