@@ -1712,135 +1712,391 @@ fun DashboardPage(
     val openingBalance = cards.sumOf { it.balance }
     val balance = openingBalance + income + workIncome - expense
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
+
     val currentJalali = today()
     val monthPrefix = currentJalali.substringBeforeLast("/") + "/"
     val monthWorkDays = workDays.filter { it.date.startsWith(monthPrefix) }
     val monthWorkIncome = monthWorkDays.sumOf { it.income }
-    val monthExpenses = transactions.filter { it.type == "expense" && it.date.startsWith(monthPrefix) }.sumOf { it.amount }
+    val monthExpenses = transactions
+        .filter { it.type == "expense" && it.date.startsWith(monthPrefix) }
+        .sumOf { it.amount }
+    val monthIncome = transactions
+        .filter { it.type == "income" && it.date.startsWith(monthPrefix) }
+        .sumOf { it.amount }
+    val monthNet = monthWorkIncome + monthIncome - monthExpenses
     val monthAverage = if (monthWorkDays.isEmpty()) 0L else monthWorkIncome / monthWorkDays.size
-    val currentMonthNet = monthWorkIncome + transactions.filter { it.type == "income" && it.date.startsWith(monthPrefix) }.sumOf { it.amount } - monthExpenses
-    val currentParts = currentJalali.split("/").mapNotNull { it.toIntOrNull() }
-    val currentYear = currentParts.getOrNull(0) ?: 1405
-    val currentMonth = currentParts.getOrNull(1) ?: 1
-    val previousYear = if (currentMonth == 1) currentYear - 1 else currentYear
-    val previousMonth = if (currentMonth == 1) 12 else currentMonth - 1
-    val previousPrefix = "%04d/%02d/".format(Locale.US, previousYear, previousMonth)
-    val previousWorkIncome = workDays.filter { it.date.startsWith(previousPrefix) }.sumOf { it.income }
-    val previousIncome = transactions.filter { it.type == "income" && it.date.startsWith(previousPrefix) }.sumOf { it.amount }
-    val previousExpenses = transactions.filter { it.type == "expense" && it.date.startsWith(previousPrefix) }.sumOf { it.amount }
-    val previousMonthNet = previousWorkIncome + previousIncome - previousExpenses
-    val netChangePercent = if (previousMonthNet != 0L) ((currentMonthNet - previousMonthNet).toDouble() / kotlin.math.abs(previousMonthNet.toDouble())) * 100.0 else null
-    val animatedBalance by animateFloatAsState(balance.toFloat(), animationSpec = tween(650), label = "balance")
-    val animatedIncome by animateFloatAsState((income + workIncome).toFloat(), animationSpec = tween(750), label = "income")
-    val animatedExpense by animateFloatAsState(expense.toFloat(), animationSpec = tween(800), label = "expense")
+
+    val animatedBalance by animateFloatAsState(balance.toFloat(), tween(650), label = "balance")
+    val animatedIncome by animateFloatAsState((income + workIncome).toFloat(), tween(750), label = "income")
+    val animatedExpense by animateFloatAsState(expense.toFloat(), tween(800), label = "expense")
 
     LazyColumn(
-        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(bottom = 28.dp)
     ) {
         item {
-            Column {
-                Text("VSOFT", fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary)
-                Text(strings.dashboard, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-                VsoftEntrance(0) { Text(uiText("وضعیت مالی و کاری شما در یک نگاه"), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            VsoftEntrance(0) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "VSOFT",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 1.8.sp
+                        )
+                        Text(
+                            strings.dashboard,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            uiText("وضعیت مالی و کاری شما در یک نگاه"),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Dashboard,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(23.dp)
+                        )
+                    }
+                }
             }
         }
+
         item {
-            Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)) {
-                Column(Modifier.padding(22.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(44.dp).clip(CircleShape)
-                            .background(Color.White.copy(alpha = .16f)),
-                            contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.AccountBalanceWallet, null, tint = Color.White)
+            VsoftEntrance(1) {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(30.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    elevation = CardDefaults.cardElevation(0.dp)
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = .92f)
+                                    )
+                                )
+                            )
+                            .padding(22.dp)
+                    ) {
+                        Column {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    Modifier
+                                        .size(44.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = .16f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.AccountBalanceWallet,
+                                        null,
+                                        tint = Color.White
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        uiText("موجودی کل"),
+                                        color = Color.White.copy(alpha = .76f),
+                                        fontSize = 13.sp
+                                    )
+                                    Text(
+                                        money(animatedBalance.toLong()),
+                                        color = Color.White,
+                                        fontSize = 26.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                                Icon(
+                                    Icons.Default.TrendingUp,
+                                    null,
+                                    tint = Color.White.copy(alpha = .82f),
+                                    modifier = Modifier.size(25.dp)
+                                )
+                            }
+                            Spacer(Modifier.height(18.dp))
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                DashboardPill(
+                                    uiText("درآمد"),
+                                    money(animatedIncome.toLong()),
+                                    Icons.Default.AddCircleOutline,
+                                    Modifier.weight(1f)
+                                )
+                                DashboardPill(
+                                    uiText("هزینه"),
+                                    money(animatedExpense.toLong()),
+                                    Icons.Default.RemoveCircleOutline,
+                                    Modifier.weight(1f)
+                                )
+                            }
                         }
-                        Spacer(Modifier.width(12.dp))
-                        Text(uiText("موجودی کل"), color = Color.White.copy(alpha = .82f), fontSize = 14.sp)
                     }
-                    Spacer(Modifier.height(12.dp))
-                    Text(money(animatedBalance.toLong()), color = Color.White,
-                        fontSize = 27.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.height(14.dp))
-                    LinearProgressIndicator(
-                        progress = { 1f },
-                        Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(5.dp)),
-                        color = Color.White.copy(alpha = .72f),
-                        trackColor = Color.White.copy(alpha = .16f)
+                }
+            }
+        }
+
+        item {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                DashboardMetric(
+                    uiText("ساعت کاری"),
+                    String.format(Locale.US, "%.1f ساعت", totalHours),
+                    Icons.Default.AccessTime,
+                    MaterialTheme.colorScheme.primary,
+                    Modifier.weight(1f)
+                )
+                DashboardMetric(
+                    uiText("کارت بانکی"),
+                    cards.size.toString(),
+                    Icons.Default.CreditCard,
+                    MaterialTheme.colorScheme.secondary,
+                    Modifier.weight(1f)
+                )
+            }
+        }
+
+        item {
+            VsoftEntrance(3) {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline.copy(alpha = .08f)
+                    )
+                ) {
+                    Column(Modifier.padding(18.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    if (LocalVsoftLanguage.current == "en") "This month"
+                                    else if (LocalVsoftLanguage.current == "ar") "هذا الشهر"
+                                    else "این ماه",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    uiText("خلاصه عملکرد این ماه"),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (monthNet >= 0) MaterialTheme.colorScheme.secondary.copy(alpha = .12f)
+                                        else MaterialTheme.colorScheme.error.copy(alpha = .12f)
+                                    )
+                                    .padding(horizontal = 11.dp, vertical = 7.dp)
+                            ) {
+                                Text(
+                                    money(monthNet),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (monthNet >= 0)
+                                        MaterialTheme.colorScheme.secondary
+                                    else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(9.dp)
+                        ) {
+                            DashboardMiniStat(
+                                if (LocalVsoftLanguage.current == "en") "Work income" else if (LocalVsoftLanguage.current == "ar") "دخل العمل" else "درآمد کاری",
+                                money(monthWorkIncome),
+                                Icons.Default.Work,
+                                MaterialTheme.colorScheme.secondary,
+                                Modifier.weight(1f)
+                            )
+                            DashboardMiniStat(
+                                if (LocalVsoftLanguage.current == "en") "Expenses" else if (LocalVsoftLanguage.current == "ar") "المصروفات" else "هزینه‌ها",
+                                money(monthExpenses),
+                                Icons.Default.TrendingDown,
+                                MaterialTheme.colorScheme.tertiary,
+                                Modifier.weight(1f)
+                            )
+                            DashboardMiniStat(
+                                if (LocalVsoftLanguage.current == "en") "Workdays" else if (LocalVsoftLanguage.current == "ar") "أيام العمل" else "روز کاری",
+                                monthWorkDays.size.toString(),
+                                Icons.Default.Event,
+                                MaterialTheme.colorScheme.primary,
+                                Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            DashboardMetric(
+                if (LocalVsoftLanguage.current == "en") "Average workday income"
+                else if (LocalVsoftLanguage.current == "ar") "متوسط دخل يوم العمل"
+                else "میانگین درآمد هر روز کاری",
+                money(monthAverage),
+                Icons.Default.AutoGraph,
+                MaterialTheme.colorScheme.primary,
+                Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            VsoftEntrance(4) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        uiText("کارت‌های بانکی"),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        cards.size.toString(),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
+
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DashboardMetric("درآمد", money(animatedIncome.toLong()), Icons.Default.TrendingUp,
-                    MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                DashboardMetric("هزینه", money(animatedExpense.toLong()), Icons.Default.TrendingDown,
-                    MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
-            }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DashboardMetric(uiText("ساعت کاری"), String.format(Locale.US, "%.1f ساعت", totalHours),
-                    Icons.Default.AccessTime, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-                DashboardMetric("کارت بانکی", cards.size.toString(),
-                    Icons.Default.CreditCard, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-            }
-        }
-        item {
-            Text(if (LocalVsoftLanguage.current == "en") "This month" else if (LocalVsoftLanguage.current == "ar") "هذا الشهر" else "این ماه",
-                fontSize = 21.sp, fontWeight = FontWeight.Bold)
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DashboardMetric(
-                    if (LocalVsoftLanguage.current == "en") "Work income" else if (LocalVsoftLanguage.current == "ar") "دخل العمل" else "درآمد کاری",
-                    money(monthWorkIncome), Icons.Default.Work, MaterialTheme.colorScheme.secondary, Modifier.weight(1f)
-                )
-                DashboardMetric(
-                    if (LocalVsoftLanguage.current == "en") "Expenses" else if (LocalVsoftLanguage.current == "ar") "المصروفات" else "هزینه‌ها",
-                    money(monthExpenses), Icons.Default.TrendingDown, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)
-                )
-            }
-        }
-        item {
-            DashboardMetric(
-                if (LocalVsoftLanguage.current == "en") "Average workday income" else if (LocalVsoftLanguage.current == "ar") "متوسط دخل يوم العمل" else "میانگین درآمد هر روز کاری",
-                money(monthAverage), Icons.Default.AutoGraph, MaterialTheme.colorScheme.primary, Modifier.fillMaxWidth()
-            )
-        }
-        item {
-            DashboardMetric(
-                "Profit vs last month",
-                netChangePercent?.let { "%+.1f%%".format(Locale.US, it) } ?: "—",
-                Icons.Default.ShowChart,
-                if ((netChangePercent ?: 0.0) >= 0.0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
-                Modifier.fillMaxWidth()
-            )
-        }
-        item { VsoftEntrance(4) { Text(uiText("کارت‌های بانکی"), fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
-                    VsoftEntrance(index.coerceAtMost(5)) {
-                        MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
+            if (cards.isEmpty()) {
+                EmptyState(uiText("هنوز کارتی ثبت نشده"), Icons.Default.CreditCard)
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
+                        VsoftEntrance(index.coerceAtMost(5)) {
+                            MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
+                        }
                     }
                 }
             }
         }
-        item { VsoftEntrance(6) { Text(uiText("آخرین تراکنش‌ها"), fontSize = 21.sp, fontWeight = FontWeight.Bold) } }
+
+        item {
+            VsoftEntrance(6) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        uiText("آخرین تراکنش‌ها"),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        transactions.size.toString(),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
         if (transactions.isEmpty()) {
-            item { EmptyState(uiText("هنوز تراکنشی ثبت نشده"), Icons.Default.ReceiptLong) }
+            item {
+                EmptyState(uiText("هنوز تراکنشی ثبت نشده"), Icons.Default.ReceiptLong)
+            }
         } else {
-            itemsIndexed(transactions.sortedByDescending { it.id }.take(5), key = { _, it -> it.id }) { index, t ->
+            itemsIndexed(
+                transactions.sortedByDescending { it.id }.take(5),
+                key = { _, it -> it.id }
+            ) { index, t ->
                 VsoftEntrance(index.coerceAtMost(4)) {
                     TransactionCard(t, onDelete = {}, showActions = false)
                 }
             }
         }
+    }
+}
+
+@Composable
+fun DashboardPill(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier
+) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = .13f))
+            .padding(horizontal = 11.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = Color.White.copy(alpha = .86f), modifier = Modifier.size(17.dp))
+        Spacer(Modifier.width(7.dp))
+        Column {
+            Text(title, color = Color.White.copy(alpha = .66f), fontSize = 9.sp)
+            Text(value, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+fun DashboardMiniStat(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    modifier: Modifier
+) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(accent.copy(alpha = .08f))
+            .padding(11.dp)
+    ) {
+        Icon(icon, null, tint = accent, modifier = Modifier.size(19.dp))
+        Spacer(Modifier.height(8.dp))
+        Text(title, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Text(value, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
@@ -1851,42 +2107,35 @@ fun DashboardMetric(
     accent: Color, modifier: Modifier
 ) {
     Card(
-        modifier.vsoftGlass(RoundedCornerShape(24.dp)),
+        modifier = modifier.vsoftGlass(RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = null,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = .07f)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(17.dp)
+                .padding(16.dp)
         ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(accent.copy(alpha = .12f)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(accent.copy(alpha = 0.13f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp))
-                }
-                Box(
-                    Modifier
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(accent.copy(alpha = 0.65f))
-                )
+                Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
             }
-            Spacer(Modifier.height(12.dp))
-            Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(4.dp))
-            Text(value, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Spacer(Modifier.height(11.dp))
+            Text(title, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Spacer(Modifier.height(3.dp))
+            Text(value, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
         }
     }
 }
@@ -1910,9 +2159,9 @@ fun MiniBankCard(card: BankCard, balance: Long) {
                 .background(
                     Brush.linearGradient(
                         listOf(
-                            scheme.primary.copy(alpha = 0.92f),
-                            scheme.primaryContainer.copy(alpha = 0.76f),
-                            scheme.secondary.copy(alpha = 0.72f)
+                            scheme.primary.copy(alpha = 0.96f),
+                            scheme.primaryContainer.copy(alpha = 0.82f),
+                            scheme.secondary.copy(alpha = 0.78f)
                         )
                     )
                 )
@@ -1924,7 +2173,7 @@ fun MiniBankCard(card: BankCard, balance: Long) {
                         Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.16f)),
+                            .background(Color.White.copy(alpha = .16f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.CreditCard, null, tint = Color.White, modifier = Modifier.size(21.dp))
@@ -1936,7 +2185,7 @@ fun MiniBankCard(card: BankCard, balance: Long) {
                     }
                     Icon(Icons.Default.Wifi, null, tint = Color.White.copy(alpha = 0.78f), modifier = Modifier.size(21.dp))
                 }
-                Spacer(Modifier.height(22.dp))
+                Spacer(Modifier.height(21.dp))
                 Text(
                     if (card.cardNumber.isNotBlank())
                         "••••  ••••  ••••  " + card.cardNumber.filter(Char::isDigit).takeLast(4)
@@ -1945,7 +2194,7 @@ fun MiniBankCard(card: BankCard, balance: Long) {
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.94f)
                 )
-                Spacer(Modifier.height(13.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
                         Text(uiText("موجودی فعلی"), fontSize = 10.sp, color = Color.White.copy(alpha = 0.68f))
