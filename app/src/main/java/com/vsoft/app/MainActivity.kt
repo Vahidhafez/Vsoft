@@ -2752,27 +2752,64 @@ fun WorkPage(
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column(Modifier.weight(1f)) {
-                    
+                    Text(
+                        uiText("مدیریت روزهای کاری"),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                     Text(
                         if (LocalVsoftLanguage.current == "en")
                             "${workDays.size} workdays • ${String.format(Locale.US, "%.1f", totalHours)} hours"
                         else
                             "${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = .10f)
+                ) {
+                    Icon(
+                        Icons.Default.WorkHistory,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(10.dp).size(20.dp)
                     )
                 }
             }
 
-        Row(Modifier.padding(horizontal = 18.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            DashboardMetric("درآمد کاری", money(totalIncome), Icons.Default.Payments,
-                MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-            DashboardMetric("محل‌های کار", workplaces.size.toString(), Icons.Default.Place,
-                MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(12.dp))
+            Card(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp).vsoftGlass(RoundedCornerShape(24.dp)),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Row(
+                    Modifier.padding(12.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    DashboardMetric(
+                        "درآمد کاری", money(totalIncome), Icons.Default.Payments,
+                        MaterialTheme.colorScheme.secondary, Modifier.weight(1f)
+                    )
+                    DashboardMetric(
+                        "ساعت کاری", String.format(Locale.US, "%.1f", totalHours),
+                        Icons.Default.Schedule, MaterialTheme.colorScheme.primary, Modifier.weight(1f)
+                    )
+                    DashboardMetric(
+                        "محل‌های کار", workplaces.size.toString(), Icons.Default.Place,
+                        MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
 
         if (workDays.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
