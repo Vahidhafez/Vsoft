@@ -77,6 +77,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
@@ -928,6 +932,12 @@ fun VsoftApp() {
     }
 
     LaunchedEffect(Unit) {
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            "vsoft_encrypted_auto_backup",
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<VsoftAutoBackupWorker>(1, TimeUnit.DAYS).build()
+        )
 
         SmsStore.initializeScanCursor(context)
 
