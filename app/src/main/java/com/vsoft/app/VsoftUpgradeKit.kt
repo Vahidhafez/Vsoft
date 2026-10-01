@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -221,15 +220,6 @@ fun VsoftPullToRefresh(
             }
         },
         state = state,
-        modifier = modifier,
-        indicator = {
-            PullToRefreshDefaults.Indicator(
-                modifier = Modifier.align(Alignment.TopCenter),
-                isRefreshing = isRefreshing,
-                containerColor = MaterialTheme.colorScheme.surface,
-                color = MaterialTheme.colorScheme.primary,
-                state = state
-            )
-        }
+        modifier = modifier
     ) { content() }
 }
