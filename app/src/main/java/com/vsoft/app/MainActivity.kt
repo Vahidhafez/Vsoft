@@ -3106,6 +3106,11 @@ fun FontOption(title: String, value: String, current: String, onChange: (String)
 fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: List<WorkDay>, onCardsChange: (MutableList<BankCard>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<BankCard?>(null) }
+    var search by remember { mutableStateOf("") }
+    val filteredCards = cards.filter {
+        val q = normalizeVsoftSearch(search)
+        q.isBlank() || normalizeVsoftSearch(it.bank).contains(q) || normalizeVsoftSearch(it.name).contains(q) || it.cardNumber.contains(q)
+    }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
@@ -3115,7 +3120,16 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                     Text(cards.size.toString() + " " + uiText("کارت"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
-            itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
+            item {
+                OutlinedTextField(
+                    value = search, onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    label = { Text(uiText("جستجوی کارت")) },
+                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                )
+            }
+            itemsIndexed(filteredCards, key = { _, it -> it.id }) { index, card ->
                 VsoftEntrance(index.coerceAtMost(5)) {
                     VsoftSwipeToDelete(onDelete = {
                         onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } })
@@ -3146,6 +3160,11 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
 fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList<Workplace>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Workplace?>(null) }
+    var search by remember { mutableStateOf("") }
+    val filteredWorkplaces = workplaces.filter {
+        val q = normalizeVsoftSearch(search)
+        q.isBlank() || normalizeVsoftSearch(it.name).contains(q)
+    }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
@@ -3155,7 +3174,16 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                     Text(workplaces.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "workplaces" else "محل کار", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            itemsIndexed(workplaces, key = { _, it -> it.id }) { index, workplace ->
+            item {
+                OutlinedTextField(
+                    value = search, onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    label = { Text(uiText("جستجوی محل کار")) },
+                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                )
+            }
+            itemsIndexed(filteredWorkplaces, key = { _, it -> it.id }) { index, workplace ->
                 VsoftEntrance(index.coerceAtMost(7)) {
                     VsoftSwipeToDelete(onDelete = {
                         onWorkplacesChange(workplaces.toMutableList().also { list -> list.removeAll { w -> w.id == workplace.id } })
@@ -3216,6 +3244,12 @@ fun EditWorkplaceDialog(place: Workplace, onDismiss: () -> Unit, onSave: (Workpl
 fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Person?>(null) }
+    var search by remember { mutableStateOf("") }
+    val filteredPeople = people.filter {
+        val q = normalizeVsoftSearch(search)
+        q.isBlank() || normalizeVsoftSearch(it.name).contains(q) ||
+            normalizeVsoftSearch(it.phone).contains(q) || normalizeVsoftSearch(it.job).contains(q)
+    }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
@@ -3225,7 +3259,16 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     Text(people.size.toString() + " نفر", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            itemsIndexed(people, key = { _, it -> it.id }) { index, person ->
+            item {
+                OutlinedTextField(
+                    value = search, onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    label = { Text(uiText("جستجوی افراد")) },
+                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                )
+            }
+            itemsIndexed(filteredPeople, key = { _, it -> it.id }) { index, person ->
                 VsoftEntrance(index.coerceAtMost(7)) {
                     VsoftSwipeToDelete(onDelete = {
                         onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
