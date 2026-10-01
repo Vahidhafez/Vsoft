@@ -18,32 +18,16 @@ android {
     }
 
     val signingFile = file("signing/vsoft-release.jks")
-    val signingEnabled = System.getenv("VSOFT_SIGNING_ENABLED") == "true" && signingFile.exists()
 
-    if (signingEnabled) {
-        signingConfigs {
-            create("vsoft") {
-                storeFile = signingFile
-                storePassword = System.getenv("KSTOREPWD")
-                keyAlias = System.getenv("KEYALIAS")
-                keyPassword = System.getenv("KEYPWD")
-            }
+    signingConfigs {
+        create("release") {
+            storeFile = signingFile
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
         }
     }
 
-    buildTypes {
-        debug {
-            if (signingEnabled) {
-                signingConfig = signingConfigs.getByName("vsoft")
-            }
-        }
-        release {
-            isMinifyEnabled = false
-            if (signingEnabled) {
-                signingConfig = signingConfigs.getByName("vsoft")
-            }
-        }
-    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
