@@ -2157,13 +2157,19 @@ fun WorkPage(
                 contentPadding = PaddingValues(bottom = 24.dp)) {
                 itemsIndexed(workDays.sortedByDescending { it.id }, key = { _, it -> it.id }) { index, w ->
                     VsoftEntrance(index.coerceAtMost(7)) {
-                        WorkCard(w,
-                            onDelete = {
-                                val x = workDays.toMutableList()
-                                x.removeAll { it.id == w.id }
-                                onWorkChange(x)
-                            },
-                            onEdit = { edit = w; show = true })
+                        VsoftSwipeToDelete(onDelete = {
+                            val x = workDays.toMutableList()
+                            x.removeAll { it.id == w.id }
+                            onWorkChange(x)
+                        }) {
+                            WorkCard(w,
+                                onDelete = {
+                                    val x = workDays.toMutableList()
+                                    x.removeAll { it.id == w.id }
+                                    onWorkChange(x)
+                                },
+                                onEdit = { edit = w; show = true })
+                        }
                     }
                 }
             }
@@ -2485,9 +2491,13 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
             }
             itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
                 VsoftEntrance(index.coerceAtMost(5)) {
-                    CardItem(card, cardCurrentBalance(card, transactions, workDays),
-                        onEdit = { editing = card },
-                        onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
+                    VsoftSwipeToDelete(onDelete = {
+                        onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } })
+                    }) {
+                        CardItem(card, cardCurrentBalance(card, transactions, workDays),
+                            onEdit = { editing = card },
+                            onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
+                    }
                 }
             }
         }
@@ -2520,17 +2530,21 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
             }
             itemsIndexed(workplaces, key = { _, it -> it.id }) { index, workplace ->
                 VsoftEntrance(index.coerceAtMost(7)) {
-                    Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp)) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(46.dp).clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary)
+                    VsoftSwipeToDelete(onDelete = {
+                        onWorkplacesChange(workplaces.toMutableList().also { list -> list.removeAll { w -> w.id == workplace.id } })
+                    }) {
+                        Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp)) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(46.dp).clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                                IconButton(onClick = {
+                                    onWorkplacesChange(workplaces.toMutableList().also { list -> list.removeAll { w -> w.id == workplace.id } })
+                                }) { Icon(Icons.Default.DeleteOutline, null) }
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Text(workplace.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                            IconButton(onClick = {
-                                onWorkplacesChange(workplaces.toMutableList().also { list -> list.removeAll { w -> w.id == workplace.id } })
-                            }) { Icon(Icons.Default.DeleteOutline, null) }
                         }
                     }
                 }
@@ -2558,8 +2572,12 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
             }
             itemsIndexed(people, key = { _, it -> it.id }) { index, person ->
                 VsoftEntrance(index.coerceAtMost(7)) {
-                    PersonItem(person) {
+                    VsoftSwipeToDelete(onDelete = {
                         onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
+                    }) {
+                        PersonItem(person) {
+                            onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
+                        }
                     }
                 }
             }
