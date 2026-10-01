@@ -1419,7 +1419,8 @@ fun MainScreen(
                     icon = { AnimatedNavIcon(Icons.Default.AccountBalanceWallet, selectedPage == 1) },
                     label = {
                         Text(strings.finance)
-                    }
+                    },
+                    alwaysShowLabel = true
                 )
 
                 NavigationBarItem(
@@ -2325,11 +2326,16 @@ fun TransactionCard(
 ) {
     val isIncome = transaction.type == "income"
     val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary
-    Card(Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(22.dp),
+    val lift by animateFloatAsState(
+        targetValue = if (isIncome) 0f else 0f,
+        animationSpec = tween(220),
+        label = "transaction_lift"
+    )
+    Card(Modifier.fillMaxWidth().animateContentSize().graphicsLayer { translationY = lift }, shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        border = BorderStroke(1.dp, accent.copy(alpha = .16f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
+        Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(46.dp).clip(CircleShape)
                 .background(accent.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
                 Icon(if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
@@ -2541,9 +2547,11 @@ fun WorkPage(
             }
         }
         }
-        FloatingActionButton(modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(),
+        FloatingActionButton(modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(0.90f),
             onClick = { edit = null; show = true }, containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary, shape = RoundedCornerShape(18.dp)) { Icon(Icons.Default.Add, "افزودن") }
+            contentColor = MaterialTheme.colorScheme.onPrimary, shape = RoundedCornerShape(20.dp)) {
+            Icon(Icons.Default.Add, "افزودن", modifier = Modifier.size(25.dp))
+        }
     }
 
     if (show) AddWorkDialog(strings, people, workplaces, cards, edit, { show = false }) { w ->
@@ -2560,11 +2568,11 @@ fun WorkPage(
 @Composable
 fun WorkCard(work: WorkDay, onDelete: () -> Unit, onEdit: () -> Unit = {}) {
     val hours = calculateHours(work.start, work.end)
-    Card(Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize(),
-        shape = RoundedCornerShape(24.dp),
+    Card(Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize().pressScale(0.985f),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = .14f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(46.dp).clip(CircleShape)
