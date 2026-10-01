@@ -1339,8 +1339,14 @@ fun MainScreen(
                     AnimatedContent(
                         targetState = pages[selectedPage],
                         transitionSpec = {
-                            (fadeIn(tween(180)) + slideInHorizontally(tween(220)) { it / 5 }) togetherWith
-                                (fadeOut(tween(120)) + slideOutHorizontally(tween(160)) { -it / 6 })
+                            val rtl = language != "en"
+                            val direction = if (targetState != initialState) {
+                                if (rtl) -1 else 1
+                            } else {
+                                1
+                            }
+                            (fadeIn(tween(180)) + slideInHorizontally(tween(260)) { direction * it / 5 }) togetherWith
+                                (fadeOut(tween(140)) + slideOutHorizontally(tween(200)) { -direction * it / 6 })
                         },
                         label = "top_title"
                     ) { title ->
@@ -1475,15 +1481,32 @@ fun MainScreen(
         AnimatedContent(
             targetState = selectedPage,
             transitionSpec = {
-                val direction = if (targetState > initialState) 1 else -1
+                // Direction is language-aware: Persian/Arabic pages move in the RTL direction,
+                // while English pages keep the conventional LTR navigation motion.
+                val forward = targetState > initialState
+                val direction = when {
+                    language == "en" && forward -> 1
+                    language == "en" && !forward -> -1
+                    language != "en" && forward -> -1
+                    else -> 1
+                }
                 (slideInHorizontally(
-                    animationSpec = tween(420, easing = FastOutSlowInEasing),
+                    animationSpec = spring(
+                        dampingRatio = 0.86f,
+                        stiffness = 420f
+                    ),
                     initialOffsetX = { direction * it / 2 }
-                ) + fadeIn(tween(300)) + scaleIn(tween(420), initialScale = 0.985f)) togetherWith
+                ) + fadeIn(tween(260)) + scaleIn(
+                    animationSpec = spring(dampingRatio = 0.88f, stiffness = 420f),
+                    initialScale = 0.975f
+                )) togetherWith
                 (slideOutHorizontally(
-                    animationSpec = tween(300, easing = FastOutSlowInEasing),
-                    targetOffsetX = { -direction * it / 5 }
-                ) + fadeOut(tween(220)) + scaleOut(tween(300), targetScale = 0.985f))
+                    animationSpec = tween(260, easing = FastOutSlowInEasing),
+                    targetOffsetX = { -direction * it / 6 }
+                ) + fadeOut(tween(180)) + scaleOut(
+                    animationSpec = tween(240, easing = FastOutSlowInEasing),
+                    targetScale = 0.985f
+                ))
             },
             modifier = Modifier
                 .padding(padding)
