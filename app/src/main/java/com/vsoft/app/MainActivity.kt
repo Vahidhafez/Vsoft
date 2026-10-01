@@ -2358,44 +2358,67 @@ fun TransactionCard(
 ) {
     val isIncome = transaction.type == "income"
     val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary
-    val lift by animateFloatAsState(
-        targetValue = if (isIncome) 0f else 0f,
-        animationSpec = tween(220),
-        label = "transaction_lift"
+    val iconScale by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "transaction_icon_scale"
     )
-    Card(Modifier.fillMaxWidth().animateContentSize().graphicsLayer { translationY = lift }, shape = RoundedCornerShape(24.dp),
+    Card(
+        Modifier.fillMaxWidth().animateContentSize().pressScale(0.992f),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, accent.copy(alpha = .16f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
-        Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(46.dp).clip(CircleShape)
-                .background(accent.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
-                Icon(if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                    null, tint = accent)
+        border = BorderStroke(1.dp, accent.copy(alpha = .15f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier.size(50.dp).clip(RoundedCornerShape(17.dp))
+                    .background(accent.copy(alpha = .10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                    null, tint = accent, modifier = Modifier.size(23.dp * iconScale)
+                )
             }
             Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(transaction.category, fontWeight = FontWeight.Bold)
-                if (transaction.description.isNotBlank())
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(transaction.category, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                if (transaction.description.isNotBlank()) {
                     Text(transaction.description, fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(transaction.date, fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (transaction.card.isNotBlank())
-                        Text("• ${transaction.card}", fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(shape = RoundedCornerShape(9.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .7f)) {
+                        Text(transaction.date, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp))
+                    }
+                    if (transaction.card.isNotBlank()) {
+                        Text("• " + transaction.card, fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
                 }
             }
+            Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.End) {
-                Text((if (isIncome) "+" else "−") + money(transaction.amount),
-                    color = accent, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
-                if (showActions) Row {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(34.dp)) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
-                        Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(18.dp))
+                Text(
+                    (if (isIncome) "+" else "−") + money(transaction.amount),
+                    color = accent, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp
+                )
+                if (showActions) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Edit, null, modifier = Modifier.size(17.dp))
+                        }
+                        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(17.dp))
+                        }
                     }
                 }
             }
@@ -2725,42 +2748,69 @@ fun WorkPage(
 @Composable
 fun WorkCard(work: WorkDay, onDelete: () -> Unit, onEdit: () -> Unit = {}) {
     val hours = calculateHours(work.start, work.end)
-    Card(Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize().pressScale(0.985f),
+    val accent = MaterialTheme.colorScheme.primary
+    Card(
+        Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize().pressScale(0.985f),
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = .14f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)) {
-        Column(Modifier.padding(16.dp)) {
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(46.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
-                    contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Work, null, tint = MaterialTheme.colorScheme.primary)
+                Box(
+                    Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                        .background(accent.copy(alpha = .10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Work, null, tint = accent, modifier = Modifier.size(23.dp))
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
                     Text(work.place.ifBlank { "محل کار ثبت نشده" },
-                        fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(if (work.startDate.isNotBlank() && work.endDate.isNotBlank())
-                        if (LocalLayoutDirection.current == LayoutDirection.Rtl) "${work.startDate} ← ${work.endDate}" else "${work.startDate} → ${work.endDate}"
-                        else work.date,
-                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                    val dateText = if (work.startDate.isNotBlank() && work.endDate.isNotBlank())
+                        if (LocalLayoutDirection.current == LayoutDirection.Rtl) work.startDate + " ← " + work.endDate
+                        else work.startDate + " → " + work.endDate
+                    else work.date
+                    Text(dateText, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, null) }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                WorkMeta(Icons.Default.Schedule, if (LocalLayoutDirection.current == LayoutDirection.Rtl) "${work.start} ← ${work.end}" else "${work.start} → ${work.end}", Modifier.weight(1f))
+                WorkMeta(Icons.Default.Schedule,
+                    if (LocalLayoutDirection.current == LayoutDirection.Rtl) work.start + " ← " + work.end
+                    else work.start + " → " + work.end, Modifier.weight(1f))
                 WorkMeta(Icons.Default.Timer, String.format(Locale.US, "%.1f ساعت", hours), Modifier.weight(1f))
             }
-            Spacer(Modifier.height(9.dp))
-            Text(money(work.income), fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.secondary, fontSize = 17.sp)
-            if (work.person.isNotBlank()) Text("با: ${work.person}", fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (work.card.isNotBlank()) Text("واریز به: " + work.card, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
-            if (work.description.isNotBlank()) Text(work.description, fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("درآمد", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(money(work.income), fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.secondary, fontSize = 17.sp)
+                }
+                if (work.person.isNotBlank()) {
+                    Surface(shape = RoundedCornerShape(11.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = .08f)) {
+                        Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Person, null, modifier = Modifier.size(14.dp), tint = accent)
+                            Spacer(Modifier.width(4.dp))
+                            Text(work.person, fontSize = 10.sp, maxLines = 1)
+                        }
+                    }
+                }
+            }
+            if (work.card.isNotBlank() || work.description.isNotBlank()) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (work.card.isNotBlank())
+                        Text("واریز به: " + work.card, fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+                    if (work.description.isNotBlank())
+                        Text(work.description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                }
+            }
         }
     }
 }
