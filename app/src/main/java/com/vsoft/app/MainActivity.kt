@@ -447,40 +447,7 @@ class GroupedNumberVisualTransformation : VisualTransformation {
 val LocalVsoftGlass = compositionLocalOf { false }
 val LocalVsoftCurrency = compositionLocalOf { "IRT" }
 
-@Composable
-fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier {
-    val scheme = MaterialTheme.colorScheme
-    val glass = LocalVsoftGlass.current
-    return this
-        .clip(shape)
-        .background(
-            if (glass) {
-                Brush.linearGradient(
-                    listOf(
-                        scheme.surface.copy(alpha = 0.82f),
-                        scheme.surfaceVariant.copy(alpha = 0.58f)
-                    )
-                )
-            } else {
-                scheme.surface
-            }
-        )
-        .border(
-            BorderStroke(
-                1.dp,
-                if (glass) scheme.onSurface.copy(alpha = 0.08f)
-                else scheme.outline.copy(alpha = 0.08f)
-            ),
-            shape
-        )
-        .shadow(
-            elevation = if (glass) 8.dp else 3.dp,
-            shape = shape,
-            ambientColor = scheme.primary.copy(alpha = if (glass) 0.05f else 0.025f),
-            spotColor = scheme.primary.copy(alpha = if (glass) 0.07f else 0.03f)
-        )
-}
-
+fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier = this
 @Composable
 fun money(value: Long): String {
     return when (LocalVsoftCurrency.current) {
@@ -1424,7 +1391,8 @@ fun MainScreen(
 
             NavigationBar(
                 modifier = Modifier
-                    .padding(horizontal = 10.dp, bottom = 8.dp)
+                    .padding(8.dp)
+                    .padding(horizontal = 2.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .border(
                         BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .10f)),
