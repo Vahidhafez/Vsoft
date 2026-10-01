@@ -447,7 +447,39 @@ class GroupedNumberVisualTransformation : VisualTransformation {
 val LocalVsoftGlass = compositionLocalOf { false }
 val LocalVsoftCurrency = compositionLocalOf { "IRT" }
 
-fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier = this
+@Composable
+fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier {
+    val scheme = MaterialTheme.colorScheme
+    val glass = LocalVsoftGlass.current
+    return this
+        .clip(shape)
+        .background(
+            if (glass) {
+                Brush.linearGradient(
+                    listOf(
+                        scheme.surface.copy(alpha = 0.82f),
+                        scheme.surfaceVariant.copy(alpha = 0.58f)
+                    )
+                )
+            } else {
+                scheme.surface
+            }
+        )
+        .border(
+            BorderStroke(
+                1.dp,
+                if (glass) scheme.onSurface.copy(alpha = 0.08f)
+                else scheme.outline.copy(alpha = 0.08f)
+            ),
+            shape
+        )
+        .shadow(
+            elevation = if (glass) 8.dp else 3.dp,
+            shape = shape,
+            ambientColor = scheme.primary.copy(alpha = if (glass) 0.05f else 0.025f),
+            spotColor = scheme.primary.copy(alpha = if (glass) 0.07f else 0.03f)
+        )
+}
 
 @Composable
 fun money(value: Long): String {
@@ -1392,12 +1424,16 @@ fun MainScreen(
 
             NavigationBar(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, bottom = 8.dp)
+                    .clip(RoundedCornerShape(28.dp))
                     .border(
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .10f))
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .10f)),
+                        RoundedCornerShape(28.dp)
                     ),
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp
+                containerColor = if (LocalVsoftGlass.current)
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+                else MaterialTheme.colorScheme.surface,
+                tonalElevation = 3.dp
             ) {
 
                 NavigationBarItem(
@@ -1673,13 +1709,23 @@ fun AnimatedNavIcon(
 @Composable
 fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
     val visible = remember { MutableTransitionState(false) }
+    val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay((index * 55L).coerceAtMost(330L))
         visible.targetState = true
     }
     AnimatedVisibility(
         visibleState = visible,
-        enter = fadeIn(tween(360)) + slideInHorizontally(tween(420, easing = FastOutSlowInEasing)) { it / 14 }
+        enter = fadeIn(tween(320)) + slideInHorizontally(
+            animationSpec = tween(420, easing = FastOutSlowInEasing)
+        ) { direction * it / 14 } + scaleIn(
+            animationSpec = spring(dampingRatio = 0.88f, stiffness = 380f),
+            initialScale = 0.985f
+        ),
+        exit = fadeOut(tween(160)) + scaleOut(
+            animationSpec = tween(160, easing = FastOutSlowInEasing),
+            targetScale = 0.99f
+        )
     ) { content() }
 }
 
@@ -1836,46 +1882,116 @@ fun DashboardMetric(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     accent: Color, modifier: Modifier
 ) {
-    Card(modifier.vsoftGlass(RoundedCornerShape(22.dp)), shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-        Column(Modifier.padding(16.dp)) {
-            Box(Modifier.size(36.dp).clip(CircleShape).background(accent.copy(alpha = .12f)),
-                contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
+    Card(
+        modifier.vsoftGlass(RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(17.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(accent.copy(alpha = 0.13f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp))
+                }
+                Box(
+                    Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(accent.copy(alpha = 0.65f))
+                )
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(3.dp))
-            Text(value, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Spacer(Modifier.height(4.dp))
+            Text(value, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
         }
     }
 }
 
 @Composable
 fun MiniBankCard(card: BankCard, balance: Long) {
-    Card(Modifier.width(235.dp), shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-        Column(Modifier.padding(17.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(38.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .12f)),
-                    contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.CreditCard, null, tint = MaterialTheme.colorScheme.primary)
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(26.dp)
+    Card(
+        Modifier
+            .width(250.dp)
+            .vsoftGlass(shape),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            scheme.primary.copy(alpha = 0.92f),
+                            scheme.primaryContainer.copy(alpha = 0.76f),
+                            scheme.secondary.copy(alpha = 0.72f)
+                        )
+                    )
+                )
+                .padding(18.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.16f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.CreditCard, null, tint = Color.White, modifier = Modifier.size(21.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(card.bank.ifBlank { uiText("کارت") }, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(card.name.ifBlank { "Vsoft" }, fontSize = 11.sp, color = Color.White.copy(alpha = 0.72f))
+                    }
+                    Icon(Icons.Default.Wifi, null, tint = Color.White.copy(alpha = 0.78f), modifier = Modifier.size(21.dp))
                 }
-                Spacer(Modifier.width(10.dp))
-                Column {
-                    Text(card.bank, fontWeight = FontWeight.Bold)
-                    Text(card.name, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    if (card.cardNumber.isNotBlank())
+                        "••••  ••••  ••••  " + card.cardNumber.filter(Char::isDigit).takeLast(4)
+                    else "••••  ••••  ••••  ••••",
+                    letterSpacing = 1.5.sp,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.94f)
+                )
+                Spacer(Modifier.height(13.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Column(Modifier.weight(1f)) {
+                        Text(uiText("موجودی فعلی"), fontSize = 10.sp, color = Color.White.copy(alpha = 0.68f))
+                        Text(money(balance), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    }
+                    Text(
+                        "VSOFT",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.4.sp,
+                        color = Color.White.copy(alpha = 0.62f)
+                    )
                 }
             }
-            Spacer(Modifier.height(18.dp))
-            Text(if (card.cardNumber.isNotBlank())
-                "••••  ••••  ••••  " + card.cardNumber.filter(Char::isDigit).takeLast(4)
-            else "••••  ••••  ••••  ••••", letterSpacing = 1.5.sp, fontSize = 14.sp)
-            Spacer(Modifier.height(10.dp))
-            Text(money(balance), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
