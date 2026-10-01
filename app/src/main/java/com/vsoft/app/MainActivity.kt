@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1697,11 +1698,20 @@ fun DashboardPage(
     val animatedIncome by animateFloatAsState((income + workIncome).toFloat(), animationSpec = tween(750), label = "income")
     val animatedExpense by animateFloatAsState(expense.toFloat(), animationSpec = tween(800), label = "expense")
 
-    LazyColumn(
-        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    Box(Modifier.fillMaxSize()) {
+        VsoftPullToRefresh(
+            onRefresh = { kotlinx.coroutines.delay(180) },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            LazyColumn(
+                state = listState,
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
         item {
             Column {
                 Text("VSOFT", fontSize = 13.sp, fontWeight = FontWeight.Bold,
@@ -1804,6 +1814,11 @@ fun DashboardPage(
                 }
             }
         }
+        VsoftScrollToTopFab(
+            state = listState,
+            scope = scope,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 20.dp)
+        )
     }
 }
 
