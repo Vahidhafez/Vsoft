@@ -19,6 +19,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
+import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalContext
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
+
+private val android.content.Context.vsoftSearchStore by preferencesDataStore("vsoft_search_history")
+private val RECENT_SEARCHES_KEY = stringPreferencesKey("recent_searches")
 
 private fun toolsText(language: String, key: String): String = when (language) {
     "en" -> when (key) {
@@ -145,22 +154,93 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
 
 @Composable
 private fun VsoftSearchContent(language: String, transactions: List<Transaction>, workDays: List<WorkDay>, cards: List<BankCard>, people: List<Person>, workplaces: List<Workplace>) {
+    val context = LocalContext.current
     var query by remember { mutableStateOf("") }
-    val q = query.trim().lowercase()
-    val tx = transactions.filter { q.isNotBlank() && listOf(it.category, it.description, it.date, it.card, it.person).any { s -> s.lowercase().contains(q) } }
-    val work = workDays.filter { q.isNotBlank() && listOf(it.place, it.description, it.person, it.card, it.date, it.startDate, it.endDate).any { s -> s.lowercase().contains(q) } }
-    val cardMatches = cards.filter { q.isNotBlank() && listOf(it.bank, it.name, it.cardNumber, it.last4).any { s -> s.lowercase().contains(q) } }
-    val peopleMatches = people.filter { q.isNotBlank() && listOf(it.name, it.phone, it.note, it.job).any { s -> s.lowercase().contains(q) } }
-    val placeMatches = workplaces.filter { q.isNotBlank() && it.name.lowercase().contains(q) }
+    var debouncedQuery by remember { mutableStateOf("") }
+    var recentSearches by remember { mutableStateOf<List<String>>(emptyList()) }
+    var historyLoaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        recentSearches = context.vsoftSearchStore.data.first()[RECENT_SEARCHES_KEY]
+            ?.split("|")
+            ?.filter { it.isNotBlank() }
+            ?.take(8)
+            ?: emptyList()
+        historyLoaded = true
+    }
+
+    LaunchedEffect(query) {
+        delay(180)
+        debouncedQuery = query
+    }
+
+    val q = normalizeVsoftSearch(debouncedQuery)
+    val tx = transactions.filter { q.isNotBlank() && listOf(it.category, it.description, it.date, it.card, it.person).any { s -> normalizeVsoftSearch(s).contains(q) } }
+    val work = workDays.filter { q.isNotBlank() && listOf(it.place, it.description, it.person, it.card, it.date, it.startDate, it.endDate).any { s -> normalizeVsoftSearch(s).contains(q) } }
+    val cardMatches = cards.filter { q.isNotBlank() && listOf(it.bank, it.name, it.cardNumber, it.last4).any { s -> normalizeVsoftSearch(s).contains(q) } }
+    val peopleMatches = people.filter { q.isNotBlank() && listOf(it.name, it.phone, it.note, it.job).any { s -> normalizeVsoftSearch(s).contains(q) } }
+    val placeMatches = workplaces.filter { q.isNotBlank() && normalizeVsoftSearch(it.name).contains(q) }
+
+    fun rememberSearch(value: String) {
+        val clean = value.trim()
+        if (clean.isBlank()) return
+        val updated = listOf(clean) + recentSearches.filterNot { normalizeVsoftSearch(it) == normalizeVsoftSearch(clean) }
+        recentSearches = updated.take(8)
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            context.vsoftSearchStore.edit { it[RECENT_SEARCHES_KEY] = updated.take(8).joinToString("|") }
+        }
+    }
+
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
         item {
-            OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                label = { Text(toolsText(language, "search")) }, placeholder = { Text(toolsText(language, "hint")) },
-                leadingIcon = { Icon(Icons.Default.Search, null) })
+            OutlinedTextField(
+                query,
+                { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text(toolsText(language, "search")) },
+                placeholder = { Text(toolsText(language, "hint")) },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                trailingIcon = {
+                    if (query.isNotBlank()) IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Default.Clear, contentDescription = null)
+                    }
+                }
+            )
+        }
+        if (q.isBlank() && historyLoaded && recentSearches.isNotEmpty()) {
+            item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(if (language == "en") "Recent searches" else if (language == "ar") "عمليات البحث الأخيرة" else "جستجوهای اخیر", fontWeight = FontWeight.Bold)
+                    TextButton(onClick = {
+                        recentSearches = emptyList()
+                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            context.vsoftSearchStore.edit { it.remove(RECENT_SEARCHES_KEY) }
+                        }
+                    }) { Text(if (language == "en") "Clear" else if (language == "ar") "مسح" else "پاک کردن") }
+                }
+            }
+            items(recentSearches, key = { "recent-" + it }) { recent ->
+                AssistChip(
+                    onClick = { query = recent; rememberSearch(recent) },
+                    label = { Text(recent) },
+                    leadingIcon = { Icon(Icons.Default.History, null, Modifier.size(16.dp)) }
+                )
+            }
         }
         if (q.isNotBlank()) {
+            item {
+                val total = tx.size + work.size + cardMatches.size + peopleMatches.size + placeMatches.size
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(total.toString(), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = { rememberSearch(query) }) {
+                        Icon(Icons.Default.History, null, Modifier.size(17.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (language == "en") "Save" else if (language == "ar") "حفظ" else "ذخیره")
+                    }
+                }
+            }
             val total = tx.size + work.size + cardMatches.size + peopleMatches.size + placeMatches.size
-            item { Text(total.toString(), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (total == 0) item { Text(toolsText(language, "none"), Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             items(tx, key = { "tx" + it.id }) { t ->
                 ListItem(headlineContent = { Text(t.description.ifBlank { t.category }) }, supportingContent = { Text(toolsText(language, "transaction") + " • " + t.date) }, trailingContent = { Text(money(t.amount), fontWeight = FontWeight.Bold) }, leadingContent = { Icon(Icons.Default.ReceiptLong, null) }, modifier = Modifier.vsoftGlass(RoundedCornerShape(18.dp)))
@@ -180,7 +260,6 @@ private fun VsoftSearchContent(language: String, transactions: List<Transaction>
         }
     }
 }
-
 @Composable
 private fun VsoftInsightsContent(language: String, transactions: List<Transaction>, workDays: List<WorkDay>) {
     val now = today().split("/").mapNotNull { it.toIntOrNull() }
