@@ -3593,50 +3593,176 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
     var search by remember { mutableStateOf("") }
     val filteredCards = cards.filter {
         val q = normalizeVsoftSearch(search)
-        q.isBlank() || normalizeVsoftSearch(it.bank).contains(q) || normalizeVsoftSearch(it.name).contains(q) || it.cardNumber.contains(q)
+        q.isBlank() || normalizeVsoftSearch(it.bank).contains(q) ||
+            normalizeVsoftSearch(it.name).contains(q) || it.cardNumber.contains(q)
     }
+    val totalBalance = cards.sumOf { cardCurrentBalance(it, transactions, workDays) }
+    val positiveCount = cards.count { cardCurrentBalance(it, transactions, workDays) > 0L }
+
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 100.dp)) {
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            contentPadding = PaddingValues(top = 14.dp, bottom = 110.dp)
+        ) {
             item {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(uiText("کارت‌های بانکی"), fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(cards.size.toString() + " " + uiText("کارت"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(
+                        if (LocalVsoftLanguage.current == "en")
+                            "${cards.size} cards • ${positiveCount} active"
+                        else
+                            "${cards.size} کارت • ${positiveCount} کارت دارای موجودی",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            item {
+                Card(
+                    Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(26.dp)),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(50.dp).clip(RoundedCornerShape(17.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .11f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.AccountBalanceWallet, null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(25.dp))
+                        }
+                        Spacer(Modifier.width(13.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                uiText("مجموع موجودی"),
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                money(totalBalance),
+                                fontSize = 21.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                        Text(
+                            if (LocalVsoftLanguage.current == "en") "VSOFT" else "مدیریت مالی",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 1.sp
+                        )
+                    }
                 }
             }
             item {
                 OutlinedTextField(
-                    value = search, onValueChange = { search = it },
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
                     shape = RoundedCornerShape(18.dp),
                     label = { Text(uiText("جستجوی کارت")) },
-                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = {
+                        AnimatedVisibility(search.isNotBlank()) {
+                            IconButton(onClick = { search = "" }) {
+                                Icon(Icons.Default.Close, uiText("بستن"))
+                            }
+                        }
+                    }
                 )
             }
+            if (filteredCards.isEmpty()) {
+                item {
+                    Card(
+                        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(26.dp)),
+                        shape = RoundedCornerShape(26.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                Modifier.size(66.dp).clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.CreditCard, null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(31.dp))
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                if (cards.isEmpty()) uiText("هنوز کارت بانکی ثبت نشده")
+                                else uiText("تراکنشی با این فیلتر پیدا نشد"),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            if (cards.isEmpty()) {
+                                Spacer(Modifier.height(5.dp))
+                                Text(
+                                    uiText("برای افزودن کارت از دکمه + استفاده کنید"),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
             itemsIndexed(filteredCards, key = { _, it -> it.id }) { index, card ->
-                VsoftEntrance(index.coerceAtMost(5)) {
-                    VsoftSwipeToDelete(onDelete = {
-                        onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } })
-                    }) {
-                        CardItem(card, cardCurrentBalance(card, transactions, workDays),
+                VsoftEntrance(index.coerceAtMost(7)) {
+                    VsoftSwipeToDelete(
+                        onDelete = {
+                            onCardsChange(cards.toMutableList().also { list ->
+                                list.removeAll { it.id == card.id }
+                            })
+                        }
+                    ) {
+                        CardItem(
+                            card,
+                            cardCurrentBalance(card, transactions, workDays),
                             onEdit = { editing = card },
-                            onDelete = { onCardsChange(cards.toMutableList().also { list -> list.removeAll { it.id == card.id } }) })
+                            onDelete = {
+                                onCardsChange(cards.toMutableList().also { list ->
+                                    list.removeAll { it.id == card.id }
+                                })
+                            }
+                        )
                     }
                 }
             }
         }
         FloatingActionButton(
             modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
-            onClick = { show = true }, shape = RoundedCornerShape(18.dp)
-        ) { Icon(Icons.Default.Add, "افزودن کارت") }
+            onClick = { show = true },
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Icon(Icons.Default.Add, "افزودن کارت")
+        }
     }
     if (show) AddCardDialog(onDismiss = { show = false }, onSave = { newCard ->
-        onCardsChange(cards.toMutableList().also { it.add(newCard) }); show = false
+        onCardsChange(cards.toMutableList().also { it.add(newCard) })
+        show = false
     })
     if (editing != null) EditCardDialog(editing!!, onDismiss = { editing = null }, onSave = { updated ->
         onCardsChange(cards.toMutableList().also { list ->
-            val i = list.indexOfFirst { it.id == updated.id }; if (i >= 0) list[i] = updated
-        }); editing = null
+            val i = list.indexOfFirst { it.id == updated.id }
+            if (i >= 0) list[i] = updated
+        })
+        editing = null
     })
 }
 
