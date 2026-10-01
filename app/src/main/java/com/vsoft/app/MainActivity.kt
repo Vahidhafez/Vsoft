@@ -2781,12 +2781,32 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
         if (selected == null) {
             item { EmptyState(uiText("هنوز کارت بانکی ثبت نشده"), Icons.Default.CreditCard) }
         } else {
-            item { InfoCard(uiText("موجودی فعلی کارت"), money(current), Icons.Default.AccountBalance) }
-            item { InfoCard(uiText("درآمد کارت"), money(income), Icons.Default.TrendingUp) }
-            item { InfoCard(uiText("هزینه کارت"), money(expense), Icons.Default.TrendingDown) }
-            item { InfoCard(uiText("موجودی اولیه"), money(opening), Icons.Default.CreditCard) }
-            item { InfoCard(uiText("درآمد کاری واریزشده"), money(workIncome), Icons.Default.Work) }
-            item { InfoCard(uiText("ساعات کاری مرتبط"), String.format(Locale.US, "%.1f ساعت", hours), Icons.Default.AccessTime) }
+            item {
+                Card(
+                    Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(28.dp)),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(Modifier.padding(20.dp)) {
+                        Text(uiText("خلاصه کارت"), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                        Spacer(Modifier.height(12.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            ReportStatTile(uiText("موجودی"), money(current), Icons.Default.AccountBalanceWallet, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                            ReportStatTile(uiText("درآمد"), money(income), Icons.Default.TrendingUp, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(9.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            ReportStatTile(uiText("هزینه"), money(expense), Icons.Default.TrendingDown, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+                            ReportStatTile(uiText("درآمد کاری"), money(workIncome), Icons.Default.Work, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(9.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            ReportStatTile(uiText("موجودی اولیه"), money(opening), Icons.Default.CreditCard, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                            ReportStatTile(uiText("ساعت کاری"), String.format(Locale.US, "%.1f", hours), Icons.Default.AccessTime, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
             item { VsoftReportMonthlyChart(monthly) }
             item {
                 val categories = cardTransactions
@@ -2832,6 +2852,23 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ReportStatTile(title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, modifier: Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(18.dp)).background(accent.copy(alpha = .08f)).padding(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(accent.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
+            }
+            Spacer(Modifier.width(7.dp))
+            Text(title, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+        Spacer(Modifier.height(7.dp))
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
     }
 }
 
