@@ -2220,7 +2220,7 @@ fun FinancePage(
             normalizeVsoftSearch(it.person).contains(normalizedSearch) ||
             normalizeVsoftSearch(it.card).contains(normalizedSearch) ||
             normalizeVsoftSearch(it.date).contains(normalizedSearch))
-    }.sortedByDescending { it.id }
+    }.sortedWith(\n        compareByDescending<Transaction> { it.date }\n            .thenByDescending { it.id }\n    )
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize()) {
