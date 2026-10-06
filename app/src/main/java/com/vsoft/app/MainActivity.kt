@@ -114,7 +114,8 @@ data class Transaction(
     val description: String,
     val date: String,
     val card: String,
-    val person: String
+    val person: String,
+    val timestamp: Long = id
 )
 
 data class WorkDay(
@@ -142,7 +143,9 @@ data class BankCard(
     val name: String,
     val cardNumber: String,
     val last4: String,
-    val balance: Long
+    val balance: Long,
+    val openingBalance: Long = balance,
+    val balanceAsOf: Long = 0L
 )
 
 data class Person(
@@ -464,16 +467,29 @@ fun money(value: Long): String {
 }
 
 fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays: List<WorkDay>): Long {
-    // تراکنش‌های ثبت‌شده از پیامک بانکی، وقتی موجودی داخل همان پیامک وجود دارد،
-    // قبلاً موجودی واقعی کارت را مستقیماً به‌روزرسانی کرده‌اند؛ بنابراین نباید
-    // دوباره روی موجودی گزارش‌شده جمع/کم شوند.
-    val movement = transactions
-        .filter { it.card == card.name && !it.description.startsWith("ثبت خودکار از پیامک") }
-        .sumOf {
-            if (it.type == "income") it.amount else -it.amount
-        }
-    val workIncome = workDays.filter { it.card == card.name }.sumOf { it.income }
-    return card.balance + movement + workIncome
+    val transactionMovement = transactions
+        .filter { it.card == card.name && it.timestamp > card.balanceAsOf }
+        .sumOf { if (it.type == "income") it.amount else -it.amount }
+
+    val workIncome = workDays
+        .filter { it.card == card.name && workDayTimestamp(it) > card.balanceAsOf }
+        .sumOf { it.income }
+
+    return card.balance + transactionMovement + workIncome
+}
+
+fun workDayTimestamp(workDay: WorkDay): Long {
+    val date = workDay.endDate.ifBlank { workDay.date }
+    val parts = date.split("/").mapNotNull { it.toIntOrNull() }
+    if (parts.size != 3) return 0L
+    val g = jalaliToGregorian(parts[0], parts[1], parts[2])
+    val time = workDay.end.ifBlank { workDay.start }.split(":").mapNotNull { it.toIntOrNull() }
+    val hour = time.getOrNull(0) ?: 0
+    val minute = time.getOrNull(1) ?: 0
+    return java.util.Calendar.getInstance().apply {
+        set(g[0], g[1] - 1, g[2], hour, minute, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+    }.timeInMillis
 }
 
 fun today(): String {
@@ -545,6 +561,7 @@ fun encodeTransactions(list: List<Transaction>): String {
                 put("date", it.date)
                 put("card", it.card)
                 put("person", it.person)
+                put("timestamp", it.timestamp)
             }
         )
     }
@@ -570,7 +587,8 @@ fun decodeTransactions(value: String): MutableList<Transaction> {
                     o.getString("description"),
                     o.getString("date"),
                     o.getString("card"),
-                    o.getString("person")
+                    o.getString("person"),
+                    o.optLong("timestamp", o.getLong("id"))
                 )
             )
         }
@@ -647,6 +665,8 @@ fun encodeCards(list: List<BankCard>): String {
                 put("cardNumber", it.cardNumber)
                 put("last4", it.last4)
                 put("balance", it.balance)
+                put("openingBalance", it.openingBalance)
+                put("balanceAsOf", it.balanceAsOf)
             }
         )
     }
@@ -670,7 +690,9 @@ fun decodeCards(value: String): MutableList<BankCard> {
                     o.getString("name"),
                     o.optString("cardNumber", o.optString("last4", "")),
                     o.optString("last4", "").takeLast(4),
-                    o.getLong("balance")
+                    o.getLong("balance"),
+                    o.optLong("openingBalance", o.getLong("balance")),
+                    o.optLong("balanceAsOf", 0L)
                 )
             )
         }
@@ -1722,8 +1744,7 @@ fun DashboardPage(
     val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
     val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
     val workIncome = workDays.sumOf { it.income }
-    val openingBalance = cards.sumOf { it.balance }
-    val balance = openingBalance + income + workIncome - expense
+    val balance = cards.sumOf { cardCurrentBalance(it, transactions, workDays) }
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
 
     val currentJalali = today()
@@ -2231,10 +2252,7 @@ fun FinancePage(
             normalizeVsoftSearch(it.person).contains(normalizedSearch) ||
             normalizeVsoftSearch(it.card).contains(normalizedSearch) ||
             normalizeVsoftSearch(it.date).contains(normalizedSearch))
-    }.sortedWith(
-        compareByDescending<Transaction> { it.date }
-            .thenByDescending { it.id }
-    )
+    }.sortedByDescending { it.timestamp }
     val incomeTotal = transactions.filter { it.type == "income" }.sumOf { it.amount }
     val expenseTotal = transactions.filter { it.type == "expense" }.sumOf { it.amount }
     val netTotal = incomeTotal - expenseTotal
@@ -4367,7 +4385,8 @@ fun AddCardDialog(onDismiss:()->Unit,onSave:(BankCard)->Unit){
    OutlinedTextField(name,{name=it},label={Text(uiText("عنوان کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Personal card" else "مثلاً کارت شخصی")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(cardNumber,{cardNumber=normalizeDigits(it).filter(Char::isDigit).take(16)},label={Text(uiText("شماره کامل کارت"))},leadingIcon={Icon(Icons.Default.Numbers,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,supportingText={Text(cardNumber.length.toString()+" / 16")},shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(balance,{balance=normalizeAmountInput(it)},label={Text(uiText("موجودی اولیه"))},leadingIcon={Icon(Icons.Default.AccountBalanceWallet,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),visualTransformation=GroupedNumberVisualTransformation(),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={val n=normalizeDigits(cardNumber).filter(Char::isDigit).take(16);onSave(BankCard(System.currentTimeMillis(),bank.trim(),name.trim().ifBlank{bank.trim()},n,n.takeLast(4),normalizeDigits(balance).toLongOrNull()?:0L))},enabled=bank.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={val n=normalizeDigits(cardNumber).filter(Char::isDigit).take(16);val initial = normalizeDigits(balance).toLongOrNull() ?: 0L
+                                    onSave(BankCard(System.currentTimeMillis(),bank.trim(),name.trim().ifBlank{bank.trim()},n,n.takeLast(4),initial,initial,System.currentTimeMillis()))},enabled=bank.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
   }
  }}
 }
@@ -4383,7 +4402,9 @@ fun EditCardDialog(card:BankCard,onDismiss:()->Unit,onSave:(BankCard)->Unit){
    OutlinedTextField(name,{name=it},label={Text(uiText("نام کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(num,{num=normalizeDigits(it).filter(Char::isDigit).take(16)},label={Text(uiText("شماره کامل کارت"))},leadingIcon={Icon(Icons.Default.Numbers,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,supportingText={Text(num.length.toString()+" / 16")},shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(balance,{balance=normalizeAmountInput(it)},label={Text(uiText("موجودی اولیه"))},leadingIcon={Icon(Icons.Default.AccountBalanceWallet,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),visualTransformation=GroupedNumberVisualTransformation(),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={val n=normalizeDigits(num).filter(Char::isDigit).take(16);onSave(card.copy(bank=bank.trim(),name=name.trim().ifBlank{bank.trim()},cardNumber=n,last4=n.takeLast(4),balance=normalizeDigits(balance).toLongOrNull()?:0L))},enabled=bank.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={val n=normalizeDigits(num).filter(Char::isDigit).take(16);val enteredBalance = normalizeDigits(balance).toLongOrNull() ?: 0L
+                                    val updatedOpening = if (card.openingBalance == card.balance) enteredBalance else card.openingBalance
+                                    onSave(card.copy(bank=bank.trim(),name=name.trim().ifBlank{bank.trim()},cardNumber=n,last4=n.takeLast(4),balance=enteredBalance,openingBalance=updatedOpening))},enabled=bank.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
   }
  }}
 }
