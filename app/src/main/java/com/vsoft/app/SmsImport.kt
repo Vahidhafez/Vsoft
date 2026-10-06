@@ -424,15 +424,9 @@ class SmsReceiver : BroadcastReceiver() {
                 val sender = parts[0].originatingAddress ?: ""
                 val body = parts.joinToString("") { it.messageBody ?: "" }
                 val time = System.currentTimeMillis()
-                if (SmsStore.addIfBank(context, sender, body, time)) {
-                    val parsed = parseBankSms(sender, body, time)
-                    if (parsed != null) {
-                        val autoSms = parsed.copy(bank = SmsStore.bankFor(context, sender, body, parsed))
-                        if (autoRegisterSmsTransaction(context, autoSms)) {
-                            SmsStore.remove(context, autoSms.id)
-                        }
-                    }
-                }
+                // پیامک فقط وارد صف بررسی می‌شود؛ ثبت مالی و تغییر موجودی
+                // فقط بعد از تأیید دستی کاربر انجام خواهد شد.
+                SmsStore.addIfBank(context, sender, body, time)
             } catch (_: Exception) {
             } finally {
                 pendingResult.finish()
