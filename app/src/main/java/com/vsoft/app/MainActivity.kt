@@ -2242,7 +2242,7 @@ fun FinancePage(
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize()) {
             Row(
-                Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
@@ -2277,7 +2277,7 @@ fun FinancePage(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         DashboardMiniStat(
                             uiText("درآمد"),
@@ -2306,7 +2306,7 @@ fun FinancePage(
 
             OutlinedTextField(
                 search, { search = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 6.dp),
                 singleLine = true,
                 shape = RoundedCornerShape(18.dp),
                 label = { Text(strings.search) },
@@ -2318,7 +2318,7 @@ fun FinancePage(
                 }) else null
             )
             Row(
-                Modifier.padding(horizontal = 18.dp, vertical = 2.dp),
+                Modifier.padding(horizontal = 18.dp, vertical = 0.dp),
                 horizontalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 FilterChip(filter == "all", { filter = "all" }, label = { Text(if (LocalVsoftLanguage.current == "en") "All" else "همه") })
@@ -2333,7 +2333,7 @@ fun FinancePage(
                 LazyColumn(
                     Modifier.weight(1f).fillMaxWidth().padding(horizontal = 18.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 28.dp)
                 ) {
                 itemsIndexed(list, key = { _, it -> it.id }) { index, t ->
                     VsoftEntrance(index.coerceAtMost(7)) {
