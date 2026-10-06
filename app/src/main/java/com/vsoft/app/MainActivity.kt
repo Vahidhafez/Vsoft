@@ -2380,7 +2380,8 @@ fun VsoftSwipeToDelete(
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val scope = rememberCoroutineScope()
     val offset = remember { Animatable(0f) }
-    val maxReveal = 92f
+    val maxReveal = 140f
+    val swipeSensitivity = 0.65f
 
     Box(
         Modifier.fillMaxWidth()
@@ -2407,16 +2408,16 @@ fun VsoftSwipeToDelete(
                             change.consume()
                             scope.launch {
                                 val next = if (rtl) {
-                                    (offset.value + dragAmount).coerceIn(0f, maxReveal)
+                                    (offset.value + dragAmount * swipeSensitivity).coerceIn(0f, maxReveal)
                                 } else {
-                                    (offset.value + dragAmount).coerceIn(-maxReveal, 0f)
+                                    (offset.value + dragAmount * swipeSensitivity).coerceIn(-maxReveal, 0f)
                                 }
                                 offset.snapTo(next)
                             }
                         },
                         onDragEnd = {
                             scope.launch {
-                                if (kotlin.math.abs(offset.value) >= maxReveal * .72f) {
+                                if (kotlin.math.abs(offset.value) >= maxReveal * .85f) {
                                     onDelete()
                                 } else {
                                     offset.animateTo(0f, tween(220, easing = FastOutSlowInEasing))
