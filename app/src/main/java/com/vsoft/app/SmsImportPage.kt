@@ -131,16 +131,22 @@ fun SmsImportPage(
                                 description = "ثبت خودکار از پیامک " + p.bank.ifBlank { "بانکی" },
                                 date = jalaliDateOf(p.time),
                                 card = cardName,
-                                person = ""
+                                person = "",
+                                timestamp = p.time
                             ))
                             onTransactionsChange(list)
 
-                            // اگر پیامک موجودی واقعی کارت را اعلام کرده، همان موجودی
-                            // باید روی کارت ذخیره شود؛ مبلغ تراکنش نباید دوباره به آن اضافه/کم شود.
+                            // موجودی اولیه ثابت می‌ماند. اگر پیامک موجودی واقعی کارت را
+                            // اعلام کند، فقط «موجودی فعلی» و زمان مبنا به‌روز می‌شوند.
+                            // پیامک قدیمی‌تر از مبنای فعلی اجازه برگشت دادن موجودی را ندارد.
                             if (p.balanceRial >= 0L) {
                                 val reportedBalance = if (currency == "IRT") p.balanceRial / 10 else p.balanceRial
                                 val updatedCards = cards.map { card ->
-                                    if (card.name == cardName) card.copy(balance = reportedBalance) else card
+                                    if (card.name == cardName && p.time >= card.balanceAsOf) {
+                                        card.copy(balance = reportedBalance, balanceAsOf = p.time)
+                                    } else {
+                                        card
+                                    }
                                 }.toMutableList()
                                 onCardsChange(updatedCards)
                             }
