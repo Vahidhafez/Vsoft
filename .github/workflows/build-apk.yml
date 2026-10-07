@@ -29,7 +29,7 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          set -e
+          set -euo pipefail
           if [ -z "$KEYSTORE_BASE64" ]; then
             echo "KEYSTORE_BASE64 is not configured."
             exit 1
@@ -44,20 +44,38 @@ jobs:
           KSTOREPWD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          set -e
-          gradle assembleRelease --no-daemon --stacktrace             -PVSOFT_VERSION_CODE=${{ github.run_number }}             -PVSOFT_VERSION_NAME=1.0.${{ github.run_number }}
+          set -euo pipefail
+          VERSION_CODE="${{ github.run_number }}"
+          VERSION_NAME="1.0.${{ github.run_number }}"
+          gradle assembleRelease --no-daemon --stacktrace             -PVSOFT_VERSION_CODE="$VERSION_CODE"             -PVSOFT_VERSION_NAME="$VERSION_NAME"
 
-      - name: Verify Release APK
+      - name: Verify Release APK identity and signature
         run: |
-          set -e
+          set -euo pipefail
           APK="app/build/outputs/apk/release/app-release.apk"
           test -f "$APK"
+
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
           "$APKSIGNER" verify --verbose --print-certs "$APK"
+
+          APKANALYZER=$(find "$ANDROID_HOME/cmdline-tools" -name apkanalyzer -type f | sort -V | tail -n 1 || true)
+          if [ -n "$APKANALYZER" ]; then
+            echo "Application ID:"
+            "$APKANALYZER" manifest application-id "$APK"
+            echo "Version code:"
+            "$APKANALYZER" manifest version-code "$APK"
+            echo "Version name:"
+            "$APKANALYZER" manifest version-name "$APK"
+          fi
+
+      - name: Prepare uniquely named release APK
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/VSOFT-1.0.${{ github.run_number }}.apk"
 
       - name: Upload signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Vsoft-APK-Release
-          path: app/build/outputs/apk/release/app-release.apk
+          name: Vsoft-APK-Release-${{ github.run_number }}
+          path: app/build/outputs/apk/release/VSOFT-1.0.${{ github.run_number }}.apk
           if-no-files-found: error
