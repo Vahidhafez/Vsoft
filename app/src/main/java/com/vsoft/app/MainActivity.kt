@@ -66,6 +66,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -3857,6 +3858,10 @@ private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
             }
         }
     }
+    if (showReceiptBuilder) {
+        ReceiptBuilderDialog(transactions, workDays) { showReceiptBuilder = false }
+    }
+
 }
 
 @Composable
