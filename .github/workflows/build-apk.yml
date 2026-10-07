@@ -40,14 +40,13 @@ jobs:
 
       - name: Build signed Release APK
         env:
+          VSOFT_SIGNING_ENABLED: "true"
           KSTOREPWD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYALIAS: ${{ secrets.KEY_ALIAS }}
           KEYPWD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -e
-          gradle assembleRelease --no-daemon --stacktrace \
-            -PVSOFT_VERSION_CODE=${{ github.run_number }} \
-            -PVSOFT_VERSION_NAME=1.0.${{ github.run_number }}
+          gradle assembleRelease --no-daemon --stacktrace             -PVSOFT_VERSION_CODE=${{ github.run_number }}             -PVSOFT_VERSION_NAME=1.0.${{ github.run_number }}
 
       - name: Verify Release APK
         run: |
