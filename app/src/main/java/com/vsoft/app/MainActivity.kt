@@ -486,14 +486,11 @@ fun money(value: Long): String {
 }
 
 fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays: List<WorkDay>): Long {
-    // تراکنش‌های ثبت‌شده از پیامک بانکی، وقتی موجودی داخل همان پیامک وجود دارد،
-    // قبلاً موجودی واقعی کارت را مستقیماً به‌روزرسانی کرده‌اند؛ بنابراین نباید
-    // دوباره روی موجودی گزارش‌شده جمع/کم شوند.
+    // موجودی اولیه کارت فقط همان مبلغی است که کاربر دستی تعیین کرده است.
+    // پیامک بانکی هرگز آن را تغییر نمی‌دهد؛ تراکنش تأییدشده در محاسبه موجودی فعلی لحاظ می‌شود.
     val movement = transactions
-        .filter { it.card == card.name && !it.description.startsWith("ثبت خودکار از پیامک") }
-        .sumOf {
-            if (it.type == "income") it.amount else -it.amount
-        }
+        .filter { it.card == card.name }
+        .sumOf { if (it.type == "income") it.amount else -it.amount }
     val workIncome = workDays.filter { it.card == card.name }.sumOf { it.income }
     return card.balance + movement + workIncome
 }
@@ -936,20 +933,9 @@ suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms): Boole
         )
     )
 
-    var updatedCards = cards.toMutableList()
-    if (sms.balanceRial >= 0L) {
-        val reportedBalance = if (currency == "IRT") sms.balanceRial / 10 else sms.balanceRial
-
-        // موجودی درج‌شده در خود پیامک، موجودی فعلی کارت است؛
-        // بنابراین همان مقدار مستقیماً روی کارت ذخیره می‌شود.
-        updatedCards = updatedCards.map {
-            if (it.id == card!!.id) it.copy(balance = reportedBalance) else it
-        }.toMutableList()
-    }
-
+    // موجودی اعلام‌شده در پیامک فقط برای بررسی است و موجودی اولیه کارت را تغییر نمی‌دهد.
     context.dataStore.edit { p ->
         p[TRANSACTIONS_KEY] = encodeTransactions(updatedTransactions)
-        p[CARDS_KEY] = encodeCards(updatedCards)
     }
     return true
 }
@@ -1148,7 +1134,7 @@ fun VsoftApp() {
         language = data.language
         currency = data.currency
         theme = data.theme
-        glass = false
+        glass = data.glass
         font = data.font
         pendingRestore = null
     }
@@ -1363,7 +1349,8 @@ fun VsoftApp() {
                     authError = null
                     runCatching { signOutFromGoogle(context) }
                         .onFailure { authError = it.message ?: "Sign-out failed" }
-                }
+                },
+                onWorkPurchasesNavigate = { selectedPage = 10 }
             )
             }
         }
@@ -1403,7 +1390,8 @@ fun MainScreen(
     firebaseUser: FirebaseUser?,
     authError: String?,
     onGoogleSignIn: () -> Unit,
-    onGoogleSignOut: () -> Unit
+    onGoogleSignOut: () -> Unit,
+    onWorkPurchasesNavigate: () -> Unit
 ) {
 
     var selectedPage by remember { mutableStateOf(0) }
@@ -1648,7 +1636,8 @@ fun MainScreen(
                     people,
                     workplaces,
                     cards,
-                    onWorkChange
+                    onWorkChange,
+                    onWorkPurchasesNavigate
                 )
 
                 3 -> ReportsPage(strings, transactions, workDays, cards)
@@ -2344,6 +2333,8 @@ fun FinancePage(
     val netTotal = incomeTotal - expenseTotal
 
     val listState = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LazyColumn(
@@ -2445,6 +2436,15 @@ fun FinancePage(
                                 val x = transactions.toMutableList()
                                 x.removeAll { it.id == t.id }
                                 onTransactionsChange(x)
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        "تراکنش حذف شد", "بازگردانی",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        onTransactionsChange((x + t).sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending { it.id }).toMutableList())
+                                    }
+                                }
                             }
                         ) {
                             TransactionCard(
@@ -2463,6 +2463,10 @@ fun FinancePage(
             }
         }
 
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 18.dp, bottom = 88.dp)
+        )
         FloatingActionButton(
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(),
             onClick = { edit = null; show = true },
@@ -2690,15 +2694,16 @@ fun AddTransactionDialog(
                         Icon(Icons.Default.ExpandMore, null)
                     }
                     DropdownMenu(categoryOpen, { categoryOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(uiText("افزودن دسته‌بندی جدید")) },
+                            leadingIcon = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) },
+                            onClick = { categoryOpen = false; newCategoryOpen = true }
+                        )
                         allFinanceCategories.forEach { item ->
                             DropdownMenuItem(
-                                text = { Text(item) }, leadingIcon = { Icon(Icons.Default.Label, null, Modifier.size(18.dp)) },
+                                text = { Text(item) },
+                                leadingIcon = { Icon(Icons.Default.Label, null, Modifier.size(18.dp)) },
                                 onClick = { category = item; categoryOpen = false }
-                            )
-                                                        DropdownMenuItem(
-                                text = { Text(uiText("افزودن دسته‌بندی جدید")) },
-                                leadingIcon = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) },
-                                onClick = { categoryOpen = false; newCategoryOpen = true }
                             )
                         }
                     }
@@ -2859,6 +2864,8 @@ fun WorkPurchasesPage(
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<WorkPurchase?>(null) }
     val total = purchases.sumOf { it.amount }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LazyColumn(
@@ -2903,6 +2910,22 @@ fun WorkPurchasesPage(
                                 onPurchasesChange(next)
                                 val tx = transactions.toMutableList().apply { removeAll { it.id == purchase.id } }
                                 onTransactionsChange(tx)
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar("خرید کار حذف شد","بازگردانی",duration=SnackbarDuration.Short)
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        onPurchasesChange((next + purchase).toMutableList())
+                                        onTransactionsChange((tx + Transaction(
+                                            id = purchase.id,
+                                            type = "expense",
+                                            amount = purchase.amount,
+                                            category = purchase.category,
+                                            description = "خرید کار: " + purchase.title,
+                                            date = purchase.date,
+                                            card = purchase.card,
+                                            person = ""
+                                        )).toMutableList())
+                                    }
+                                }
                             }
                         ) {
                             Card(
@@ -3093,7 +3116,8 @@ fun WorkPage(
     people: List<Person>,
     workplaces: List<Workplace>,
     cards: List<BankCard>,
-    onWorkChange: (MutableList<WorkDay>) -> Unit
+    onWorkChange: (MutableList<WorkDay>) -> Unit,
+    onWorkPurchases: () -> Unit
 ) {
     var show by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<WorkDay?>(null) }
@@ -3170,6 +3194,17 @@ fun WorkPage(
                 }
             }
 
+            item(key = "work_purchases_entry") {
+                OutlinedButton(
+                    onClick = onWorkPurchases,
+                    modifier = Modifier.fillMaxWidth().pressScale(),
+                    shape = RoundedCornerShape(17.dp)
+                ) {
+                    Icon(Icons.Default.ShoppingCart, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text(uiText("خریدهای کار"), fontWeight = FontWeight.SemiBold)
+                }
+            }
             if (workDays.isEmpty()) {
                 item(key = "work_empty") {
                     Box(
@@ -3534,7 +3569,7 @@ fun AddWorkDialog(
 @Composable
 fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: List<WorkDay>, cards: List<BankCard>) {
     var showReceiptBuilder by remember { mutableStateOf(false) }
-    if (showReceiptBuilder) ReceiptBuilderDialog(transactions, workDays) { showReceiptBuilder = false }
+    if (showReceiptBuilder) ReceiptBuilderDialog(transactions, workDays, cards) { showReceiptBuilder = false }
     var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "") }
     val selected = cards.firstOrNull { it.name == selectedCardName }
     val cardTransactions = transactions.filter { it.card == selectedCardName }
@@ -3543,7 +3578,7 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
     val expense = cardTransactions.filter { it.type == "expense" }.sumOf { it.amount }
     val opening = selected?.balance ?: 0L
     val workIncome = cardWork.sumOf { it.income }
-    val current = opening + income + workIncome - expense
+    val current = selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
     val hours = cardWork.sumOf { calculateHours(it.start, it.end) }
 
     val now = today().split("/").mapNotNull { it.toIntOrNull() }
@@ -3883,16 +3918,29 @@ fun TransactionReceiptDialog(transaction:Transaction,onDismiss:()->Unit){
         dismissButton={TextButton(onClick=onDismiss){Text(uiText("لغو"))}})
 }
 @Composable
-fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,onDismiss:()->Unit){
+fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,cards:List<BankCard>,onDismiss:()->Unit){
     val context=LocalContext.current
     var mode by remember{mutableStateOf("monthly")};var start by remember{mutableStateOf(today())};var end by remember{mutableStateOf(today())};var dateOpen by remember{mutableStateOf(0)}
+    var selectedCardName by remember{mutableStateOf("")}
+    var cardOpen by remember{mutableStateOf(false)}
     LaunchedEffect(mode){val t=today();when(mode){"daily"->{start=t;end=t};"weekly"->{start=shiftJalali(t,-6);end=t};"monthly"->{val p=t.split("/");start="%s/%02d/01".format(Locale.US,p[0],p[1].toInt());end=t}}}
-    val filtered=transactions.filter{dateInRange(it.date,start,end)}.sortedWith(compareBy<Transaction>{it.date}.thenBy{it.id})
-    val workFiltered=workDays.filter{dateInRange(it.date,start,end)}
+    val filtered=transactions.filter{dateInRange(it.date,start,end) && (selectedCardName.isBlank() || it.card==selectedCardName)}.sortedWith(compareBy<Transaction>{it.date}.thenBy{it.id})
+    val workFiltered=workDays.filter{dateInRange(it.date,start,end) && (selectedCardName.isBlank() || it.card==selectedCardName)}
     val income=filtered.filter{it.type=="income"}.sumOf{it.amount}+workFiltered.sumOf{it.income};val expense=filtered.filter{it.type=="expense"}.sumOf{it.amount}
     AlertDialog(onDismissRequest=onDismiss,title={Column{Text(uiText("ساخت فاکتور و خلاصه"),fontWeight=FontWeight.ExtraBold);Text(uiText("هر زمان و برای هر بازه‌ای که بخواهی"),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}},
         text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)){
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){listOf("daily" to "روزانه","weekly" to "هفتگی","monthly" to "ماهانه","custom" to "بازه دلخواه").forEach{(key,label)->FilterChip(selected=mode==key,onClick={mode=key},label={Text(uiText(label),fontSize=10.sp)})}}
+            Box(Modifier.fillMaxWidth()){
+                OutlinedButton({cardOpen=true},Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)){
+                    Icon(Icons.Default.CreditCard,null);Spacer(Modifier.width(7.dp))
+                    Text(if(selectedCardName.isBlank()) "همه کارت‌ها" else selectedCardName,Modifier.weight(1f),textAlign=TextAlign.Start)
+                    Icon(Icons.Default.ExpandMore,null)
+                }
+                DropdownMenu(cardOpen,{cardOpen=false}){
+                    DropdownMenuItem(text={Text("همه کارت‌ها")},onClick={selectedCardName="";cardOpen=false})
+                    cards.forEach{card->DropdownMenuItem(text={Text(card.name)},onClick={selectedCardName=card.name;cardOpen=false})}
+                }
+            }
             OutlinedButton({dateOpen=1},Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CalendarMonth,null);Spacer(Modifier.width(7.dp));Text(uiText("از")+" "+start,Modifier.weight(1f),textAlign=TextAlign.Start)}
             OutlinedButton({dateOpen=2},Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.Event,null);Spacer(Modifier.width(7.dp));Text(uiText("تا")+" "+end,Modifier.weight(1f),textAlign=TextAlign.Start)}
             Surface(Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.primary.copy(alpha=.08f)){Column(Modifier.padding(13.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
@@ -4214,6 +4262,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                 }
             }
         }
+        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 18.dp, bottom = 88.dp))
         FloatingActionButton(
             modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
             onClick = { show = true },

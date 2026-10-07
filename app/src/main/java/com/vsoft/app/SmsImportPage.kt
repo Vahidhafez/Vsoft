@@ -135,15 +135,7 @@ fun SmsImportPage(
                             ))
                             onTransactionsChange(list)
 
-                            // اگر پیامک موجودی واقعی کارت را اعلام کرده، همان موجودی
-                            // باید روی کارت ذخیره شود؛ مبلغ تراکنش نباید دوباره به آن اضافه/کم شود.
-                            if (p.balanceRial >= 0L) {
-                                val reportedBalance = if (currency == "IRT") p.balanceRial / 10 else p.balanceRial
-                                val updatedCards = cards.map { card ->
-                                    if (card.name == cardName) card.copy(balance = reportedBalance) else card
-                                }.toMutableList()
-                                onCardsChange(updatedCards)
-                            }
+                            // موجودی اعلام‌شده پیامک فقط برای بررسی است؛ موجودی اولیه کارت هرگز خودکار تغییر نمی‌کند.
 
                             SmsStore.remove(context, p.id)
                             pending = SmsStore.pending(context)
