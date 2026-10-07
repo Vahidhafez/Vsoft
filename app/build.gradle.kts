@@ -26,7 +26,7 @@ android {
                 storeFile = signingFile
                 storePassword = System.getenv("KSTOREPWD")
                 keyAlias = System.getenv("KEYALIAS")
-                keyPassword = System.getenv("KEYPWD")
+                keyPassword = System.getenv("KSTOREPWD")
             }
         }
     }
