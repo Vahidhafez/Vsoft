@@ -2562,6 +2562,8 @@ fun AddTransactionDialog(
     var cardOpen by remember { mutableStateOf(false) }
     var categoryOpen by remember { mutableStateOf(false) }
     var newCategoryOpen by remember { mutableStateOf(false) }
+    var customCategories by remember { mutableStateOf(emptyList<String>()) }
+    var newCategoryOpen by remember { mutableStateOf(false) }
     var customFinanceCategories by remember { mutableStateOf(emptyList<String>()) }
     var personOpen by remember { mutableStateOf(false) }
     val financeCategories = if (type == "income") listOf(
@@ -2802,6 +2804,22 @@ fun AddTransactionDialog(
             dismissButton = { TextButton(onClick = { newCategoryOpen = false }) { Text(strings.cancel) } }
         )
     }
+    if (newCategoryOpen) {
+        var newName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { newCategoryOpen = false },
+            title = { Text(uiText("دسته‌بندی جدید")) },
+            text = { OutlinedTextField(newName, { newName = it }, label = { Text(uiText("نام دسته‌بندی")) }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val name = newName.trim()
+                    if (name.isNotBlank()) { customCategories = (customCategories + name).distinct(); category = name }
+                    newCategoryOpen = false
+                }) { Text(uiText("افزودن")) }
+            },
+            dismissButton = { TextButton(onClick = { newCategoryOpen = false }) { Text(strings.cancel) } }
+        )
+    }
     if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
 }
 
@@ -2961,7 +2979,10 @@ fun WorkPurchaseDialog(
     var cardOpen by remember { mutableStateOf(false) }
     var dateOpen by remember { mutableStateOf(false) }
 
-    val categories = listOf("ابزار و تجهیزات", "قطعات", "مواد مصرفی", "لباس و تجهیزات ایمنی", "حمل‌ونقل کاری", "تعمیرات", "سایر")
+    val categories = listOf(
+        "خرید ابزار", "خرید قطعات", "مواد مصرفی", "لوازم اداری", "پوشاک و لوازم شخصی",
+        "حمل‌ونقل", "غذا و پذیرایی", "تعمیرات", "خرید تجهیزات", "سایر"
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -2990,7 +3011,14 @@ fun WorkPurchaseDialog(
                         Icon(Icons.Default.Label, null); Spacer(Modifier.width(8.dp)); Text(category, Modifier.weight(1f), textAlign = TextAlign.Start); Icon(Icons.Default.ExpandMore, null)
                     }
                     DropdownMenu(categoryOpen, { categoryOpen = false }) {
-                        categories.forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { category = item; categoryOpen = false }) }
+                        (categories + customCategories).distinct().forEach { item ->
+                            DropdownMenuItem(text = { Text(item) }, onClick = { category = item; categoryOpen = false })
+                        }
+                        DropdownMenuItem(
+                            text = { Text(uiText("افزودن دسته‌بندی جدید")) },
+                            leadingIcon = { Icon(Icons.Default.Add, null) },
+                            onClick = { categoryOpen = false; newCategoryOpen = true }
+                        )
                     }
                 }
                 Box(Modifier.fillMaxWidth()) {
