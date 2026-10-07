@@ -2842,6 +2842,25 @@ fun AddTransactionDialog(
         )
     }
     if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
+    if (newCategoryOpen) {
+        AlertDialog(
+            onDismissRequest = { newCategoryOpen = false },
+            title = { Text(uiText("دسته‌بندی جدید")) },
+            text = { OutlinedTextField(newCategoryName, { newCategoryName = it }, label = { Text(uiText("نام دسته‌بندی")) }, singleLine = true) },
+            confirmButton = {
+                Button(onClick = {
+                    val value = newCategoryName.trim()
+                    if (value.isNotBlank()) {
+                        customCategories = (customCategories + value).distinct()
+                        category = value
+                    }
+                    newCategoryName = ""
+                    newCategoryOpen = false
+                }) { Text(uiText("افزودن")) }
+            },
+            dismissButton = { TextButton(onClick = { newCategoryOpen = false }) { Text(uiText("لغو")) } }
+        )
+    }
 }
 
 
@@ -2999,6 +3018,9 @@ fun WorkPurchaseDialog(
     var workplaceOpen by remember { mutableStateOf(false) }
     var cardOpen by remember { mutableStateOf(false) }
     var dateOpen by remember { mutableStateOf(false) }
+    var newCategoryOpen by remember { mutableStateOf(false) }
+    var customCategories by remember { mutableStateOf(emptyList<String>()) }
+    var newCategoryName by remember { mutableStateOf("") }
 
     val categories = listOf(
         "خرید ابزار", "خرید قطعات", "مواد مصرفی", "لوازم اداری", "پوشاک و لوازم شخصی",
@@ -3531,6 +3553,7 @@ fun AddWorkDialog(
 @Composable
 fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: List<WorkDay>, cards: List<BankCard>) {
     var showReceiptBuilder by remember { mutableStateOf(false) }
+    if (showReceiptBuilder) ReceiptBuilderDialog(transactions, workDays) { showReceiptBuilder = false }
     var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "") }
     val selected = cards.firstOrNull { it.name == selectedCardName }
     val cardTransactions = transactions.filter { it.card == selectedCardName }
@@ -3857,9 +3880,6 @@ private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
                 )
             }
         }
-    }
-    if (showReceiptBuilder) {
-        ReceiptBuilderDialog(transactions, workDays) { showReceiptBuilder = false }
     }
 
 }
