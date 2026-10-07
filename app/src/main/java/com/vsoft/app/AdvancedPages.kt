@@ -67,7 +67,8 @@ fun VsoftToolsPage(
     workDays: List<WorkDay>,
     cards: List<BankCard>,
     people: List<Person>,
-    workplaces: List<Workplace>
+    workplaces: List<Workplace>,
+    onWorkPurchases: () -> Unit
 ) {
     var mode by remember { mutableStateOf(0) }
     Column(Modifier.fillMaxSize()) {
@@ -78,6 +79,16 @@ fun VsoftToolsPage(
                 FilterChip(mode == 0, { mode = 0 }, label = { Text(toolsText(language, "calendar")) }, leadingIcon = { Icon(Icons.Default.CalendarMonth, null, Modifier.size(17.dp)) })
                 FilterChip(mode == 1, { mode = 1 }, label = { Text(toolsText(language, "search")) }, leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(17.dp)) })
                 FilterChip(mode == 2, { mode = 2 }, label = { Text(toolsText(language, "insights")) }, leadingIcon = { Icon(Icons.Default.AutoGraph, null, Modifier.size(17.dp)) })
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onWorkPurchases,
+                modifier = Modifier.fillMaxWidth().pressScale(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.ShoppingCart, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (language == "en") "Work purchases" else if (language == "ar") "مشتريات العمل" else "خریدهای کار")
             }
         }
         when (mode) {
