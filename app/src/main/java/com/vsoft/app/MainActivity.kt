@@ -1390,6 +1390,7 @@ fun MainScreen(
     onPeopleChange: (MutableList<Person>) -> Unit,
     workplaces: List<Workplace>,
     onWorkplacesChange: (MutableList<Workplace>) -> Unit,
+    workPurchases: List<WorkPurchase>,
     onWorkPurchasesChange: (MutableList<WorkPurchase>) -> Unit,
     onLanguageChange: (String) -> Unit,
     onCurrencyChange: (String) -> Unit,
@@ -2480,10 +2481,7 @@ fun FinancePage(
         show = false
     }
 }
-    receiptTransaction?.let { TransactionReceiptDialog(it) { receiptTransaction = null } }
 
-
-// ---------------- TRANSACTION CARD ----------------
 
 @Composable
 fun TransactionCard(
@@ -2586,7 +2584,6 @@ fun AddTransactionDialog(
     var categoryOpen by remember { mutableStateOf(false) }
     var newCategoryOpen by remember { mutableStateOf(false) }
     var customCategories by remember { mutableStateOf(emptyList<String>()) }
-    var newCategoryOpen by remember { mutableStateOf(false) }
     var customFinanceCategories by remember { mutableStateOf(emptyList<String>()) }
     var personOpen by remember { mutableStateOf(false) }
     val financeCategories = if (type == "income") listOf(
@@ -3869,7 +3866,6 @@ private fun VsoftChartLegend(color: Color, label: String) {
         Spacer(Modifier.width(6.dp))
         Text(label, fontSize = 12.sp)
     }
-    if(showReceiptBuilder) ReceiptBuilderDialog(transactions,workDays){showReceiptBuilder=false}
 }
 
 @Composable
