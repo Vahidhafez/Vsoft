@@ -1784,7 +1784,6 @@ fun AnimatedNavIcon(
 @Composable
 fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
     val visible = remember { MutableTransitionState(false) }
-    val direction = if (rtl) -1 else 1
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay((index * 42L).coerceAtMost(250L))
         visible.targetState = true
@@ -4266,7 +4265,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                 }
             }
         }
-        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 18.dp, bottom = 88.dp))
+        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(18.dp))
         FloatingActionButton(
             modifier = Modifier.align(Alignment.BottomEnd).padding(22.dp).pressScale(),
             onClick = { show = true },
@@ -5094,7 +5093,7 @@ fun JalaliDatePickerDialog(
                     AnimatedContent(
                         targetState = "${jalaliMonthName(month)} $year",
                         transitionSpec = {
-                            val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
+                            val direction = if (rtl) -1 else 1
                             fadeIn(tween(160)) + slideInHorizontally(tween(180)) { direction * it / 4 } togetherWith
                                 fadeOut(tween(100)) + slideOutHorizontally(tween(120)) { -direction * it / 5 }
                         },
