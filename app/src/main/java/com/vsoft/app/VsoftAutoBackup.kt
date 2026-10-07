@@ -64,6 +64,7 @@ class VsoftAutoBackupWorker(
             decodeCards(p[CARDS_KEY] ?: "[]"),
             decodePeople(p[PEOPLE_KEY] ?: "[]"),
             decodeWorkplaces(p[WORKPLACES_KEY] ?: "[]"),
+            decodeWorkPurchases(p[WORK_PURCHASES_KEY] ?: "[]"),
             p[LANGUAGE_KEY] ?: "fa",
             p[CURRENCY_KEY] ?: "IRT",
             p[THEME_KEY] ?: "system",
