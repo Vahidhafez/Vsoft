@@ -3606,9 +3606,33 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(bottom = 28.dp)) {
         item {
-            Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-            Text(uiText("گزارش مالی، روند ماهانه و عملکرد کارت را یکجا ببینید."),
-                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        uiText("گزارش مالی، روند ماهانه و عملکرد کارت را یکجا ببینید."),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledTonalButton(
+                    onClick = { showReceiptBuilder = true },
+                    modifier = Modifier.pressScale(0.98f),
+                    shape = RoundedCornerShape(15.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
+                ) {
+                    Icon(Icons.Default.ReceiptLong, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        if (LocalVsoftLanguage.current == "en") "Invoice"
+                        else if (LocalVsoftLanguage.current == "ar") "فاتورة"
+                        else "فاکتور"
+                    )
+                }
+            }
         }
         item {
             Card(

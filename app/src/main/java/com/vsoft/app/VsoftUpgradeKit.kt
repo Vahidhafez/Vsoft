@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -72,13 +73,18 @@ fun VsoftSwipeToDelete(
     var deleting by remember { mutableStateOf(false) }
     var hapticSent by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
-    val targetOffset = if (deleting) -1000f else offsetX
+    val rtl = LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    // RTL uses the mirrored physical swipe direction so the delete reveal stays on the correct side.
+    val swipeDirection = if (rtl) 1f else -1f
+    val threshold = 195f
+    val maxOffset = 260f
+    val targetOffset = if (deleting) swipeDirection * 1000f else offsetX
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffset,
         animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy),
         label = "swipe_delete_offset"
     )
-    val progress = (kotlin.math.abs(animatedOffset) / 180f).coerceIn(0f, 1f)
+    val progress = (kotlin.math.abs(animatedOffset) / threshold).coerceIn(0f, 1f)
 
     Box(
         modifier
@@ -89,14 +95,17 @@ fun VsoftSwipeToDelete(
                 if (!enabled) return@pointerInput
                 detectHorizontalDragGestures(
                     onHorizontalDrag = { _, drag ->
-                        offsetX = (offsetX + drag).coerceIn(-260f, 24f)
-                        if (offsetX < -195f && !hapticSent) {
+                        offsetX = (offsetX + drag).coerceIn(
+                            if (swipeDirection > 0f) -24f else -maxOffset,
+                            if (swipeDirection > 0f) maxOffset else 24f
+                        )
+                        if (swipeDirection * offsetX > threshold && !hapticSent) {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             hapticSent = true
                         }
                     },
                     onDragEnd = {
-                        if (offsetX < -195f) {
+                        if (swipeDirection * offsetX > threshold) {
                             deleting = true
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onDelete()
@@ -112,7 +121,10 @@ fun VsoftSwipeToDelete(
                 )
             }
     ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
+        Box(
+            Modifier.fillMaxSize(),
+            contentAlignment = if (rtl) Alignment.CenterStart else Alignment.CenterEnd
+        ) {
             Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onErrorContainer)
         }
         androidx.compose.foundation.layout.Box(
