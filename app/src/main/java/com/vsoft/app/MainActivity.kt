@@ -1784,6 +1784,7 @@ fun AnimatedNavIcon(
 @Composable
 fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
     val visible = remember { MutableTransitionState(false) }
+    val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay((index * 42L).coerceAtMost(250L))
         visible.targetState = true
