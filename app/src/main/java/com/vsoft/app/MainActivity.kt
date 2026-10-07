@@ -2842,25 +2842,6 @@ fun AddTransactionDialog(
         )
     }
     if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
-    if (newCategoryOpen) {
-        AlertDialog(
-            onDismissRequest = { newCategoryOpen = false },
-            title = { Text(uiText("دسته‌بندی جدید")) },
-            text = { OutlinedTextField(newCategoryName, { newCategoryName = it }, label = { Text(uiText("نام دسته‌بندی")) }, singleLine = true) },
-            confirmButton = {
-                Button(onClick = {
-                    val value = newCategoryName.trim()
-                    if (value.isNotBlank()) {
-                        customCategories = (customCategories + value).distinct()
-                        category = value
-                    }
-                    newCategoryName = ""
-                    newCategoryOpen = false
-                }) { Text(uiText("افزودن")) }
-            },
-            dismissButton = { TextButton(onClick = { newCategoryOpen = false }) { Text(uiText("لغو")) } }
-        )
-    }
 }
 
 
@@ -3939,7 +3920,7 @@ fun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:Li
     val footer=p(muted,22f,true).apply{textAlign=Paint.Align.CENTER};canvas.drawText("VSOFT",540f,height-38f,footer)
     val values=ContentValues().apply{put(MediaStore.Images.Media.DISPLAY_NAME,"VSOFT_"+title.replace(" ","_")+"_"+System.currentTimeMillis()+".png");put(MediaStore.Images.Media.MIME_TYPE,"image/png");put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/VSOFT")}
     val uri=context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values)?:return
-    try{context.contentResolver.openOutputStream(uri)?.use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};val send=Intent(Intent.ACTION_SEND).apply{type="image/png";putExtra(Intent.EXTRA_STREAM,uri);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(send,uiText("ارسال رسید VSOFT")))}catch(_:Exception){context.contentResolver.delete(uri,null,null)}finally{bitmap.recycle()}
+    try{context.contentResolver.openOutputStream(uri)?.use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};val send=Intent(Intent.ACTION_SEND).apply{type="image/png";putExtra(Intent.EXTRA_STREAM,uri);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(send,"ارسال رسید VSOFT"))}catch(_:Exception){context.contentResolver.delete(uri,null,null)}finally{bitmap.recycle()}
 }
 // ---------------- SETTINGS ----------------
 
