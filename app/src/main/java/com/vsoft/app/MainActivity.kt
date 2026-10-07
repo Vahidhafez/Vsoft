@@ -1639,7 +1639,7 @@ fun MainScreen(
                     workplaces,
                     cards,
                     onWorkChange,
-                    onWorkPurchasesNavigate = { selectedPage = 10 }
+                    onWorkPurchases = { selectedPage = 10 }
                 )
 
                 3 -> ReportsPage(strings, transactions, workDays, cards)
@@ -1784,7 +1784,7 @@ fun AnimatedNavIcon(
 @Composable
 fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
     val visible = remember { MutableTransitionState(false) }
-    val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
+    val direction = if (rtl) -1 else 1
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay((index * 42L).coerceAtMost(250L))
         visible.targetState = true
@@ -2468,7 +2468,7 @@ fun FinancePage(
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 18.dp, bottom = 88.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(18.dp)
         )
         FloatingActionButton(
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp).pressScale(),
