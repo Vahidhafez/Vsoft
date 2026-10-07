@@ -75,7 +75,7 @@ fun VsoftSwipeToDelete(
     val targetOffset = if (deleting) -1000f else offsetX
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffset,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
+        animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy),
         label = "swipe_delete_offset"
     )
     val progress = (kotlin.math.abs(animatedOffset) / 180f).coerceIn(0f, 1f)
@@ -89,14 +89,14 @@ fun VsoftSwipeToDelete(
                 if (!enabled) return@pointerInput
                 detectHorizontalDragGestures(
                     onHorizontalDrag = { _, drag ->
-                        offsetX = (offsetX + drag).coerceIn(-220f, 24f)
-                        if (kotlin.math.abs(offsetX) > 170f && !hapticSent) {
+                        offsetX = (offsetX + drag).coerceIn(-260f, 24f)
+                        if (offsetX < -195f && !hapticSent) {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             hapticSent = true
                         }
                     },
                     onDragEnd = {
-                        if (offsetX < -170f) {
+                        if (offsetX < -195f) {
                             deleting = true
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onDelete()
@@ -112,7 +112,7 @@ fun VsoftSwipeToDelete(
                 )
             }
     ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
             Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onErrorContainer)
         }
         androidx.compose.foundation.layout.Box(
