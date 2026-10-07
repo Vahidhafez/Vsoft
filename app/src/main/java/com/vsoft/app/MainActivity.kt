@@ -1,6 +1,14 @@
 package com.vsoft.app
 
 import android.os.Bundle
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
+import android.content.Intent
+import android.provider.MediaStore
 import android.content.Context
 import android.app.Activity
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -494,6 +502,13 @@ fun today(): String {
     val j=gregorianToJalali(c.get(java.util.Calendar.YEAR),c.get(java.util.Calendar.MONTH)+1,c.get(java.util.Calendar.DAY_OF_MONTH))
     return "%04d/%02d/%02d".format(Locale.US,j[0],j[1],j[2])
 }
+fun shiftJalali(date:String,deltaDays:Int):String{
+    val p=date.split("/").mapNotNull{it.toIntOrNull()};if(p.size!=3)return date
+    var y=p[0];var m=p[1];var d=p[2];var n=kotlin.math.abs(deltaDays);val step=if(deltaDays>=0)1 else -1
+    while(n-->0){d+=step;if(step>0&&d>jalaliMonthDays(y,m)){d=1;m++;if(m>12){m=1;y++}};if(step<0&&d<1){m--;if(m<1){m=12;y--};d=jalaliMonthDays(y,m)}}
+    return "%04d/%02d/%02d".format(Locale.US,y,m,d)
+}
+fun dateInRange(date:String,start:String,end:String)=date>=minOf(start,end)&&date<=maxOf(start,end)
 fun gregorianToJalali(gy:Int,gm:Int,gd:Int):IntArray{
     val md=intArrayOf(0,31,28,31,30,31,30,31,31,30,31,30,31)
     val y=gy-1600; val m=gm-1; val d=gd-1
@@ -2306,6 +2321,7 @@ fun FinancePage(
 ) {
     var show by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<Transaction?>(null) }
+    var receiptTransaction by remember { mutableStateOf<Transaction?>(null) }
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("all") }
     val normalizedSearch = normalizeVsoftSearch(search)
@@ -2436,7 +2452,8 @@ fun FinancePage(
                                     x.removeAll { it.id == t.id }
                                     onTransactionsChange(x)
                                 },
-                                onEdit = { edit = t; show = true }
+                                onEdit = { edit = t; show = true },
+                                onReceipt = { receiptTransaction = t }
                             )
                         }
                     }
@@ -2463,6 +2480,8 @@ fun FinancePage(
         show = false
     }
 }
+    receiptTransaction?.let { TransactionReceiptDialog(it) { receiptTransaction = null } }
+
 
 // ---------------- TRANSACTION CARD ----------------
 
@@ -2471,6 +2490,7 @@ fun TransactionCard(
     transaction: Transaction,
     onDelete: () -> Unit,
     onEdit: () -> Unit = {},
+    onReceipt: () -> Unit = {},
     showActions: Boolean = true
 ) {
     val isIncome = transaction.type == "income"
@@ -2530,6 +2550,9 @@ fun TransactionCard(
                 )
                 if (showActions) {
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        IconButton(onClick = onReceipt, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.ReceiptLong, uiText("رسید"), modifier = Modifier.size(17.dp))
+                        }
                         IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Edit, null, modifier = Modifier.size(17.dp))
                         }
@@ -3509,6 +3532,7 @@ fun AddWorkDialog(
 
 @Composable
 fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: List<WorkDay>, cards: List<BankCard>) {
+    var showReceiptBuilder by remember { mutableStateOf(false) }
     var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "") }
     val selected = cards.firstOrNull { it.name == selectedCardName }
     val cardTransactions = transactions.filter { it.card == selectedCardName }
@@ -3845,8 +3869,57 @@ private fun VsoftChartLegend(color: Color, label: String) {
         Spacer(Modifier.width(6.dp))
         Text(label, fontSize = 12.sp)
     }
+    if(showReceiptBuilder) ReceiptBuilderDialog(transactions,workDays){showReceiptBuilder=false}
 }
 
+@Composable
+fun TransactionReceiptDialog(transaction:Transaction,onDismiss:()->Unit){
+    val context=LocalContext.current
+    AlertDialog(onDismissRequest=onDismiss,icon={Icon(Icons.Default.ReceiptLong,null)},title={Text(uiText("رسید تراکنش"))},
+        text={Text(uiText("یک رسید تصویری تمیز با تمام جزئیات مهم این تراکنش ساخته می‌شود."))},
+        confirmButton={Button(onClick={shareVsoftReceipt(context,listOf(transaction),emptyList(),transaction.date,transaction.date,"رسید تراکنش");onDismiss()}){Icon(Icons.Default.Image,null);Spacer(Modifier.width(6.dp));Text(uiText("ساخت عکس"))}},
+        dismissButton={TextButton(onClick=onDismiss){Text(uiText("لغو"))}})
+}
+@Composable
+fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,onDismiss:()->Unit){
+    val context=LocalContext.current
+    var mode by remember{mutableStateOf("monthly")};var start by remember{mutableStateOf(today())};var end by remember{mutableStateOf(today())};var dateOpen by remember{mutableStateOf(0)}
+    LaunchedEffect(mode){val t=today();when(mode){"daily"->{start=t;end=t};"weekly"->{start=shiftJalali(t,-6);end=t};"monthly"->{val p=t.split("/");start="%s/%02d/01".format(Locale.US,p[0],p[1].toInt());end=t}}}
+    val filtered=transactions.filter{dateInRange(it.date,start,end)}.sortedWith(compareBy<Transaction>{it.date}.thenBy{it.id})
+    val workFiltered=workDays.filter{dateInRange(it.date,start,end)}
+    val income=filtered.filter{it.type=="income"}.sumOf{it.amount}+workFiltered.sumOf{it.income};val expense=filtered.filter{it.type=="expense"}.sumOf{it.amount}
+    AlertDialog(onDismissRequest=onDismiss,title={Column{Text(uiText("ساخت فاکتور و خلاصه"),fontWeight=FontWeight.ExtraBold);Text(uiText("هر زمان و برای هر بازه‌ای که بخواهی"),fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}},
+        text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)){
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){listOf("daily" to "روزانه","weekly" to "هفتگی","monthly" to "ماهانه","custom" to "بازه دلخواه").forEach{(key,label)->FilterChip(selected=mode==key,onClick={mode=key},label={Text(uiText(label),fontSize=10.sp)})}}
+            OutlinedButton({dateOpen=1},Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CalendarMonth,null);Spacer(Modifier.width(7.dp));Text(uiText("از")+" "+start,Modifier.weight(1f),textAlign=TextAlign.Start)}
+            OutlinedButton({dateOpen=2},Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.Event,null);Spacer(Modifier.width(7.dp));Text(uiText("تا")+" "+end,Modifier.weight(1f),textAlign=TextAlign.Start)}
+            Surface(Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.primary.copy(alpha=.08f)){Column(Modifier.padding(13.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+                Text("${uiText("تعداد تراکنش‌ها")}: ${filtered.size}",fontWeight=FontWeight.SemiBold);Text("${uiText("درآمد")}: ${money(income)}",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Text("${uiText("هزینه")}: ${money(expense)}",color=MaterialTheme.colorScheme.error,fontWeight=FontWeight.Bold);Text("${uiText("خالص")}: ${money(income-expense)}",fontWeight=FontWeight.ExtraBold)
+            }}
+        }},
+        confirmButton={Button(onClick={shareVsoftReceipt(context,filtered,workFiltered,start,end,receiptTitle(mode));onDismiss()},enabled=filtered.isNotEmpty()||workFiltered.isNotEmpty()){Icon(Icons.Default.Image,null);Spacer(Modifier.width(6.dp));Text(uiText("ساخت عکس"))}},
+        dismissButton={TextButton(onClick=onDismiss){Text(uiText("لغو"))}})
+    if(dateOpen==1)JalaliDatePickerDialog(start,{dateOpen=0}){start=it;mode="custom";dateOpen=0}
+    if(dateOpen==2)JalaliDatePickerDialog(end,{dateOpen=0}){end=it;mode="custom";dateOpen=0}
+}
+fun receiptTitle(mode:String)=when(mode){"daily"->"گزارش روزانه";"weekly"->"گزارش هفتگی";"monthly"->"گزارش ماهانه";else->"گزارش مالی"}
+fun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:List<WorkDay>,start:String,end:String,title:String){
+    val width=1080;val rows=(transactions.size+workDays.size).coerceAtMost(80);val height=750+rows*92;val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);val canvas=Canvas(bitmap)
+    fun p(color:Int,size:Float,bold:Boolean=false)=Paint(Paint.ANTI_ALIAS_FLAG).apply{this.color=color;textSize=size;typeface=if(bold)Typeface.DEFAULT_BOLD else Typeface.DEFAULT}
+    val bg=p(android.graphics.Color.rgb(245,247,251),1f);canvas.drawRect(0f,0f,width.toFloat(),height.toFloat(),bg)
+    val dark=android.graphics.Color.rgb(28,34,46);val muted=android.graphics.Color.rgb(105,115,130);val primary=android.graphics.Color.rgb(55,91,220);val inc=android.graphics.Color.rgb(27,145,96);val exp=android.graphics.Color.rgb(205,70,75)
+    fun round(r:RectF,color:Int,rad:Float=26f){canvas.drawRoundRect(r,rad,rad,p(color,1f))}
+    round(RectF(45f,40f,1035f,230f),primary,42f);val center=p(android.graphics.Color.WHITE,48f,true).apply{textAlign=Paint.Align.CENTER};canvas.drawText("VSOFT",540f,112f,center);center.textSize=33f;canvas.drawText(title,540f,162f,center);center.textSize=20f;center.typeface=Typeface.DEFAULT;canvas.drawText(start+"  •  "+end,540f,202f,center)
+    val income=transactions.filter{it.type=="income"}.sumOf{it.amount}+workDays.sumOf{it.income};val expense=transactions.filter{it.type=="expense"}.sumOf{it.amount}
+    fun metric(x:Float,label:String,value:String,color:Int){round(RectF(x,260f,x+300f,375f),android.graphics.Color.WHITE,28f);val v=p(color,25f,true).apply{textAlign=Paint.Align.CENTER};canvas.drawText(value,x+150f,316f,v);val l=p(muted,18f).apply{textAlign=Paint.Align.CENTER};canvas.drawText(label,x+150f,352f,l)}
+    metric(45f,"درآمد",money(income),inc);metric(390f,"هزینه",money(expense),exp);metric(735f,"خالص",money(income-expense),primary)
+    var y=415f;val items=(transactions.map{Pair(0,it)}+workDays.map{Pair(1,it)}).take(rows)
+    items.forEach{(kind,obj)->round(RectF(45f,y,1035f,y+74f),android.graphics.Color.WHITE,22f);if(kind==0){val t=obj as Transaction;val color=if(t.type=="income")inc else exp;canvas.drawCircle(86f,y+37f,17f,p(color,1f));canvas.drawText(t.category.ifBlank{"تراکنش"},120f,y+31f,p(dark,21f,true));canvas.drawText(listOf(t.date,t.card,t.person,t.description).filter{it.isNotBlank()}.take(2).joinToString(" • "),120f,y+55f,p(muted,16f));val ap=p(color,21f,true).apply{textAlign=Paint.Align.LEFT};canvas.drawText((if(t.type=="income")"+" else "−")+money(t.amount),1000f,y+44f,ap)}else{val w=obj as WorkDay;canvas.drawCircle(86f,y+37f,17f,p(primary,1f));canvas.drawText("کار • "+w.place,120f,y+31f,p(dark,21f,true));canvas.drawText(listOf(w.date,w.start+"–"+w.end,w.description).filter{it.isNotBlank()}.take(2).joinToString(" • "),120f,y+55f,p(muted,16f));val ap=p(inc,21f,true).apply{textAlign=Paint.Align.LEFT};canvas.drawText("+"+money(w.income),1000f,y+44f,ap)};y+=92f}
+    val footer=p(muted,22f,true).apply{textAlign=Paint.Align.CENTER};canvas.drawText("VSOFT",540f,height-38f,footer)
+    val values=ContentValues().apply{put(MediaStore.Images.Media.DISPLAY_NAME,"VSOFT_"+title.replace(" ","_")+"_"+System.currentTimeMillis()+".png");put(MediaStore.Images.Media.MIME_TYPE,"image/png");put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/VSOFT")}
+    val uri=context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values)?:return
+    try{context.contentResolver.openOutputStream(uri)?.use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};val send=Intent(Intent.ACTION_SEND).apply{type="image/png";putExtra(Intent.EXTRA_STREAM,uri);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(send,uiText("ارسال رسید VSOFT")))}catch(_:Exception){context.contentResolver.delete(uri,null,null)}finally{bitmap.recycle()}
+}
 // ---------------- SETTINGS ----------------
 
 @Composable
