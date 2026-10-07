@@ -99,6 +99,7 @@ val WORK_KEY = stringPreferencesKey("work_days")
 val CARDS_KEY = stringPreferencesKey("cards")
 val PEOPLE_KEY = stringPreferencesKey("people")
 val WORKPLACES_KEY = stringPreferencesKey("workplaces")
+val WORK_PURCHASES_KEY = stringPreferencesKey("work_purchases")
 val LANGUAGE_KEY = stringPreferencesKey("language")
 val CURRENCY_KEY = stringPreferencesKey("currency")
 val THEME_KEY = stringPreferencesKey("theme")
@@ -152,6 +153,17 @@ data class Person(
     val phone: String,
     val note: String,
     val job: String = ""
+)
+
+data class WorkPurchase(
+    val id: Long,
+    val title: String,
+    val amount: Long,
+    val category: String,
+    val date: String,
+    val workplace: String,
+    val card: String,
+    val note: String = ""
 )
 
 // ---------------- TEXT ----------------
@@ -746,6 +758,46 @@ fun decodeWorkplaces(value: String): MutableList<Workplace> {
     } catch (_: Exception) {}
     return result
 }
+fun encodeWorkPurchases(list: List<WorkPurchase>): String {
+    val array = JSONArray()
+    list.forEach {
+        array.put(JSONObject().apply {
+            put("id", it.id)
+            put("title", it.title)
+            put("amount", it.amount)
+            put("category", it.category)
+            put("date", it.date)
+            put("workplace", it.workplace)
+            put("card", it.card)
+            put("note", it.note)
+        })
+    }
+    return array.toString()
+}
+
+fun decodeWorkPurchases(value: String): MutableList<WorkPurchase> {
+    val result = mutableListOf<WorkPurchase>()
+    try {
+        val array = JSONArray(value)
+        for (i in 0 until array.length()) {
+            val o = array.getJSONObject(i)
+            result.add(
+                WorkPurchase(
+                    o.getLong("id"),
+                    o.optString("title", ""),
+                    o.optLong("amount", 0L),
+                    o.optString("category", ""),
+                    o.optString("date", today()),
+                    o.optString("workplace", ""),
+                    o.optString("card", ""),
+                    o.optString("note", "")
+                )
+            )
+        }
+    } catch (_: Exception) {}
+    return result
+}
+
 
 // ---------------- BACKUP ----------------
 
@@ -755,6 +807,7 @@ data class VsoftBackup(
     val cards: List<BankCard>,
     val people: List<Person>,
     val workplaces: List<Workplace>,
+    val workPurchases: List<WorkPurchase> = emptyList(),
     val language: String,
     val currency: String,
     val theme: String,
@@ -770,6 +823,7 @@ fun encodeBackup(data: VsoftBackup): String {
         put("cards", JSONArray(encodeCards(data.cards)))
         put("people", JSONArray(encodePeople(data.people)))
         put("workplaces", JSONArray(encodeWorkplaces(data.workplaces)))
+         put("workPurchases", JSONArray(encodeWorkPurchases(data.workPurchases)))
         put("language", data.language)
         put("currency", data.currency)
         put("theme", data.theme)
@@ -788,6 +842,7 @@ fun decodeBackup(value: String): VsoftBackup? {
             decodeCards(o.optJSONArray("cards")?.toString() ?: "[]"),
             decodePeople(o.optJSONArray("people")?.toString() ?: "[]"),
             decodeWorkplaces(o.optJSONArray("workplaces")?.toString() ?: "[]"),
+            decodeWorkPurchases(o.optJSONArray("workPurchases")?.toString() ?: "[]"),
             o.optString("language", "fa"),
             o.optString("currency", "IRT"),
             o.optString("theme", "system"),
@@ -806,6 +861,7 @@ suspend fun restoreBackup(context: Context, data: VsoftBackup) {
         p[CARDS_KEY] = encodeCards(data.cards)
         p[PEOPLE_KEY] = encodePeople(data.people)
         p[WORKPLACES_KEY] = encodeWorkplaces(data.workplaces)
+        p[WORK_PURCHASES_KEY] = encodeWorkPurchases(data.workPurchases)
         p[LANGUAGE_KEY] = data.language
         p[CURRENCY_KEY] = data.currency
         p[THEME_KEY] = data.theme
@@ -929,6 +985,10 @@ fun VsoftApp() {
         mutableStateOf(mutableListOf<Workplace>())
     }
 
+    var workPurchases by remember {
+        mutableStateOf(mutableListOf<WorkPurchase>())
+    }
+
     var loaded by remember {
         mutableStateOf(false)
     }
@@ -965,6 +1025,9 @@ fun VsoftApp() {
 
         workplaces =
             decodeWorkplaces(preferences[WORKPLACES_KEY] ?: "[]")
+
+        workPurchases =
+            decodeWorkPurchases(preferences[WORK_PURCHASES_KEY] ?: "[]")
 
         if (cards.isEmpty()) {
             cards = mutableListOf(
@@ -1035,7 +1098,7 @@ fun VsoftApp() {
     ) { uri ->
         if (uri != null) {
             val snapshot = VsoftBackup(
-                transactions, workDays, cards, people, workplaces,
+                transactions, workDays, cards, people, workplaces, workPurchases,
                 language, currency, theme, glass, font
             )
             runCatching {
@@ -1065,6 +1128,7 @@ fun VsoftApp() {
         cards = data.cards.toMutableList()
         people = data.people.toMutableList()
         workplaces = data.workplaces.toMutableList()
+        workPurchases = data.workPurchases.toMutableList()
         language = data.language
         currency = data.currency
         theme = data.theme
@@ -1184,6 +1248,7 @@ fun VsoftApp() {
                 cards = cards,
                 people = people,
                 workplaces = workplaces,
+                workPurchases = workPurchases,
 
                 onTransactionsChange = {
                     transactions = it
@@ -1234,6 +1299,15 @@ fun VsoftApp() {
                     scope.launch {
                         context.dataStore.edit { prefs ->
                             prefs[WORKPLACES_KEY] = encodeWorkplaces(it)
+                        }
+                    }
+                },
+
+                onWorkPurchasesChange = {
+                    workPurchases = it
+                    scope.launch {
+                        context.dataStore.edit { prefs ->
+                            prefs[WORK_PURCHASES_KEY] = encodeWorkPurchases(it)
                         }
                     }
                 },
@@ -1301,6 +1375,7 @@ fun MainScreen(
     onPeopleChange: (MutableList<Person>) -> Unit,
     workplaces: List<Workplace>,
     onWorkplacesChange: (MutableList<Workplace>) -> Unit,
+    onWorkPurchasesChange: (MutableList<WorkPurchase>) -> Unit,
     onLanguageChange: (String) -> Unit,
     onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
@@ -1326,7 +1401,8 @@ fun MainScreen(
         "محل‌های کار",
         strings.people,
         if (language == "en") "Tools" else if (language == "ar") "الأدوات" else "ابزارها",
-        "پیامک بانکی"
+        "پیامک بانکی",
+        if (language == "en") "Work purchases" else if (language == "ar") "مشتريات العمل" else "خریدهای کار"
     )
 
     Scaffold(
@@ -1478,7 +1554,7 @@ fun MainScreen(
                         },
                         onDragEnd = {
                             if (kotlin.math.abs(dragDistance) >= 80f) {
-                                val swipePages = listOf(0, 1, 2, 3, 8, 9)
+                                val swipePages = listOf(0, 1, 2, 3, 8, 9, 10)
                                 val currentIndex = swipePages.indexOf(selectedPage)
                                 if (currentIndex >= 0) {
                                     val goNext = if (language == "en") dragDistance < 0f else dragDistance > 0f
@@ -1589,7 +1665,16 @@ fun MainScreen(
                     workDays = workDays,
                     cards = cards,
                     people = people,
-                    workplaces = workplaces
+                    workplaces = workplaces,
+                    onWorkPurchases = { selectedPage = 10 }
+                )
+                10 -> WorkPurchasesPage(
+                    purchases = workPurchases,
+                    cards = cards,
+                    workplaces = workplaces,
+                    onPurchasesChange = onWorkPurchasesChange,
+                    onTransactionsChange = onTransactionsChange,
+                    transactions = transactions
                 )
             }
         }
@@ -2691,6 +2776,233 @@ fun AddTransactionDialog(
     if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
 }
 
+
+// ---------------- WORK PURCHASES ----------------
+
+@Composable
+fun WorkPurchasesPage(
+    purchases: List<WorkPurchase>,
+    cards: List<BankCard>,
+    workplaces: List<Workplace>,
+    transactions: List<Transaction>,
+    onPurchasesChange: (MutableList<WorkPurchase>) -> Unit,
+    onTransactionsChange: (MutableList<Transaction>) -> Unit
+) {
+    var show by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<WorkPurchase?>(null) }
+    val total = purchases.sumOf { it.amount }
+
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 104.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(uiText("خریدهای کار"), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        uiText("ابزار، تجهیزات، قطعات و سایر خریدهای مرتبط با کار"),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Card(
+                        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(22.dp)),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            DashboardMetric(
+                                "تعداد خرید", purchases.size.toString(), Icons.Default.ShoppingCart,
+                                MaterialTheme.colorScheme.primary, Modifier.weight(1f)
+                            )
+                            DashboardMetric(
+                                "مجموع هزینه", money(total), Icons.Default.Payments,
+                                MaterialTheme.colorScheme.error, Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+            if (purchases.isEmpty()) {
+                item { EmptyState("هنوز خرید کاری ثبت نشده", Icons.Default.ShoppingCart) }
+            } else {
+                itemsIndexed(purchases.sortedByDescending { it.id }, key = { _, it -> it.id }) { index, purchase ->
+                    VsoftEntrance(index.coerceAtMost(7)) {
+                        VsoftSwipeToDelete(
+                            onDelete = {
+                                val next = purchases.toMutableList().apply { removeAll { it.id == purchase.id } }
+                                onPurchasesChange(next)
+                                val tx = transactions.toMutableList().apply { removeAll { it.id == purchase.id } }
+                                onTransactionsChange(tx)
+                            }
+                        ) {
+                            Card(
+                                Modifier.fillMaxWidth().clickable { editing = purchase; show = true },
+                                shape = RoundedCornerShape(22.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+                            ) {
+                                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                                                .background(MaterialTheme.colorScheme.error.copy(alpha = .10f)),
+                                            contentAlignment = Alignment.Center
+                                        ) { Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.error) }
+                                        Spacer(Modifier.width(10.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(purchase.title, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                                            Text(purchase.date, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        IconButton(onClick = { editing = purchase; show = true }) {
+                                            Icon(Icons.Default.Edit, uiText("ویرایش"), tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        AssistChip(onClick = {}, label = { Text(purchase.category) }, leadingIcon = { Icon(Icons.Default.Label, null, Modifier.size(15.dp)) })
+                                        if (purchase.workplace.isNotBlank())
+                                            AssistChip(onClick = {}, label = { Text(purchase.workplace) }, leadingIcon = { Icon(Icons.Default.Place, null, Modifier.size(15.dp)) })
+                                    }
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Text(money(purchase.amount), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                                        if (purchase.card.isNotBlank())
+                                            Text(purchase.card, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (purchase.note.isNotBlank())
+                                        Text(purchase.note, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        FloatingActionButton(
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 22.dp, bottom = 22.dp),
+            onClick = { editing = null; show = true },
+            containerColor = MaterialTheme.colorScheme.primary
+        ) { Icon(Icons.Default.Add, "افزودن خرید") }
+    }
+
+    if (show) {
+        WorkPurchaseDialog(editing, cards, workplaces, onDismiss = { show = false }) { purchase ->
+            val next = purchases.toMutableList()
+            val index = next.indexOfFirst { it.id == purchase.id }
+            if (index >= 0) next[index] = purchase else next.add(purchase)
+            onPurchasesChange(next)
+
+            val txNext = transactions.toMutableList()
+            val transaction = Transaction(
+                id = purchase.id,
+                type = "expense",
+                amount = purchase.amount,
+                category = "Work purchase — خرید کار",
+                description = "خرید کار: " + purchase.title,
+                date = purchase.date,
+                card = purchase.card,
+                person = ""
+            )
+            val txIndex = txNext.indexOfFirst { it.id == purchase.id }
+            if (txIndex >= 0) txNext[txIndex] = transaction else txNext.add(transaction)
+            onTransactionsChange(txNext)
+            show = false
+        }
+    }
+}
+
+@Composable
+fun WorkPurchaseDialog(
+    existing: WorkPurchase?,
+    cards: List<BankCard>,
+    workplaces: List<Workplace>,
+    onDismiss: () -> Unit,
+    onSave: (WorkPurchase) -> Unit
+) {
+    var title by remember { mutableStateOf(existing?.title ?: "") }
+    var amount by remember { mutableStateOf(existing?.amount?.toString() ?: "") }
+    var category by remember { mutableStateOf(existing?.category ?: "ابزار و تجهیزات") }
+    var date by remember { mutableStateOf(existing?.date ?: today()) }
+    var workplace by remember { mutableStateOf(existing?.workplace ?: "") }
+    var card by remember { mutableStateOf(existing?.card ?: "") }
+    var note by remember { mutableStateOf(existing?.note ?: "") }
+    var categoryOpen by remember { mutableStateOf(false) }
+    var workplaceOpen by remember { mutableStateOf(false) }
+    var cardOpen by remember { mutableStateOf(false) }
+    var dateOpen by remember { mutableStateOf(false) }
+
+    val categories = listOf("ابزار و تجهیزات", "قطعات", "مواد مصرفی", "لباس و تجهیزات ایمنی", "حمل‌ونقل کاری", "تعمیرات", "سایر")
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            Modifier.fillMaxWidth().padding(8.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            Column(
+                Modifier.padding(20.dp).heightIn(max = 680.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(25.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (existing == null) "ثبت خرید کار" else "ویرایش خرید کار", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("جزئیات خرید را ثبت کنید", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "بستن") }
+                }
+                OutlinedTextField(title, { title = it }, label = { Text("عنوان خرید") }, leadingIcon = { Icon(Icons.Default.ShoppingCart, null) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+                OutlinedTextField(amount, { amount = normalizeAmountInput(it) }, label = { Text("مبلغ") }, leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ categoryOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                        Icon(Icons.Default.Label, null); Spacer(Modifier.width(8.dp)); Text(category, Modifier.weight(1f), textAlign = TextAlign.Start); Icon(Icons.Default.ExpandMore, null)
+                    }
+                    DropdownMenu(categoryOpen, { categoryOpen = false }) {
+                        categories.forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { category = item; categoryOpen = false }) }
+                    }
+                }
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ workplaceOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                        Icon(Icons.Default.Place, null); Spacer(Modifier.width(8.dp)); Text(if (workplace.isBlank()) "محل کار (اختیاری)" else workplace, Modifier.weight(1f), textAlign = TextAlign.Start); Icon(Icons.Default.ExpandMore, null)
+                    }
+                    DropdownMenu(workplaceOpen, { workplaceOpen = false }) {
+                        DropdownMenuItem(text = { Text("بدون محل کار") }, onClick = { workplace = ""; workplaceOpen = false })
+                        workplaces.forEach { item -> DropdownMenuItem(text = { Text(item.name) }, onClick = { workplace = item.name; workplaceOpen = false }) }
+                    }
+                }
+                Box(Modifier.fillMaxWidth()) {
+                    OutlinedButton({ cardOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                        Icon(Icons.Default.CreditCard, null); Spacer(Modifier.width(8.dp)); Text(if (card.isBlank()) "کارت پرداخت" else card, Modifier.weight(1f), textAlign = TextAlign.Start); Icon(Icons.Default.ExpandMore, null)
+                    }
+                    DropdownMenu(cardOpen, { cardOpen = false }) {
+                        DropdownMenuItem(text = { Text("بدون کارت") }, onClick = { card = ""; cardOpen = false })
+                        cards.forEach { item -> DropdownMenuItem(text = { Text(item.name) }, onClick = { card = item.name; cardOpen = false }) }
+                    }
+                }
+                OutlinedButton({ dateOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                    Icon(Icons.Default.CalendarMonth, null); Spacer(Modifier.width(8.dp)); Text(date, Modifier.weight(1f), textAlign = TextAlign.Start); Icon(Icons.Default.ChevronLeft, null)
+                }
+                OutlinedTextField(note, { note = it }, label = { Text("یادداشت / فاکتور") }, leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 2, maxLines = 3, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onDismiss, Modifier.weight(1f)) { Text("لغو") }
+                    Button(
+                        onClick = {
+                            val v = normalizeDigits(amount).toLongOrNull() ?: 0L
+                            if (title.isNotBlank() && v > 0) onSave(WorkPurchase(existing?.id ?: System.currentTimeMillis(), title.trim(), v, category, date, workplace, card, note.trim()))
+                        },
+                        enabled = title.isNotBlank() && (normalizeDigits(amount).toLongOrNull() ?: 0L) > 0,
+                        modifier = Modifier.weight(1f).pressScale()
+                    ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(5.dp)); Text("ذخیره") }
+                }
+            }
+        }
+    }
+    if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
+}
+
 // ---------------- WORK ----------------
 
 @Composable
@@ -3491,64 +3803,114 @@ fun SettingsPage(
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(bottom = 24.dp)
+        contentPadding = PaddingValues(bottom = 28.dp)
     ) {
-        item { Text(strings.settings, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold) }
-        item { SettingsSection(uiText("زبان"), Icons.Default.Language) {
-            LanguageOption("فارسی", "fa", language, onLanguageChange)
-            LanguageOption("English", "en", language, onLanguageChange)
-            LanguageOption("العربية", "ar", language, onLanguageChange)
-        }}
-        item { SettingsSection(if (language == "fa") "واحد پول" else "Currency", Icons.Default.Payments) {
-            ThemeOption("تومان — IR Toman", "IRT", currency, onCurrencyChange)
-            ThemeOption("ریال — Iranian Rial", "IRR", currency, onCurrencyChange)
-            ThemeOption("دلار آمریکا — US Dollar", "USD", currency, onCurrencyChange)
-            ThemeOption("یورو — Euro", "EUR", currency, onCurrencyChange)
-            ThemeOption("پوند — British Pound", "GBP", currency, onCurrencyChange)
-            ThemeOption("درهم — UAE Dirham", "AED", currency, onCurrencyChange)
-            ThemeOption("لیر — Turkish Lira", "TRY", currency, onCurrencyChange)
-        }}
-        item { SettingsSection(strings.theme, Icons.Default.Palette) {
-            ThemeOption(strings.light, "light", theme, onThemeChange)
-            ThemeOption(strings.dark, "dark", theme, onThemeChange)
-            ThemeOption(strings.system, "system", theme, onThemeChange)
-        }}
-        item { SettingsSection(uiText("حساب و همگام‌سازی"), Icons.Default.AccountCircle) {
-            if (firebaseUser == null) {
-                Text(uiText("با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = onGoogleSignIn, modifier = Modifier.fillMaxWidth().pressScale()) {
-                    Icon(Icons.Default.AccountCircle, null); Spacer(Modifier.width(8.dp)); Text(uiText("ورود با Google"))
+        item {
+            Column(Modifier.padding(vertical = 6.dp)) {
+                Text(strings.settings, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                Text(
+                    uiText("تنظیمات را به‌صورت فهرست مرتب و ساده مدیریت کنید"),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        item {
+            SettingsSection(uiText("عمومی"), Icons.Default.Tune) {
+                SettingsSelectRow(
+                    title = uiText("زبان برنامه"),
+                    value = when (language) { "en" -> "English"; "ar" -> "العربية"; else -> "فارسی" },
+                    icon = Icons.Default.Language,
+                    options = listOf("فارسی" to "fa", "English" to "en", "العربية" to "ar"),
+                    selected = language,
+                    onSelected = onLanguageChange
+                )
+                SettingsSelectRow(
+                    title = uiText("واحد پول"),
+                    value = when (currency) {
+                        "IRR" -> "ریال"
+                        "USD" -> "دلار آمریکا"
+                        "EUR" -> "یورو"
+                        "GBP" -> "پوند"
+                        "AED" -> "درهم"
+                        "TRY" -> "لیر"
+                        else -> "تومان"
+                    },
+                    icon = Icons.Default.Payments,
+                    options = listOf(
+                        "تومان" to "IRT", "ریال" to "IRR", "دلار آمریکا" to "USD",
+                        "یورو" to "EUR", "پوند" to "GBP", "درهم" to "AED", "لیر" to "TRY"
+                    ),
+                    selected = currency,
+                    onSelected = onCurrencyChange
+                )
+                SettingsSelectRow(
+                    title = strings.theme,
+                    value = when (theme) { "light" -> strings.light; "dark" -> strings.dark; else -> strings.system },
+                    icon = Icons.Default.Palette,
+                    options = listOf(strings.light to "light", strings.dark to "dark", strings.system to "system"),
+                    selected = theme,
+                    onSelected = onThemeChange
+                )
+                SettingsSwitchRow(
+                    title = uiText("ظاهر شیشه‌ای"),
+                    subtitle = uiText("افکت شفاف و شیشه‌ای رابط کاربری"),
+                    icon = Icons.Default.BlurOn,
+                    checked = glass,
+                    onCheckedChange = onGlassChange
+                )
+                SettingsSelectRow(
+                    title = uiText("فونت برنامه"),
+                    value = when (font) { "serif" -> "کلاسیک"; "mono" -> "فنی"; "cursive" -> "دست‌نویس"; else -> "مدرن و خوانا" },
+                    icon = Icons.Default.FontDownload,
+                    options = listOf(
+                        "مدرن و خوانا" to "sans", "کلاسیک" to "serif",
+                        "فنی" to "mono", "دست‌نویس" to "cursive"
+                    ),
+                    selected = font,
+                    onSelected = onFontChange
+                )
+            }
+        }
+        item {
+            SettingsSection(uiText("حساب و همگام‌سازی"), Icons.Default.AccountCircle) {
+                if (firebaseUser == null) {
+                    Text(uiText("با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم."),
+                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onGoogleSignIn, modifier = Modifier.fillMaxWidth().pressScale()) {
+                        Icon(Icons.Default.AccountCircle, null); Spacer(Modifier.width(8.dp)); Text(uiText("ورود با Google"))
+                    }
+                } else {
+                    ListItem(
+                        headlineContent = { Text(firebaseUser.displayName ?: uiText("حساب Google"), fontWeight = FontWeight.Bold) },
+                        supportingContent = { Text(firebaseUser.email ?: "") },
+                        leadingContent = { Icon(Icons.Default.AccountCircle, null) }
+                    )
+                    OutlinedButton(onClick = onGoogleSignOut, modifier = Modifier.fillMaxWidth().pressScale()) {
+                        Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text(uiText("خروج از حساب"))
+                    }
                 }
-            } else {
-                Text(firebaseUser.displayName ?: uiText("حساب Google"), fontWeight = FontWeight.Bold)
-                Text(firebaseUser.email ?: "", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onGoogleSignOut, modifier = Modifier.fillMaxWidth().pressScale()) {
-                    Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text(uiText("خروج از حساب"))
+                if (!authError.isNullOrBlank()) Text(authError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+            }
+        }
+        item {
+            SettingsSection(uiText("پشتیبان‌گیری و بازیابی"), Icons.Default.Backup) {
+                ListItem(
+                    headlineContent = { Text(uiText("پشتیبان کامل اطلاعات")) },
+                    supportingContent = { Text(uiText("تراکنش‌ها، کارها، خریدهای کار، کارت‌ها و تنظیمات")) },
+                    leadingContent = { Icon(Icons.Default.Security, null) }
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(onClick = onBackup, modifier = Modifier.weight(1f).pressScale()) {
+                        Icon(Icons.Default.Upload, null); Spacer(Modifier.width(6.dp)); Text(uiText("ایجاد پشتیبان"))
+                    }
+                    OutlinedButton(onClick = onRestore, modifier = Modifier.weight(1f).pressScale()) {
+                        Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text(uiText("بازیابی"))
+                    }
                 }
             }
-            if (!authError.isNullOrBlank()) {
-                Spacer(Modifier.height(8.dp)); Text(authError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-            }
-        }}
-        item { SettingsSection(uiText("پشتیبان‌گیری و بازیابی"), Icons.Default.Backup) {
-            Text(uiText("یک نسخه کامل از اطلاعات Vsoft روی گوشی ذخیره می‌شود و می‌توانی آن را بعداً روی همین یا یک گوشی دیگر بازیابی کنی."), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(onClick = onBackup, modifier = Modifier.weight(1f).pressScale()) {
-                    Icon(Icons.Default.Upload, null); Spacer(Modifier.width(6.dp)); Text(uiText("ایجاد پشتیبان"))
-                }
-                OutlinedButton(onClick = onRestore, modifier = Modifier.weight(1f).pressScale()) {
-                    Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text(uiText("بازیابی"))
-                }
-            }
-        }}
-        item { SettingsSection(uiText("فونت برنامه"), Icons.Default.FontDownload) {
-            FontOption(uiText("مدرن و خوانا"), "sans", font, onFontChange)
-            FontOption(uiText("کلاسیک"), "serif", font, onFontChange)
-            FontOption(uiText("فنی"), "mono", font, onFontChange)
-            FontOption(uiText("دست‌نویس"), "cursive", font, onFontChange)
-        }}
+        }
     }
 }
 
@@ -4117,6 +4479,54 @@ fun SettingsSection(
     }
 }
 
+
+@Composable
+fun SettingsSelectRow(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    options: List<Pair<String, String>>,
+    selected: String,
+    onSelected: (String) -> Unit
+) {
+    var open by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+        ListItem(
+            headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
+            supportingContent = { Text(value, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium) },
+            leadingContent = { Icon(icon, null, tint = MaterialTheme.colorScheme.primary) },
+            trailingContent = { Icon(Icons.Default.ExpandMore, null) },
+            modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { open = true }
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (label, option) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    trailingIcon = {
+                        if (option == selected) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                    },
+                    onClick = { onSelected(option); open = false }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsSwitchRow(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
+        supportingContent = { Text(subtitle) },
+        leadingContent = { Icon(icon, null, tint = MaterialTheme.colorScheme.primary) },
+        trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) }
+    )
+}
 
 @Composable
 fun LanguageOption(
