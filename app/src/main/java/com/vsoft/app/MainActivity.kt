@@ -1237,7 +1237,7 @@ fun VsoftApp() {
             )
         ) {
             CompositionLocalProvider(
-                LocalTextStyle provides LocalTextStyle.current.copy(textAlign = TextAlign.Start)
+                LocalLayoutDirection provides if (language == "en") LayoutDirection.Ltr else LayoutDirection.Rtl
             ) {
                 CompositionLocalProvider(LocalVsoftGlass provides glass) {
 
