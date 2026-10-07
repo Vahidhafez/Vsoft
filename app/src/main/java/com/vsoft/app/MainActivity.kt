@@ -2561,21 +2561,18 @@ fun AddTransactionDialog(
     var dateOpen by remember { mutableStateOf(false) }
     var cardOpen by remember { mutableStateOf(false) }
     var categoryOpen by remember { mutableStateOf(false) }
+    var newCategoryOpen by remember { mutableStateOf(false) }
+    var customFinanceCategories by remember { mutableStateOf(emptyList<String>()) }
     var personOpen by remember { mutableStateOf(false) }
-    val financeCategories = listOf(
-        "Salary — حقوق", "Freelance — فریلنسری", "Project income — درآمد پروژه", "Business income — درآمد کسب‌وکار",
-        "Bonus — پاداش", "Gift — هدیه", "Investment return — سود سرمایه‌گذاری", "Interest — سود بانکی",
-        "Refund — بازگشت وجه", "Transfer — انتقال وجه", "Other income — سایر درآمدها",
-        "Food & groceries — غذا و خرید روزمره", "Restaurant & cafe — رستوران و کافه", "Transport — حمل‌ونقل",
-        "Fuel — سوخت", "Taxi & ride-hailing — تاکسی و تاکسی اینترنتی", "Rent & housing — اجاره و مسکن",
-        "Utilities — آب، برق و گاز", "Internet & mobile — اینترنت و موبایل", "Subscriptions — اشتراک‌ها",
-        "Shopping — خرید", "Clothing — پوشاک", "Health & medicine — سلامت و دارو", "Education — آموزش",
-        "Entertainment — سرگرمی", "Travel — سفر", "Insurance — بیمه", "Bank fees — کارمزد بانکی",
-        "Loan payment — پرداخت وام", "Debt repayment — بازپرداخت بدهی", "Family — خانواده",
-        "Home — خانه", "Electronics — لوازم الکترونیکی", "Personal care — مراقبت شخصی",
-        "Charity — خیریه", "Taxes — مالیات", "Work expenses — هزینه‌های کاری",
-        "Tools & equipment — ابزار و تجهیزات", "Maintenance — تعمیر و نگهداری", "Other expense — سایر هزینه‌ها"
+    val financeCategories = if (type == "income") listOf(
+        "حقوق", "درآمد کاری", "درآمد پروژه", "درآمد کسب‌وکار", "پاداش", "هدیه", "بازگشت وجه", "سود بانکی", "انتقال وجه", "سایر درآمدها"
+    ) else listOf(
+        "خوراک و مواد غذایی", "رستوران و کافه", "خرید روزمره", "حمل‌ونقل", "سوخت", "تاکسی و تاکسی اینترنتی",
+        "اجاره و مسکن", "آب و برق و گاز", "اینترنت و موبایل", "خرید لباس", "سلامت و دارو", "آموزش",
+        "تفریح و سرگرمی", "سفر", "قبض و پرداختی", "قسط و بدهی", "کارمزد بانکی", "خرید لوازم خانه",
+        "لوازم الکترونیکی", "مراقبت شخصی", "هزینه کاری", "هدیه و کمک", "مالیات", "سایر هزینه‌ها"
     )
+    val allFinanceCategories = (financeCategories + customFinanceCategories).distinct()
     val typeColor by animateColorAsState(
         if (type == "income") MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
         label = "transaction_type_color"
@@ -2663,17 +2660,22 @@ fun AddTransactionDialog(
                     ) {
                         Icon(Icons.Default.Label, null, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                            Text(if (category.isBlank()) "دسته‌بندی / Category" else category,
+                            Text(if (category.isBlank()) uiText("دسته‌بندی") else category,
                                 fontWeight = if (category.isBlank()) FontWeight.Normal else FontWeight.SemiBold, maxLines = 1)
-                            if (category.isNotBlank()) Text("دسته‌بندی انتخاب شد", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (category.isNotBlank()) Text(uiText("دسته‌بندی انتخاب شد"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(Icons.Default.ExpandMore, null)
                     }
                     DropdownMenu(categoryOpen, { categoryOpen = false }) {
-                        financeCategories.forEach { item ->
+                        allFinanceCategories.forEach { item ->
                             DropdownMenuItem(
                                 text = { Text(item) }, leadingIcon = { Icon(Icons.Default.Label, null, Modifier.size(18.dp)) },
                                 onClick = { category = item; categoryOpen = false }
+                            )
+                                                        DropdownMenuItem(
+                                text = { Text(uiText("افزودن دسته‌بندی جدید")) },
+                                leadingIcon = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) },
+                                onClick = { categoryOpen = false; newCategoryOpen = true }
                             )
                         }
                     }
@@ -2772,6 +2774,33 @@ fun AddTransactionDialog(
                 }
             }
         }
+    }
+    if (newCategoryOpen) {
+        var newName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { newCategoryOpen = false },
+            title = { Text(uiText("دسته‌بندی جدید")) },
+            text = {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text(uiText("نام دسته‌بندی")) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val name = newName.trim()
+                    if (name.isNotBlank()) {
+                        customFinanceCategories = (customFinanceCategories + name).distinct()
+                        category = name
+                    }
+                    newCategoryOpen = false
+                }) { Text(uiText("افزودن")) }
+            },
+            dismissButton = { TextButton(onClick = { newCategoryOpen = false }) { Text(strings.cancel) } }
+        )
     }
     if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
 }
@@ -2898,7 +2927,7 @@ fun WorkPurchasesPage(
                 id = purchase.id,
                 type = "expense",
                 amount = purchase.amount,
-                category = "Work purchase — خرید کار",
+                category = "خرید کار",
                 description = "خرید کار: " + purchase.title,
                 date = purchase.date,
                 card = purchase.card,
