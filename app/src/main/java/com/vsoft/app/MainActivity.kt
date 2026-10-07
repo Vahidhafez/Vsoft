@@ -1236,7 +1236,10 @@ fun VsoftApp() {
                 extraLarge = RoundedCornerShape(32.dp)
             )
         ) {
-            CompositionLocalProvider(LocalVsoftGlass provides glass) {
+            CompositionLocalProvider(
+                LocalTextStyle provides LocalTextStyle.current.copy(textAlign = TextAlign.Start)
+            ) {
+                CompositionLocalProvider(LocalVsoftGlass provides glass) {
 
             MainScreen(
                 strings = appStrings,
@@ -1349,10 +1352,8 @@ fun VsoftApp() {
                     authError = null
                     runCatching { signOutFromGoogle(context) }
                         .onFailure { authError = it.message ?: "Sign-out failed" }
-                },
-                onWorkPurchasesNavigate = { selectedPage = 10 }
+                }
             )
-            }
         }
     }
 }
@@ -1390,8 +1391,7 @@ fun MainScreen(
     firebaseUser: FirebaseUser?,
     authError: String?,
     onGoogleSignIn: () -> Unit,
-    onGoogleSignOut: () -> Unit,
-    onWorkPurchasesNavigate: () -> Unit
+    onGoogleSignOut: () -> Unit
 ) {
 
     var selectedPage by remember { mutableStateOf(0) }
@@ -1637,7 +1637,7 @@ fun MainScreen(
                     workplaces,
                     cards,
                     onWorkChange,
-                    onWorkPurchasesNavigate
+                    onWorkPurchasesNavigate = { selectedPage = 10 }
                 )
 
                 3 -> ReportsPage(strings, transactions, workDays, cards)
@@ -2438,7 +2438,8 @@ fun FinancePage(
                                 onTransactionsChange(x)
                                 scope.launch {
                                     val result = snackbarHostState.showSnackbar(
-                                        "تراکنش حذف شد", "بازگردانی",
+                                        message = "تراکنش حذف شد",
+                                        actionLabel = "بازگردانی",
                                         duration = SnackbarDuration.Short
                                     )
                                     if (result == SnackbarResult.ActionPerformed) {
@@ -4107,6 +4108,7 @@ fun FontOption(title: String, value: String, current: String, onChange: (String)
 fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: List<WorkDay>, onCardsChange: (MutableList<BankCard>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<BankCard?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
     var search by remember { mutableStateOf("") }
     val filteredCards = cards.filter {
         val q = normalizeVsoftSearch(search)
@@ -5077,6 +5079,7 @@ fun JalaliDatePickerDialog(
         title = { Text("${jalaliMonthName(month)} $year") },
         text = {
             Column {
+                val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -5084,13 +5087,14 @@ fun JalaliDatePickerDialog(
                     TextButton(onClick = {
                         month--
                         if (month < 1) { month = 12; year-- }
-                    }) { Text("‹") }
+                    }) { Text(if (rtl) "›" else "‹") }
 
                     AnimatedContent(
                         targetState = "${jalaliMonthName(month)} $year",
                         transitionSpec = {
-                            fadeIn(tween(160)) + slideInHorizontally(tween(180)) { it / 4 } togetherWith
-                                fadeOut(tween(100)) + slideOutHorizontally(tween(120)) { -it / 5 }
+                            val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
+                            fadeIn(tween(160)) + slideInHorizontally(tween(180)) { direction * it / 4 } togetherWith
+                                fadeOut(tween(100)) + slideOutHorizontally(tween(120)) { -direction * it / 5 }
                         },
                         label = "jalali_month_title"
                     ) { title ->
@@ -5100,7 +5104,7 @@ fun JalaliDatePickerDialog(
                     TextButton(onClick = {
                         month++
                         if (month > 12) { month = 1; year++ }
-                    }) { Text("›") }
+                    }) { Text(if (rtl) "‹" else "›") }
                 }
 
                 val gregorian = jalaliToGregorian(year, month, 1)
