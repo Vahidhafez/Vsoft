@@ -143,4 +143,27 @@ class OpeningBalanceMigrationTest {
             recoverLegacyOpeningBalance("کارت اصلی", 15_000_000L, transactions)
         )
     }
+    @Test
+    fun doesNotSubtractSameDayManualTransactionsAfterHashBasedLegacySms() {
+        val transactions = listOf(
+            transaction(
+                type = "expense",
+                amount = 10_000_000L,
+                date = "1405/07/09",
+                description = "ثبت خودکار از پیامک بانک"
+            ).copy(id = 123_456_789L), // Older receiver used a hash ID, not a timestamp.
+            transaction(
+                type = "expense",
+                amount = 2_000_000L,
+                date = "1405/07/09",
+                description = "هزینه دستی"
+            ).copy(id = 456_789_123L)
+        )
+
+        assertEquals(
+            15_000_000L,
+            recoverLegacyOpeningBalance("کارت اصلی", 5_000_000L, transactions)
+        )
+    }
+
 }
