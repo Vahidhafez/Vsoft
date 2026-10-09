@@ -695,30 +695,49 @@ internal fun recoverLegacyOpeningBalance(
     legacyBalance: Long,
     transactions: List<Transaction>
 ): Long {
-    val cardTransactions = transactions.filter { it.card == cardName }
-    val oldSmsTransactions = cardTransactions.filter {
-        it.description.startsWith("ثبت خودکار از پیامک")
+    val indexedCardTransactions = transactions.withIndex().filter { it.value.card == cardName }
+    val oldSmsTransactions = indexedCardTransactions.filter {
+        it.value.description.startsWith("ثبت خودکار از پیامک")
     }
     if (oldSmsTransactions.isEmpty()) return legacyBalance
 
-    // The confirmation-based legacy flow gave SMS transactions a wall-clock ID.
-    // This matters because an older SMS could be confirmed after a newer one and overwrite
-    // the saved card balance. Hash-based IDs from the older receiver flow are not timestamps.
+    // Confirmation-based legacy SMS rows use epoch-millisecond IDs, so the last
+    // confirmation can be identified even when an older message was confirmed later.
     val now = System.currentTimeMillis()
     fun isEpochMillisId(id: Long) = id in 946_684_800_000L..(now + 86_400_000L)
-    val lastAppliedSms = oldSmsTransactions
-        .filter { isEpochMillisId(it.id) }
-        .maxByOrNull { it.id }
-    val cutoffDate = lastAppliedSms?.date
-        ?: oldSmsTransactions.maxOfOrNull { it.date }
-        ?: return legacyBalance
+    val lastConfirmedSms = oldSmsTransactions
+        .filter { isEpochMillisId(it.value.id) }
+        .maxByOrNull { it.value.id }
 
-    val movementsAlreadyReflectedBySms = cardTransactions
-        .filter { transaction ->
-            transaction.date <= cutoffDate &&
-                (lastAppliedSms == null || !isEpochMillisId(transaction.id) || transaction.id <= lastAppliedSms.id)
-        }
-        .sumOf { if (it.type == "income") it.amount else -it.amount }
+    val movementsAlreadyReflectedBySms = if (lastConfirmedSms != null) {
+        val cutoffDate = lastConfirmedSms.value.date
+        indexedCardTransactions
+            .filter { (_, transaction) ->
+                if (isEpochMillisId(transaction.id)) {
+                    // Epoch IDs are creation/confirmation times; don't reverse later
+                    // entries merely because the user backdated their transaction.
+                    transaction.id <= lastConfirmedSms.value.id
+                } else {
+                    // Hash-based IDs from the older SMS receiver have no usable clock.
+                    // Only older dated rows can safely be assumed to precede this SMS.
+                    transaction.date < cutoffDate
+                }
+            }
+            .sumOf { (_, transaction) ->
+                if (transaction.type == "income") transaction.amount else -transaction.amount
+            }
+    } else {
+        // The earliest receiver implementation used hash IDs, not timestamps.
+        // The persisted list preserves insertion order: only entries through the last
+        // legacy SMS row can have been reflected by that SMS. This avoids subtracting
+        // a manual transaction added later on the same Jalali date.
+        val lastSmsIndex = oldSmsTransactions.maxOf { it.index }
+        indexedCardTransactions
+            .filter { it.index <= lastSmsIndex }
+            .sumOf { (_, transaction) ->
+                if (transaction.type == "income") transaction.amount else -transaction.amount
+            }
+    }
 
     return legacyBalance - movementsAlreadyReflectedBySms
 }
