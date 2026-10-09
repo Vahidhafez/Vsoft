@@ -2956,6 +2956,15 @@ fun WorkPage(
     val listState = rememberLazyListState()
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
     val totalIncome = workDays.sumOf { it.income }
+    val sortedWorkDays = remember(workDays) {
+        workDays.sortedWith(
+            compareByDescending<WorkDay> { it.startDate.ifBlank { it.date } }
+                .thenByDescending { it.id }
+        )
+    }
+    val workGroups = remember(sortedWorkDays) {
+        sortedWorkDays.groupBy { it.startDate.ifBlank { it.date } }
+    }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LazyColumn(
@@ -3033,30 +3042,58 @@ fun WorkPage(
                     }
                 }
             } else {
-                itemsIndexed(
-                    workDays.sortedWith(
-                        compareByDescending<WorkDay> { it.startDate.ifBlank { it.date } }
-                            .thenByDescending { it.id }
-                    ),
-                    key = { _, it -> it.id }
-                ) { index, w ->
-                    VsoftEntrance(index.coerceAtMost(7)) {
-                        VsoftSwipeToDelete(
-                            onDelete = {
-                                val x = workDays.toMutableList()
-                                x.removeAll { it.id == w.id }
-                                onWorkChange(x)
-                            }
+                workGroups.forEach { (workDate, entries) ->
+                    item(key = "work_date_$workDate") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            WorkCard(
-                                w,
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    workDate,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Text(
+                                    if (LocalVsoftLanguage.current == "en")
+                                        "${entries.size} entries • ${money(entries.sumOf { it.income })}"
+                                    else "${entries.size} مورد • ${money(entries.sumOf { it.income })}",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(11.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = .08f)
+                            ) {
+                                Icon(
+                                    Icons.Default.CalendarMonth,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(8.dp).size(17.dp)
+                                )
+                            }
+                        }
+                    }
+                    itemsIndexed(entries, key = { _, it -> it.id }) { index, w ->
+                        VsoftEntrance(index.coerceAtMost(7)) {
+                            VsoftSwipeToDelete(
                                 onDelete = {
                                     val x = workDays.toMutableList()
                                     x.removeAll { it.id == w.id }
                                     onWorkChange(x)
-                                },
-                                onEdit = { edit = w; show = true }
-                            )
+                                }
+                            ) {
+                                WorkCard(
+                                    w,
+                                    onDelete = {
+                                        val x = workDays.toMutableList()
+                                        x.removeAll { it.id == w.id }
+                                        onWorkChange(x)
+                                    },
+                                    onEdit = { edit = w; show = true }
+                                )
+                            }
                         }
                     }
                 }
