@@ -2023,14 +2023,14 @@ fun DashboardPage(
                     String.format(Locale.US, "%.1f ساعت", totalHours),
                     Icons.Default.AccessTime,
                     MaterialTheme.colorScheme.primary,
-                    Modifier.weight(1f)
+                    Modifier.weight(1f).clickable { onNavigate(2) }
                 )
                 DashboardMetric(
                     uiText("کارت بانکی"),
                     cards.size.toString(),
                     Icons.Default.CreditCard,
                     MaterialTheme.colorScheme.secondary,
-                    Modifier.weight(1f)
+                    Modifier.weight(1f).clickable { onNavigate(5) }
                 )
             }
         }
