@@ -1481,10 +1481,6 @@ fun MainScreen(
                         }
                         Spacer(Modifier.width(7.dp))
                     }
-                    IconButton(onClick = { selectedPage = 5 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)) {
-                        Icon(Icons.Default.CreditCard, contentDescription = "کارت‌ها", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Spacer(Modifier.width(7.dp))
                     IconButton(onClick = { selectedPage = 4 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = .12f))) {
                         Icon(Icons.Default.Settings, contentDescription = strings.settings, tint = MaterialTheme.colorScheme.primary)
                     }
