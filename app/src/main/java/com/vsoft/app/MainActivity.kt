@@ -3828,6 +3828,48 @@ fun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:Li
 // ---------------- SETTINGS ----------------
 
 @Composable
+private fun VsoftPremiumPageHero(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth()
+                .background(Brush.linearGradient(listOf(accent, Color(0xFF243B73), Color(0xFF116F73))))
+                .padding(horizontal = 19.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    "VSOFT  /  PERSONAL FINANCE",
+                    color = Color.White.copy(alpha = .72f),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.1.sp
+                )
+                Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                Text(subtitle, color = Color.White.copy(alpha = .82f), fontSize = 11.sp)
+            }
+            Spacer(Modifier.width(12.dp))
+            Box(
+                Modifier.size(52.dp).clip(RoundedCornerShape(17.dp))
+                    .background(Color.White.copy(alpha = .15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(27.dp))
+            }
+        }
+    }
+}
+
+@Composable
 fun SettingsPage(
     strings: AppStrings, language: String, theme: String, currency: String,
     onLanguageChange: (String) -> Unit, onCurrencyChange: (String) -> Unit,
@@ -3844,14 +3886,12 @@ fun SettingsPage(
         contentPadding = PaddingValues(bottom = 28.dp)
     ) {
         item {
-            Column(Modifier.padding(vertical = 6.dp)) {
-                Text(strings.settings, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                Text(
-                    uiText("تنظیمات را به‌صورت فهرست مرتب و ساده مدیریت کنید"),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            VsoftPremiumPageHero(
+                title = strings.settings,
+                subtitle = uiText("تنظیمات را به‌صورت فهرست مرتب و ساده مدیریت کنید"),
+                icon = Icons.Default.Tune,
+                accent = Color(0xFF5064D8)
+            )
         }
         item {
             SettingsSection(uiText("عمومی"), Icons.Default.Tune) {
@@ -3991,17 +4031,14 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
             contentPadding = PaddingValues(top = 14.dp, bottom = 110.dp)
         ) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(uiText("کارت‌های بانکی"), fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        if (LocalVsoftLanguage.current == "en")
-                            "${cards.size} cards • ${positiveCount} active"
-                        else
-                            "${cards.size} کارت • ${positiveCount} کارت دارای موجودی",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                }
+                VsoftPremiumPageHero(
+                    title = uiText("کارت‌های بانکی"),
+                    subtitle = if (LocalVsoftLanguage.current == "en")
+                        "${cards.size} cards • ${positiveCount} active"
+                    else "${cards.size} کارت • ${positiveCount} کارت دارای موجودی",
+                    icon = Icons.Default.CreditCard,
+                    accent = Color(0xFF3D71D9)
+                )
             }
             item {
                 Card(
@@ -4165,10 +4202,12 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
             item {
-                Column {
-                    Text(if (LocalVsoftLanguage.current == "en") "Workplaces" else "محل‌های کار", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(workplaces.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "workplaces" else "محل کار", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                VsoftPremiumPageHero(
+                    title = if (LocalVsoftLanguage.current == "en") "Workplaces" else "محل‌های کار",
+                    subtitle = workplaces.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "workplaces" else "محل کار",
+                    icon = Icons.Default.Place,
+                    accent = Color(0xFF0B9B83)
+                )
             }
             item {
                 OutlinedTextField(
@@ -4288,10 +4327,12 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
             item {
-                Column {
-                    Text("افراد", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(people.size.toString() + " نفر", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                VsoftPremiumPageHero(
+                    title = if (LocalVsoftLanguage.current == "en") "People" else "افراد",
+                    subtitle = people.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "contacts" else "نفر ثبت‌شده",
+                    icon = Icons.Default.PeopleAlt,
+                    accent = Color(0xFF7357D8)
+                )
             }
             item {
                 OutlinedTextField(
