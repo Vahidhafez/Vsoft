@@ -2501,6 +2501,11 @@ fun AddTransactionDialog(
                     accent = typeColor,
                     onDismiss = onDismiss
                 )
+                VsoftFormSectionLabel(
+                    title = "نوع تراکنش",
+                    subtitle = "درآمد یا هزینه را انتخاب کنید",
+                    icon = Icons.Default.SwapVert
+                )
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .62f)).padding(4.dp),
@@ -2544,12 +2549,43 @@ fun AddTransactionDialog(
                         }
                     }
                 }
-                OutlinedTextField(
-                    amount, { amount = normalizeAmountInput(it) }, label = { Text(strings.amount) },
-                    leadingIcon = { Icon(Icons.Default.Payments, null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true,
-                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = typeColor.copy(alpha = .065f),
+                    border = BorderStroke(1.dp, typeColor.copy(alpha = .20f))
+                ) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Payments, null, tint = typeColor, modifier = Modifier.size(19.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("مبلغ تراکنش", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                Text("مبلغ را وارد کنید؛ جداکننده‌ها خودکار نمایش داده می‌شوند",
+                                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        OutlinedTextField(
+                            amount, { amount = normalizeAmountInput(it) },
+                            label = { Text(strings.amount) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = GroupedNumberVisualTransformation(),
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = typeColor,
+                                focusedLabelColor = typeColor,
+                                cursorColor = typeColor
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(17.dp)
+                        )
+                    }
+                }
+                VsoftFormSectionLabel(
+                    title = "جزئیات تراکنش",
+                    subtitle = "دسته‌بندی و توضیحات را مشخص کنید",
+                    icon = Icons.Default.Label
                 )
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton(
@@ -2583,6 +2619,11 @@ fun AddTransactionDialog(
                     description, { description = it }, label = { Text(strings.description) },
                     leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 2, maxLines = 3,
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                )
+                VsoftFormSectionLabel(
+                    title = "اطلاعات تکمیلی",
+                    subtitle = "تاریخ، کارت و شخص مرتبط (اختیاری)",
+                    icon = Icons.Default.Tune
                 )
                 OutlinedButton(
                     { dateOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
@@ -2660,7 +2701,9 @@ fun AddTransactionDialog(
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
+                    OutlinedButton(
+                        onDismiss, Modifier.weight(.78f).height(52.dp), shape = RoundedCornerShape(17.dp)
+                    ) { Text(strings.cancel) }
                     Button(
                         onClick = {
                             val v = normalizeDigits(amount).toLongOrNull() ?: 0L
@@ -2668,8 +2711,10 @@ fun AddTransactionDialog(
                                 onSave(Transaction(existing?.id ?: System.currentTimeMillis(), type, v, category, description, date, card, person))
                         },
                         enabled = normalizeDigits(amount).toLongOrNull()?.let { it > 0 } == true && category.isNotBlank(),
-                        modifier = Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)
-                    ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save) }
+                        modifier = Modifier.weight(1.22f).height(52.dp).pressScale(),
+                        shape = RoundedCornerShape(17.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = typeColor, contentColor = Color.White)
+                    ) { Icon(Icons.Default.CheckCircle, null); Spacer(Modifier.width(7.dp)); Text(strings.save, fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -3306,6 +3351,11 @@ fun AddWorkDialog(
                     accent = Color(0xFF0B9B83),
                     onDismiss = onDismiss
                 )
+                VsoftFormSectionLabel(
+                    title = "محل و زمان کار",
+                    subtitle = "محل انجام کار و بازه زمانی را ثبت کنید",
+                    icon = Icons.Default.EventAvailable
+                )
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ placeOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)) {
@@ -3383,10 +3433,43 @@ fun AddWorkDialog(
                         Icon(Icons.Default.Timer, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = .7f))
                     }
                 }
-                OutlinedTextField(
-                    income, { income = normalizeAmountInput(it) }, label = { Text(uiText("درآمد کار")) },
-                    leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = .07f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = .22f))
+                ) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Payments, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(19.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("دستمزد این کار", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                Text("درآمد ثبت‌شده به محاسبات مالی اضافه می‌شود",
+                                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        OutlinedTextField(
+                            income, { income = normalizeAmountInput(it) },
+                            label = { Text(uiText("درآمد کار")) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = GroupedNumberVisualTransformation(),
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                                cursorColor = MaterialTheme.colorScheme.secondary
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(17.dp)
+                        )
+                    }
+                }
+                VsoftFormSectionLabel(
+                    title = "تکمیل اطلاعات",
+                    subtitle = "کارت مقصد، کارفرما و شرح کار (اختیاری)",
+                    icon = Icons.Default.Assignment
                 )
                 if (selectedCard != null) {
                     val colors = bankCardColors(selectedCard.bank)
@@ -3450,7 +3533,9 @@ fun AddWorkDialog(
                     shape = RoundedCornerShape(17.dp), placeholder = { Text(uiText("مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی...")) }
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
+                    OutlinedButton(
+                        onDismiss, Modifier.weight(.78f).height(52.dp), shape = RoundedCornerShape(17.dp)
+                    ) { Text(strings.cancel) }
                     Button(
                         onClick = {
                             onSave(WorkDay(
@@ -3459,8 +3544,10 @@ fun AddWorkDialog(
                             ))
                         },
                         enabled = place.isNotBlank() && startDate.isNotBlank() && endDate.isNotBlank(),
-                        modifier = Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)
-                    ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save) }
+                        modifier = Modifier.weight(1.22f).height(52.dp).pressScale(),
+                        shape = RoundedCornerShape(17.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
+                    ) { Icon(Icons.Default.CheckCircle, null); Spacer(Modifier.width(7.dp)); Text(strings.save, fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -3981,6 +4068,31 @@ fun VsoftPremiumPageHero(
             ) {
                 Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(27.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun VsoftFormSectionLabel(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 3.dp, bottom = 1.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+            Text(subtitle, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
