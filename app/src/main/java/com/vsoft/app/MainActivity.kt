@@ -690,7 +690,7 @@ fun encodeCards(list: List<BankCard>): String {
  * If there is no old auto-imported SMS transaction, the legacy balance is presumed to
  * still be the user's manually entered opening balance and is preserved exactly.
  */
-private fun recoverLegacyOpeningBalance(
+internal fun recoverLegacyOpeningBalance(
     cardName: String,
     legacyBalance: Long,
     transactions: List<Transaction>
