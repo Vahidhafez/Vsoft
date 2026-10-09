@@ -141,7 +141,7 @@ fun VsoftSwipeToDelete(
             Modifier.fillMaxSize(),
             // The revealed delete action belongs on the side exposed by the swipe:
             // physical left for RTL (swipe right), physical right for LTR (swipe left).
-            contentAlignment = Alignment.CenterEnd
+            contentAlignment = if (rtl) Alignment.CenterStart else Alignment.CenterEnd
         ) {
             AnimatedVisibility(
                 visible = progress > 0.12f,
