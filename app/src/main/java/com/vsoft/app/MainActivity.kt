@@ -3972,12 +3972,102 @@ private fun VsoftChartLegend(color: Color, label: String) {
 }
 
 @Composable
-fun TransactionReceiptDialog(transaction:Transaction,onDismiss:()->Unit){
-    val context=LocalContext.current
-    AlertDialog(onDismissRequest=onDismiss,icon={Icon(Icons.Default.ReceiptLong,null)},title={Text(uiText("رسید تراکنش"))},
-        text={Text(uiText("یک رسید تصویری تمیز با تمام جزئیات مهم این تراکنش ساخته می‌شود."))},
-        confirmButton={Button(onClick={shareVsoftReceipt(context,listOf(transaction),emptyList(),transaction.date,transaction.date,"رسید تراکنش");onDismiss()}){Icon(Icons.Default.Image,null);Spacer(Modifier.width(6.dp));Text(uiText("ساخت عکس"))}},
-        dismissButton={TextButton(onClick=onDismiss){Text(uiText("لغو"))}})
+fun TransactionReceiptDialog(transaction: Transaction, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val isIncome = transaction.type == "income"
+    val accent = if (isIncome) Color(0xFF16866B) else MaterialTheme.colorScheme.error
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Box(
+                Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(25.dp))
+            }
+        },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(uiText("رسید تراکنش"), fontWeight = FontWeight.ExtraBold)
+                Text(uiText("پیش‌نمایش اطلاعات رسید"), fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                    border = BorderStroke(1.dp, accent.copy(alpha = .25f))
+                ) {
+                    Column(Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(transaction.category.ifBlank { uiText("تراکنش") },
+                                    fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                                Text(if (isIncome) uiText("رسید درآمد") else uiText("رسید هزینه"),
+                                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Icon(if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                null, tint = accent, modifier = Modifier.size(26.dp))
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Text(
+                            (if (isIncome) "+" else "−") + money(transaction.amount),
+                            fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = accent
+                        )
+                        ReceiptDetailRow(Icons.Default.CalendarMonth, uiText("تاریخ"), transaction.date)
+                        if (transaction.card.isNotBlank())
+                            ReceiptDetailRow(Icons.Default.CreditCard, uiText("کارت"), transaction.card)
+                        if (transaction.person.isNotBlank())
+                            ReceiptDetailRow(Icons.Default.Person, uiText("شخص مرتبط"), transaction.person)
+                        if (transaction.description.isNotBlank())
+                            ReceiptDetailRow(Icons.Default.Notes, uiText("توضیحات"), transaction.description)
+                    }
+                }
+                Text(uiText("با ساخت تصویر، رسید آمادهٔ ذخیره یا اشتراک‌گذاری می‌شود."),
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    shareVsoftReceipt(context, listOf(transaction), emptyList(),
+                        transaction.date, transaction.date, "رسید تراکنش")
+                    onDismiss()
+                },
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.Image, null)
+                Spacer(Modifier.width(7.dp))
+                Text(uiText("ساخت تصویر رسید"), fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(uiText("بازگشت")) }
+        }
+    )
+}
+
+@Composable
+private fun ReceiptDetailRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
+    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(icon, null, modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
 }
 @Composable
 fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,cards:List<BankCard>,onDismiss:()->Unit){
