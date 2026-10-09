@@ -78,10 +78,11 @@ fun VsoftToolsPage(
     val title = if (isEnglish) "Explore" else if (isArabic) "استكشف" else "بیشتر"
     val subtitle = if (isEnglish) "Manage the rest of your workspace" else if (isArabic) "إدارة بقية أقسام التطبيق" else "دسترسی سریع به بخش‌های مدیریتی"
     BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        val availableHeight = maxHeight
         Column(Modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxWidth()
-                .heightIn(max = maxHeight * 0.62f)
+                .heightIn(max = availableHeight * 0.62f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(11.dp)
