@@ -713,13 +713,13 @@ internal fun recoverLegacyOpeningBalance(
         val cutoffDate = lastConfirmedSms.value.date
         indexedCardTransactions
             .filter { (_, transaction) ->
-                if (isEpochMillisId(transaction.id)) {
+                transaction.date <= cutoffDate && if (isEpochMillisId(transaction.id)) {
                     // Epoch IDs are creation/confirmation times; don't reverse later
                     // entries merely because the user backdated their transaction.
                     transaction.id <= lastConfirmedSms.value.id
                 } else {
                     // Hash-based IDs from the older SMS receiver have no usable clock.
-                    // Only older dated rows can safely be assumed to precede this SMS.
+                    // Same-day rows cannot be ordered reliably against the SMS.
                     transaction.date < cutoffDate
                 }
             }
