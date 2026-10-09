@@ -170,22 +170,26 @@ fun SmsImportPage(
                             pending = SmsStore.pending(context)
                         },
                         onConfirm = { cardName ->
-                            val amount = if (currency == "IRT") p.amountRial / 10 else p.amountRial
-                            val list = transactions.toMutableList()
-                            list.add(Transaction(
-                                id = System.currentTimeMillis(),
-                                type = p.type,
-                                amount = amount,
-                                category = if (p.type == "income") "Other income — سایر درآمدها" else "Other expense — سایر هزینه‌ها",
-                                description = "ثبت خودکار از پیامک " + p.bank.ifBlank { "بانکی" },
-                                date = jalaliDateOf(p.time),
-                                card = cardName,
-                                person = ""
-                            ))
-                            onTransactionsChange(list)
+                            val smsMarker = "[SMS:${p.id}]"
+                            val alreadyImported = transactions.any { it.description.contains(smsMarker) }
+                            if (!alreadyImported) {
+                                val amount = if (currency == "IRT") p.amountRial / 10 else p.amountRial
+                                val list = transactions.toMutableList()
+                                list.add(Transaction(
+                                    id = System.currentTimeMillis(),
+                                    type = p.type,
+                                    amount = amount,
+                                    category = if (p.type == "income") "Other income — سایر درآمدها" else "Other expense — سایر هزینه‌ها",
+                                    description = "ثبت خودکار از پیامک " + p.bank.ifBlank { "بانکی" } + " " + smsMarker,
+                                    date = jalaliDateOf(p.time),
+                                    card = cardName,
+                                    person = ""
+                                ))
+                                onTransactionsChange(list)
+                            }
 
-                            // موجودی اعلام‌شده پیامک فقط برای بررسی است؛ موجودی اولیه کارت هرگز خودکار تغییر نمی‌کند.
-
+                            // پیامک تأییدشده با شناسه ثابت قابل‌شناسایی است؛ تأیید دوباره تراکنش تکراری نمی‌سازد.
+                            // موجودی اعلام‌شده پیامک هرگز موجودی اولیه کارت را تغییر نمی‌دهد.
                             SmsStore.remove(context, p.id)
                             pending = SmsStore.pending(context)
                         }
