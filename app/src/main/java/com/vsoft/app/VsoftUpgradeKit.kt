@@ -81,8 +81,9 @@ fun VsoftSwipeToDelete(
     // Require a deliberate long swipe, scaled in dp so the gesture feels consistent across phones.
     val threshold = with(density) { 150.dp.toPx() }
     val maxOffset = with(density) { 220.dp.toPx() }
-    // RTL uses the mirrored physical swipe direction so the delete reveal stays on the correct side.
-    val swipeDirection = if (rtl) 1f else -1f
+    // Keep the gesture direction consistent across locales: swipe left to delete.
+    // RTL changes text layout, not the physical direction of this gesture.
+    val swipeDirection = -1f
     val targetOffset = if (deleting) swipeDirection * maxOffset * 3f else offsetX
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffset,
@@ -134,7 +135,7 @@ fun VsoftSwipeToDelete(
     ) {
         Box(
             Modifier.fillMaxSize(),
-            contentAlignment = if (rtl) Alignment.CenterStart else Alignment.CenterEnd
+            contentAlignment = Alignment.CenterEnd
         ) {
             Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onErrorContainer)
         }
