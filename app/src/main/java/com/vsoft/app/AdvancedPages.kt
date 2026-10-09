@@ -3,6 +3,8 @@ package com.vsoft.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -75,9 +77,13 @@ fun VsoftToolsPage(
     val isArabic = language == "ar"
     val title = if (isEnglish) "Explore" else if (isArabic) "استكشف" else "بیشتر"
     val subtitle = if (isEnglish) "Manage the rest of your workspace" else if (isArabic) "إدارة بقية أقسام التطبيق" else "دسترسی سریع به بخش‌های مدیریتی"
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Column(Modifier.fillMaxSize()) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth()
+                .heightIn(max = maxHeight * 0.62f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(11.dp)
         ) {
             Card(
@@ -159,12 +165,13 @@ fun VsoftToolsPage(
                 )
             }
         }
-        Box(Modifier.fillMaxSize().weight(1f)) {
+        Box(Modifier.fillMaxWidth().weight(1f)) {
             when (mode) {
                 0 -> VsoftCalendarContent(language, transactions, workDays)
                 1 -> VsoftSearchContent(language, transactions, workDays, cards, people, workplaces)
                 else -> VsoftInsightsContent(language, transactions, workDays)
             }
+        }
         }
     }
 }
