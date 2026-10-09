@@ -2349,6 +2349,11 @@ fun FinancePage(
         onTransactionsChange(x)
         show = false
     }
+    // The receipt icon stores the selected transaction; render its dialog here so taps
+    // actually open the receipt instead of silently doing nothing.
+    receiptTransaction?.let { selected ->
+        TransactionReceiptDialog(selected) { receiptTransaction = null }
+    }
 }
 
 
@@ -5320,15 +5325,48 @@ fun JalaliDatePickerDialog(
                 val calendar = java.util.Calendar.getInstance().apply {
                     set(gregorian[0], gregorian[1] - 1, gregorian[2])
                 }
-                val offset = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+                val language = LocalVsoftLanguage.current
+                // Jalali/Persian weeks start on Saturday; English calendar starts on Sunday.
+                val offset = if (language == "en") {
+                    (calendar.get(java.util.Calendar.DAY_OF_WEEK) - 1) % 7
+                } else {
+                    calendar.get(java.util.Calendar.DAY_OF_WEEK) % 7
+                }
+                val weekdays = if (language == "en") {
+                    listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                } else {
+                    listOf("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه")
+                }
 
                 val cells = mutableListOf<Int?>()
                 repeat(offset) { cells.add(null) }
                 for (i in 1..jalaliMonthDays(year, month)) cells.add(i)
                 while (cells.size % 7 != 0) cells.add(null)
 
-                cells.chunked(7).forEach { row ->
-                    Row(Modifier.fillMaxWidth()) {
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides if (language == "en") LayoutDirection.Ltr else LayoutDirection.Rtl
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+                        weekdays.forEachIndexed { index, weekday ->
+                            Box(
+                                Modifier.weight(1f).height(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    weekday,
+                                    fontSize = if (language == "en") 10.sp else 9.sp,
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if ((language == "en" && weekday == "Sat") ||
+                                        (language != "en" && weekday == "جمعه"))
+                                        MaterialTheme.colorScheme.tertiary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    cells.chunked(7).forEach { row ->
+                        Row(Modifier.fillMaxWidth()) {
                         row.forEach { value ->
                             Box(
                                 Modifier.weight(1f),
@@ -5364,6 +5402,7 @@ fun JalaliDatePickerDialog(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
