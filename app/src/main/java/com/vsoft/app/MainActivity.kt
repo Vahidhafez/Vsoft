@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -1432,7 +1433,8 @@ fun MainScreen(
     onGoogleSignOut: () -> Unit
 ) {
 
-    var selectedPage by remember { mutableStateOf(0) }
+    var selectedPage by rememberSaveable { mutableStateOf(0) }
+    val pageStateHolder = rememberSaveableStateHolder()
 
     val pages = listOf(
         strings.dashboard,
@@ -1575,7 +1577,7 @@ fun MainScreen(
                 .fillMaxSize(),
             label = "page"
         ) { page ->
-
+            pageStateHolder.SaveableStateProvider(page) {
             when (page) {
 
                 0 -> DashboardPage(
@@ -1646,6 +1648,7 @@ fun MainScreen(
                     onTransactionsChange = onTransactionsChange,
                     transactions = transactions
                 )
+            }
             }
         }
         }
@@ -1899,7 +1902,7 @@ fun DashboardPage(
                     TextButton(onClick = { onNavigate(4) }) {
                         Text("مدیریت کارت‌ها")
                         Spacer(Modifier.width(4.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.ArrowBack, null, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -3689,10 +3692,15 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                                                 Text(card.bank, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, maxLines = 1)
                                             }
                                             Text(card.name, color = Color.White.copy(alpha = .82f), fontSize = 10.sp, maxLines = 1)
-                                            Text(
-                                                "•••• " + card.last4.ifBlank { card.cardNumber.takeLast(4) },
-                                                color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
-                                            )
+                                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                                Text(
+                                                    "•••• " + card.last4.ifBlank { card.cardNumber.takeLast(4) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    textAlign = TextAlign.Start,
+                                                    color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                                                    maxLines = 1
+                                                )
+                                            }
                                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
                                                     money(cardCurrentBalance(card, transactions, workDays)),
