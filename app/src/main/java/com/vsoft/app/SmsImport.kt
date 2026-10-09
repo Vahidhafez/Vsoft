@@ -303,6 +303,13 @@ object SmsStore {
     private fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+    fun isEnabled(context: Context): Boolean =
+        prefs(context).getBoolean("sms_enabled", true)
+
+    fun setEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean("sms_enabled", enabled).apply()
+    }
+
     fun initializeScanCursor(context: Context) {
         val p = prefs(context)
         if (!p.contains(LAST_SCAN)) {
@@ -382,6 +389,7 @@ object SmsStore {
     }
 
     fun importNewInbox(context: Context): Int {
+        if (!isEnabled(context)) return -3
         if (!smsPermissionGranted(context)) return -1
         initializeScanCursor(context)
         val p = prefs(context)
@@ -416,6 +424,7 @@ object SmsStore {
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
+        if (!SmsStore.isEnabled(context)) return
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
