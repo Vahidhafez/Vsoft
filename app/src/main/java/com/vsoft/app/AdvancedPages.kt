@@ -310,7 +310,27 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
                     }
                     val gregorian = jalaliToGregorian(year, month, 1)
                     val cal = java.util.Calendar.getInstance().apply { set(gregorian[0], gregorian[1] - 1, gregorian[2]) }
-                    val offset = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+                    // Persian calendar weeks run from Saturday (right) through Friday (left).
+                    val offset = cal.get(java.util.Calendar.DAY_OF_WEEK) % 7
+                    val weekdays = when (language) {
+                        "en" -> listOf("Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri")
+                        "ar" -> listOf("السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة")
+                        else -> listOf("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه")
+                    }
+                    Row(Modifier.fillMaxWidth()) {
+                        weekdays.forEach { weekday ->
+                            Box(Modifier.weight(1f).padding(vertical = 5.dp), contentAlignment = Alignment.Center) {
+                                Text(
+                                    weekday,
+                                    fontSize = if (language == "fa") 9.sp else 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
+                    }
                     val cells = buildList<Int?> {
                         repeat(offset) { add(null) }
                         for (d in 1..jalaliMonthDays(year, month)) add(d)
