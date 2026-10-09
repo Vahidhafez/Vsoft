@@ -885,60 +885,10 @@ suspend fun restoreBackup(context: Context, data: VsoftBackup) {
 }
 
 suspend fun autoRegisterSmsTransaction(context: Context, sms: PendingSms): Boolean {
-    val preferences = context.dataStore.data.first()
-    val currency = preferences[CURRENCY_KEY] ?: "IRT"
-    val transactions = decodeTransactions(preferences[TRANSACTIONS_KEY] ?: "[]")
-    val cards = decodeCards(preferences[CARDS_KEY] ?: "[]")
-
-    var bank = sms.bank
-    var card = cards.firstOrNull { sms.last4.isNotBlank() && it.last4 == sms.last4 }
-
-    fun sameBank(a: String, b: String): Boolean {
-        val x = smsNormalize(a).lowercase(Locale.ROOT).trim()
-        val y = smsNormalize(b).lowercase(Locale.ROOT).trim()
-        return x == y || x.removePrefix("بانک ") == y.removePrefix("بانک ") ||
-            x.contains(y) || y.contains(x)
-    }
-
-    if (bank.isBlank() && card != null) bank = card.bank
-    if (card == null && bank.isNotBlank()) {
-        val bankCards = cards.filter { sameBank(it.bank, bank) }
-        if (bankCards.size == 1) card = bankCards.first()
-    }
-
-    if (card == null) return false
-
-    val amount = if (currency == "IRT") sms.amountRial / 10 else sms.amountRial
-    if (amount <= 0L) return false
-
-    val duplicate = transactions.any {
-        it.card == card.name &&
-            it.amount == amount &&
-            it.type == sms.type &&
-            it.date == jalaliDateOf(sms.time) &&
-            it.description.startsWith("ثبت خودکار از پیامک")
-    }
-    if (duplicate) return false
-
-    val updatedTransactions = transactions.toMutableList()
-    updatedTransactions.add(
-        Transaction(
-            id = sms.id,
-            type = sms.type,
-            amount = amount,
-            category = if (sms.type == "income") "Other income — سایر درآمدها" else "Other expense — سایر هزینه‌ها",
-            description = "ثبت خودکار از پیامک " + bank.ifBlank { "بانکی" },
-            date = jalaliDateOf(sms.time),
-            card = card.name,
-            person = ""
-        )
-    )
-
-    // موجودی اعلام‌شده در پیامک فقط برای بررسی است و موجودی اولیه کارت را تغییر نمی‌دهد.
-    context.dataStore.edit { p ->
-        p[TRANSACTIONS_KEY] = encodeTransactions(updatedTransactions)
-    }
-    return true
+    // Compatibility wrapper for older call sites: bank SMS must always enter the review queue.
+    // Never write a transaction directly from a receiver/background path.
+    if (!SmsStore.isEnabled(context)) return false
+    return SmsStore.addIfBank(context, sms.sender, sms.body, sms.time)
 }
 
 // ---------------- ACTIVITY ----------------
