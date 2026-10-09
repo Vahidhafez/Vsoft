@@ -2,6 +2,7 @@ package com.vsoft.app
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -17,6 +18,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -74,16 +77,25 @@ fun VsoftSwipeToDelete(
     var hapticSent by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
     val rtl = LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val density = LocalDensity.current
+    // Require a deliberate long swipe, scaled in dp so the gesture feels consistent across phones.
+    val threshold = with(density) { 150.dp.toPx() }
+    val maxOffset = with(density) { 220.dp.toPx() }
     // RTL uses the mirrored physical swipe direction so the delete reveal stays on the correct side.
     val swipeDirection = if (rtl) 1f else -1f
-    val threshold = 195f
-    val maxOffset = 260f
-    val targetOffset = if (deleting) swipeDirection * 1000f else offsetX
+    val targetOffset = if (deleting) swipeDirection * maxOffset * 3f else offsetX
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffset,
-        animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy),
+        animationSpec = if (deleting) tween(420, easing = FastOutSlowInEasing)
+            else spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy),
         label = "swipe_delete_offset"
     )
+    LaunchedEffect(deleting) {
+        if (deleting) {
+            delay(420)
+            onDelete()
+        }
+    }
     val progress = (kotlin.math.abs(animatedOffset) / threshold).coerceIn(0f, 1f)
 
     Box(
@@ -108,7 +120,6 @@ fun VsoftSwipeToDelete(
                         if (swipeDirection * offsetX > threshold) {
                             deleting = true
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onDelete()
                         } else {
                             offsetX = 0f
                             hapticSent = false
