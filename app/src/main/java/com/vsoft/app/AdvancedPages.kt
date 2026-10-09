@@ -76,105 +76,94 @@ fun VsoftToolsPage(
     val title = if (isEnglish) "Explore" else if (isArabic) "استكشف" else "بیشتر"
     val subtitle = if (isEnglish) "Manage the rest of your workspace" else if (isArabic) "إدارة بقية أقسام التطبيق" else "دسترسی سریع به بخش‌های مدیریتی"
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 30.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(11.dp)
         ) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(Color(0xFF172B59), Color(0xFF3659B8), Color(0xFF147E83))
+                        )
+                    ).padding(horizontal = 18.dp, vertical = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        Modifier.fillMaxWidth().background(
-                            androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(Color(0xFF172B59), Color(0xFF3659B8), Color(0xFF147E83))
-                            )
-                        ).padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(title, color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(subtitle, color = Color.White.copy(alpha = .78f), fontSize = 11.sp)
+                    }
+                    Box(
+                        Modifier.size(46.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .15f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text(title, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(subtitle, color = Color.White.copy(alpha = .78f), fontSize = 12.sp)
-                        }
-                        Box(
-                            Modifier.size(52.dp).clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.DashboardCustomize, null, tint = Color.White, modifier = Modifier.size(27.dp))
-                        }
+                        Icon(Icons.Default.DashboardCustomize, null, tint = Color.White, modifier = Modifier.size(25.dp))
                     }
                 }
             }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MoreHubTile(
-                        title = if (isEnglish) "People" else if (isArabic) "الأشخاص" else "افراد",
-                        subtitle = if (isEnglish) "${people.size} contacts" else "${people.size} نفر ثبت‌شده",
-                        icon = Icons.Default.PeopleAlt,
-                        accent = Color(0xFF7357D8),
-                        modifier = Modifier.weight(1f)
-                    ) { onNavigate(7) }
-                    MoreHubTile(
-                        title = if (isEnglish) "Workplaces" else if (isArabic) "أماكن العمل" else "محل‌های کار",
-                        subtitle = if (isEnglish) "${workplaces.size} places" else "${workplaces.size} محل ثبت‌شده",
-                        icon = Icons.Default.Place,
-                        accent = Color(0xFF0B9B83),
-                        modifier = Modifier.weight(1f)
-                    ) { onNavigate(6) }
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MoreHubTile(
+                    title = if (isEnglish) "People" else if (isArabic) "الأشخاص" else "افراد",
+                    subtitle = if (isEnglish) "${people.size} contacts" else "${people.size} نفر ثبت‌شده",
+                    icon = Icons.Default.PeopleAlt,
+                    accent = Color(0xFF7357D8),
+                    modifier = Modifier.weight(1f)
+                ) { onNavigate(7) }
+                MoreHubTile(
+                    title = if (isEnglish) "Workplaces" else if (isArabic) "أماكن العمل" else "محل‌های کار",
+                    subtitle = if (isEnglish) "${workplaces.size} places" else "${workplaces.size} محل ثبت‌شده",
+                    icon = Icons.Default.Place,
+                    accent = Color(0xFF0B9B83),
+                    modifier = Modifier.weight(1f)
+                ) { onNavigate(6) }
             }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MoreHubTile(
-                        title = if (isEnglish) "Bank cards" else if (isArabic) "البطاقات" else "کارت‌های بانکی",
-                        subtitle = if (isEnglish) "${cards.size} cards" else "${cards.size} کارت ثبت‌شده",
-                        icon = Icons.Default.CreditCard,
-                        accent = Color(0xFF3D71D9),
-                        modifier = Modifier.weight(1f)
-                    ) { onNavigate(5) }
-                    MoreHubTile(
-                        title = if (isEnglish) "Bank SMS" else if (isArabic) "رسائل البنك" else "پیامک بانکی",
-                        subtitle = if (isEnglish) "Review imports" else "بررسی قبل از ثبت",
-                        icon = Icons.Default.MarkEmailRead,
-                        accent = Color(0xFFD18A32),
-                        modifier = Modifier.weight(1f)
-                    ) { onNavigate(9) }
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MoreHubTile(
+                    title = if (isEnglish) "Bank cards" else if (isArabic) "البطاقات" else "کارت‌های بانکی",
+                    subtitle = if (isEnglish) "${cards.size} cards" else "${cards.size} کارت ثبت‌شده",
+                    icon = Icons.Default.CreditCard,
+                    accent = Color(0xFF3D71D9),
+                    modifier = Modifier.weight(1f)
+                ) { onNavigate(5) }
+                MoreHubTile(
+                    title = if (isEnglish) "Bank SMS" else if (isArabic) "رسائل البنك" else "پیامک بانکی",
+                    subtitle = if (isEnglish) "Review imports" else "بررسی قبل از ثبت",
+                    icon = Icons.Default.MarkEmailRead,
+                    accent = Color(0xFFD18A32),
+                    modifier = Modifier.weight(1f)
+                ) { onNavigate(9) }
             }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(if (isEnglish) "Tools" else if (isArabic) "الأدوات" else "ابزارهای هوشمند", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(if (isEnglish) "Calendar, search and insights" else "تقویم، جستجوی یکپارچه و تحلیل‌ها", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            Text(
+                if (isEnglish) "Smart tools" else if (isArabic) "الأدوات الذكية" else "ابزارهای هوشمند",
+                fontSize = 18.sp, fontWeight = FontWeight.ExtraBold
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                FilterChip(
+                    selected = mode == 0, onClick = { mode = 0 },
+                    label = { Text(toolsText(language, "calendar")) },
+                    leadingIcon = { Icon(Icons.Default.CalendarMonth, null, Modifier.size(17.dp)) }
+                )
+                FilterChip(
+                    selected = mode == 1, onClick = { mode = 1 },
+                    label = { Text(toolsText(language, "search")) },
+                    leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(17.dp)) }
+                )
+                FilterChip(
+                    selected = mode == 2, onClick = { mode = 2 },
+                    label = { Text(toolsText(language, "insights")) },
+                    leadingIcon = { Icon(Icons.Default.AutoGraph, null, Modifier.size(17.dp)) }
+                )
             }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    FilterChip(
-                        selected = mode == 0, onClick = { mode = 0 },
-                        label = { Text(toolsText(language, "calendar")) },
-                        leadingIcon = { Icon(Icons.Default.CalendarMonth, null, Modifier.size(17.dp)) }
-                    )
-                    FilterChip(
-                        selected = mode == 1, onClick = { mode = 1 },
-                        label = { Text(toolsText(language, "search")) },
-                        leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(17.dp)) }
-                    )
-                    FilterChip(
-                        selected = mode == 2, onClick = { mode = 2 },
-                        label = { Text(toolsText(language, "insights")) },
-                        leadingIcon = { Icon(Icons.Default.AutoGraph, null, Modifier.size(17.dp)) }
-                    )
-                }
-            }
-            item {
-                when (mode) {
-                    0 -> VsoftCalendarContent(language, transactions, workDays)
-                    1 -> VsoftSearchContent(language, transactions, workDays, cards, people, workplaces)
-                    else -> VsoftInsightsContent(language, transactions, workDays)
-                }
+        }
+        Box(Modifier.fillMaxSize().weight(1f)) {
+            when (mode) {
+                0 -> VsoftCalendarContent(language, transactions, workDays)
+                1 -> VsoftSearchContent(language, transactions, workDays, cards, people, workplaces)
+                else -> VsoftInsightsContent(language, transactions, workDays)
             }
         }
     }
