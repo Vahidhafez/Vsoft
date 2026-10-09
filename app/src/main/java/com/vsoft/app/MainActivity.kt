@@ -4249,8 +4249,24 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     shape = RoundedCornerShape(18.dp),
                     label = { Text(uiText("جستجوی محل کار")) },
-                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = {
+                        AnimatedVisibility(search.isNotBlank()) {
+                            IconButton(onClick = { search = "" }) {
+                                Icon(Icons.Default.Close, uiText("پاک‌کردن جستجو"))
+                            }
+                        }
+                    }
                 )
+            }
+            if (filteredWorkplaces.isEmpty()) {
+                item {
+                    EmptyState(
+                        if (workplaces.isEmpty()) uiText("هنوز محل کاری ثبت نشده")
+                        else uiText("محل کاری با این جستجو پیدا نشد"),
+                        Icons.Default.Place
+                    )
+                }
             }
             itemsIndexed(filteredWorkplaces, key = { _, it -> it.id }) { index, workplace ->
                 VsoftEntrance(index.coerceAtMost(7)) {
@@ -4370,8 +4386,24 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     shape = RoundedCornerShape(18.dp),
                     label = { Text(uiText("جستجوی افراد")) },
-                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = {
+                        AnimatedVisibility(search.isNotBlank()) {
+                            IconButton(onClick = { search = "" }) {
+                                Icon(Icons.Default.Close, uiText("پاک‌کردن جستجو"))
+                            }
+                        }
+                    }
                 )
+            }
+            if (filteredPeople.isEmpty()) {
+                item {
+                    EmptyState(
+                        if (people.isEmpty()) uiText("هنوز فردی ثبت نشده")
+                        else uiText("فردی با این جستجو پیدا نشد"),
+                        Icons.Default.PeopleAlt
+                    )
+                }
             }
             itemsIndexed(filteredPeople, key = { _, it -> it.id }) { index, person ->
                 VsoftEntrance(index.coerceAtMost(7)) {
