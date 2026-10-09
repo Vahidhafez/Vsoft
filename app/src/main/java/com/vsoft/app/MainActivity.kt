@@ -1500,7 +1500,7 @@ fun MainScreen(
                     RedesignNavItem(strings.finance, Icons.Default.AccountBalanceWallet, selectedPage == 1, Modifier.weight(1f)) { selectedPage = 1 }
                     RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2, Modifier.weight(1f)) { selectedPage = 2 }
                     RedesignNavItem(strings.reports, Icons.Default.Insights, selectedPage == 3, Modifier.weight(1f)) { selectedPage = 3 }
-                    RedesignNavItem(if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر", Icons.Default.GridView, selectedPage == 8, Modifier.weight(1f)) { selectedPage = 8 }
+                    RedesignNavItem(if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر", Icons.Default.GridView, selectedPage >= 5, Modifier.weight(1f)) { selectedPage = 8 }
                 }
             }
         }
@@ -1631,7 +1631,7 @@ fun MainScreen(
                     cards = cards,
                     people = people,
                     workplaces = workplaces,
-                    onWorkPurchases = { selectedPage = 10 }
+                    onNavigate = { destination -> selectedPage = destination }
                 )
                 10 -> WorkPurchasesPage(
                     purchases = workPurchases,

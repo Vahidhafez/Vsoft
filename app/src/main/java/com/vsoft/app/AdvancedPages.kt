@@ -68,33 +68,146 @@ fun VsoftToolsPage(
     cards: List<BankCard>,
     people: List<Person>,
     workplaces: List<Workplace>,
-    onWorkPurchases: () -> Unit
+    onNavigate: (Int) -> Unit
 ) {
     var mode by remember { mutableStateOf(0) }
-    Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
-            Text(toolsText(language, "tools"), fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(mode == 0, { mode = 0 }, label = { Text(toolsText(language, "calendar")) }, leadingIcon = { Icon(Icons.Default.CalendarMonth, null, Modifier.size(17.dp)) })
-                FilterChip(mode == 1, { mode = 1 }, label = { Text(toolsText(language, "search")) }, leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(17.dp)) })
-                FilterChip(mode == 2, { mode = 2 }, label = { Text(toolsText(language, "insights")) }, leadingIcon = { Icon(Icons.Default.AutoGraph, null, Modifier.size(17.dp)) })
+    val isEnglish = language == "en"
+    val isArabic = language == "ar"
+    val title = if (isEnglish) "Explore" else if (isArabic) "استكشف" else "بیشتر"
+    val subtitle = if (isEnglish) "Manage the rest of your workspace" else if (isArabic) "إدارة بقية أقسام التطبيق" else "دسترسی سریع به بخش‌های مدیریتی"
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 30.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().background(
+                            androidx.compose.ui.graphics.Brush.linearGradient(
+                                listOf(Color(0xFF172B59), Color(0xFF3659B8), Color(0xFF147E83))
+                            )
+                        ).padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(title, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(subtitle, color = Color.White.copy(alpha = .78f), fontSize = 12.sp)
+                        }
+                        Box(
+                            Modifier.size(52.dp).clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.DashboardCustomize, null, tint = Color.White, modifier = Modifier.size(27.dp))
+                        }
+                    }
+                }
             }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onWorkPurchases,
-                modifier = Modifier.fillMaxWidth().pressScale(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.ShoppingCart, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(if (language == "en") "Work purchases" else if (language == "ar") "مشتريات العمل" else "خریدهای کار")
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MoreHubTile(
+                        title = if (isEnglish) "People" else if (isArabic) "الأشخاص" else "افراد",
+                        subtitle = if (isEnglish) "${people.size} contacts" else "${people.size} نفر ثبت‌شده",
+                        icon = Icons.Default.PeopleAlt,
+                        accent = Color(0xFF7357D8),
+                        modifier = Modifier.weight(1f)
+                    ) { onNavigate(7) }
+                    MoreHubTile(
+                        title = if (isEnglish) "Workplaces" else if (isArabic) "أماكن العمل" else "محل‌های کار",
+                        subtitle = if (isEnglish) "${workplaces.size} places" else "${workplaces.size} محل ثبت‌شده",
+                        icon = Icons.Default.Place,
+                        accent = Color(0xFF0B9B83),
+                        modifier = Modifier.weight(1f)
+                    ) { onNavigate(6) }
+                }
+            }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MoreHubTile(
+                        title = if (isEnglish) "Bank cards" else if (isArabic) "البطاقات" else "کارت‌های بانکی",
+                        subtitle = if (isEnglish) "${cards.size} cards" else "${cards.size} کارت ثبت‌شده",
+                        icon = Icons.Default.CreditCard,
+                        accent = Color(0xFF3D71D9),
+                        modifier = Modifier.weight(1f)
+                    ) { onNavigate(5) }
+                    MoreHubTile(
+                        title = if (isEnglish) "Bank SMS" else if (isArabic) "رسائل البنك" else "پیامک بانکی",
+                        subtitle = if (isEnglish) "Review imports" else "بررسی قبل از ثبت",
+                        icon = Icons.Default.MarkEmailRead,
+                        accent = Color(0xFFD18A32),
+                        modifier = Modifier.weight(1f)
+                    ) { onNavigate(9) }
+                }
+            }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(if (isEnglish) "Tools" else if (isArabic) "الأدوات" else "ابزارهای هوشمند", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(if (isEnglish) "Calendar, search and insights" else "تقویم، جستجوی یکپارچه و تحلیل‌ها", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    FilterChip(
+                        selected = mode == 0, onClick = { mode = 0 },
+                        label = { Text(toolsText(language, "calendar")) },
+                        leadingIcon = { Icon(Icons.Default.CalendarMonth, null, Modifier.size(17.dp)) }
+                    )
+                    FilterChip(
+                        selected = mode == 1, onClick = { mode = 1 },
+                        label = { Text(toolsText(language, "search")) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(17.dp)) }
+                    )
+                    FilterChip(
+                        selected = mode == 2, onClick = { mode = 2 },
+                        label = { Text(toolsText(language, "insights")) },
+                        leadingIcon = { Icon(Icons.Default.AutoGraph, null, Modifier.size(17.dp)) }
+                    )
+                }
+            }
+            item {
+                when (mode) {
+                    0 -> VsoftCalendarContent(language, transactions, workDays)
+                    1 -> VsoftSearchContent(language, transactions, workDays, cards, people, workplaces)
+                    else -> VsoftInsightsContent(language, transactions, workDays)
+                }
             }
         }
-        when (mode) {
-            0 -> VsoftCalendarContent(language, transactions, workDays)
-            1 -> VsoftSearchContent(language, transactions, workDays, cards, people, workplaces)
-            else -> VsoftInsightsContent(language, transactions, workDays)
+    }
+}
+
+@Composable
+private fun MoreHubTile(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clip(RoundedCornerShape(24.dp)).clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+            Box(
+                Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+            }
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Icon(Icons.Default.ArrowForward, null, tint = accent, modifier = Modifier.size(17.dp))
+            }
         }
     }
 }
