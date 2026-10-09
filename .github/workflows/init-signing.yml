@@ -29,10 +29,10 @@ jobs:
 
           base64 -w 0 vsoft-release.jks > vsoft-release.b64
 
-          gh secret set VSOFT_KEYSTORE_BASE64 < vsoft-release.b64
-          printf '%s' "$STORE_PASS" | gh secret set VSOFT_KEYSTORE_PASSWORD
-          printf '%s' "$ALIAS" | gh secret set VSOFT_KEY_ALIAS
-          printf '%s' "$KEY_PASS" | gh secret set VSOFT_KEY_PASSWORD
+          gh secret set KEYSTORE_BASE64 < vsoft-release.b64
+          printf '%s' "$STORE_PASS" | gh secret set KEYSTORE_PASSWORD
+          printf '%s' "$ALIAS" | gh secret set KEY_ALIAS
+          printf '%s' "$KEY_PASS" | gh secret set KEY_PASSWORD
 
           rm -f vsoft-release.jks vsoft-release.b64
 
