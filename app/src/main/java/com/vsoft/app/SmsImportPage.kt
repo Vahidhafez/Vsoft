@@ -34,6 +34,7 @@ fun SmsImportPage(
     val scope = rememberCoroutineScope()
     var pending by remember { mutableStateOf(SmsStore.pending(context)) }
     var granted by remember { mutableStateOf(smsPermissionGranted(context)) }
+    var enabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
     var message by remember { mutableStateOf("") }
 
     DisposableEffect(Unit) {
@@ -73,14 +74,24 @@ fun SmsImportPage(
                         OutlinedButton(onClick = { granted = smsPermissionGranted(context) }, modifier = Modifier.fillMaxWidth()) {
                             Text("بررسی مجدد")
                         }
+                    } else if (!enabled) {
+                        Text("دریافت پیامک بانکی خاموش است؛ تا زمان فعال‌کردن دوباره، پیامک جدیدی پردازش نمی‌شود.", fontSize = 13.sp)
+                        Button(onClick = {
+                            SmsStore.setEnabled(context, true)
+                            enabled = true
+                            message = "دریافت پیامک بانکی فعال شد."
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.Sms, null); Spacer(Modifier.width(8.dp)); Text("فعال‌کردن دریافت پیامک")
+                        }
                     } else {
-                        Text("دسترسی پیامک فعال است؛ پیامک‌های بانکی جدید خودکار بررسی می‌شوند.", fontSize = 13.sp)
+                        Text("پیامک‌ها ابتدا برای بررسی می‌آیند و بدون تأیید تو تراکنشی ثبت نمی‌شود.", fontSize = 13.sp)
                         OutlinedButton(onClick = {
                             scope.launch {
                                 val n = withContext(Dispatchers.IO) { SmsStore.importNewInbox(context) }
                                 message = when {
-                                    n >= 0 -> "$n مورد جدید پیدا شد."
+                                    n >= 0 -> "$n مورد جدید برای بررسی پیدا شد."
                                     n == -1 -> "دسترسی پیامک فعال نیست."
+                                    n == -3 -> "دریافت پیامک بانکی خاموش است."
                                     else -> "خواندن پیامک‌ها با خطا روبه‌رو شد."
                                 }
                                 pending = SmsStore.pending(context)
