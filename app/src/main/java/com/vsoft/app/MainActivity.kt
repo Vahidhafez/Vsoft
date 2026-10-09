@@ -1776,23 +1776,12 @@ fun AnimatedNavIcon(
 @Composable
 fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
     val visible = remember { MutableTransitionState(false) }
-    val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay((index * 42L).coerceAtMost(250L))
-        visible.targetState = true
-    }
+    LaunchedEffect(Unit) { visible.targetState = true }
+    // No per-row stagger: rows entering the viewport must be visible immediately.
     AnimatedVisibility(
         visibleState = visible,
-        enter = fadeIn(tween(320)) + slideInHorizontally(
-            animationSpec = tween(300, easing = FastOutSlowInEasing)
-        ) { direction * it / 14 } + scaleIn(
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
-            initialScale = 0.985f
-        ),
-        exit = fadeOut(tween(160)) + scaleOut(
-            animationSpec = tween(160, easing = FastOutSlowInEasing),
-            targetScale = 0.99f
-        )
+        enter = fadeIn(tween(90)),
+        exit = fadeOut(tween(70))
     ) { content() }
 }
 
@@ -2278,17 +2267,7 @@ fun FinancePage(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Surface(
-                                shape = RoundedCornerShape(11.dp),
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = .08f)
-                            ) {
-                                Icon(
-                                    Icons.Default.CalendarMonth,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(8.dp).size(17.dp)
-                                )
-                            }
+
                         }
                     }
                     itemsIndexed(entries, key = { _, it -> it.id }) { index, t ->
@@ -5168,13 +5147,18 @@ fun CardItem(
                     },
                     label = "card_number_reveal"
                 ) { value ->
-                    Text(
-                        value,
-                        fontSize = 16.sp,
-                        letterSpacing = 1.4.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            value,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp,
+                            letterSpacing = 1.4.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White,
+                            maxLines = 1
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(18.dp))
