@@ -25,6 +25,9 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Run balance migration regression tests
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
+
       - name: Prepare stable release signing
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
