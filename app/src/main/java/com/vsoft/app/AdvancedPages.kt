@@ -317,37 +317,73 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
                         "ar" -> listOf("السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة")
                         else -> listOf("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه")
                     }
-                    Row(Modifier.fillMaxWidth()) {
-                        weekdays.forEach { weekday ->
-                            Box(Modifier.weight(1f).padding(vertical = 5.dp), contentAlignment = Alignment.Center) {
-                                Text(
-                                    weekday,
-                                    fontSize = if (language == "fa") 9.sp else 8.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    softWrap = false
-                                )
+                    // Keep the Persian week order fixed: Saturday on the right, Friday on the left.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .48f))
+                                .padding(horizontal = 3.dp, vertical = 5.dp)
+                        ) {
+                            weekdays.forEachIndexed { index, weekday ->
+                                val isFriday = index == 6
+                                Box(
+                                    Modifier.weight(1f).padding(horizontal = 1.dp, vertical = 1.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        weekday,
+                                        fontSize = if (language == "fa") 10.sp else 9.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (isFriday) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
                             }
                         }
-                    }
-                    val cells = buildList<Int?> {
-                        repeat(offset) { add(null) }
-                        for (d in 1..jalaliMonthDays(year, month)) add(d)
-                        while (size % 7 != 0) add(null)
-                    }
-                    cells.chunked(7).forEach { week ->
-                        Row(Modifier.fillMaxWidth()) {
-                            week.forEach { day ->
-                                Box(Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
-                                    if (day == null) Spacer(Modifier.size(42.dp))
-                                    else Box(Modifier.size(42.dp).clip(CircleShape).background(if (day == selectedDay) MaterialTheme.colorScheme.primary else Color.Transparent).clickable { selectedDay = day }, contentAlignment = Alignment.Center) {
-                                        Text(day.toString(), color = if (day == selectedDay) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
+                        val cells = buildList<Int?> {
+                            repeat(offset) { add(null) }
+                            for (d in 1..jalaliMonthDays(year, month)) add(d)
+                            while (size % 7 != 0) add(null)
+                        }
+                        cells.chunked(7).forEach { week ->
+                            Row(Modifier.fillMaxWidth()) {
+                                week.forEachIndexed { columnIndex, day ->
+                                    Box(Modifier.weight(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                                        if (day == null) Spacer(Modifier.size(42.dp))
+                                        else {
+                                            val isSelected = day == selectedDay
+                                            val isFriday = columnIndex == 6
+                                            Box(
+                                                Modifier.size(42.dp).clip(CircleShape)
+                                                    .background(
+                                                        when {
+                                                            isSelected -> MaterialTheme.colorScheme.primary
+                                                            isFriday -> MaterialTheme.colorScheme.tertiary.copy(alpha = .09f)
+                                                            else -> Color.Transparent
+                                                        }
+                                                    )
+                                                    .clickable { selectedDay = day },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    day.toString(),
+                                                    color = when {
+                                                        isSelected -> MaterialTheme.colorScheme.onPrimary
+                                                        isFriday -> MaterialTheme.colorScheme.tertiary
+                                                        else -> MaterialTheme.colorScheme.onSurface
+                                                    },
+                                                    fontWeight = if (isSelected || isFriday) FontWeight.Bold else FontWeight.Medium
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+
                 }
             }
         }
