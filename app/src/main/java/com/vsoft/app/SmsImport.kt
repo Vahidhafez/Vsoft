@@ -190,7 +190,9 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
     val amountRial = amount * factor
     if (amountRial < 1000L) return null
 
-    val hash = sha(sender + "|" + rawBody)
+    // Use normalized sender/body plus the SMS timestamp: identical transactions on different days
+    // must remain distinct, while the same SMS from the receiver and inbox scan deduplicates.
+    val hash = sha(cleanSender + "|" + text.trim() + "|" + time)
     return PendingSms(
         id = hash.take(12).toLong(16),
         hash = hash,
@@ -432,7 +434,8 @@ class SmsReceiver : BroadcastReceiver() {
                 if (parts == null || parts.isEmpty()) return@launch
                 val sender = parts[0].originatingAddress ?: ""
                 val body = parts.joinToString("") { it.messageBody ?: "" }
-                val time = System.currentTimeMillis()
+                val time = parts.maxOfOrNull { it.timestampMillis } ?: System.currentTimeMillis()
+                // Keep the carrier timestamp so inbox scans and broadcasts identify the same SMS.
                 // پیامک فقط وارد صف بررسی می‌شود؛ ثبت مالی هرگز بدون تأیید کاربر انجام نمی‌شود.
                 SmsStore.addIfBank(context, sender, body, time)
             } catch (_: Exception) {
