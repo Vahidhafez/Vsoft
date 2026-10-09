@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,7 +63,12 @@ fun SmsImportPage(
         contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
     ) {
         item {
-            Text("پیامک بانکی", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+            VsoftPremiumPageHero(
+                title = "پیامک بانکی",
+                subtitle = "پیامک‌ها قبل از ثبت تراکنش بررسی و تأیید می‌شوند.",
+                icon = Icons.Default.MarkEmailRead,
+                accent = Color(0xFFD18A32)
+            )
             Text(
                 "با تعیین بانک یک پیامک، تمام پیامک‌های همان فرستنده در همان بخش قرار می‌گیرند.",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
