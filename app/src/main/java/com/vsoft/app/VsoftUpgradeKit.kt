@@ -76,7 +76,11 @@ fun VsoftSwipeToDelete(
     var deleting by remember { mutableStateOf(false) }
     var hapticSent by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
-    val rtl = LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    // Base the gesture on the app language as well as Compose direction. Some screens
+    // can inherit LTR layout locally while the app is Persian; the gesture must still
+    // follow the Persian physical convention (finger moves from left to right).
+    val rtl = LocalVsoftLanguage.current != "en" ||
+        LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val density = LocalDensity.current
     // Require a deliberate long swipe, scaled in dp so the gesture feels consistent across phones.
     val threshold = with(density) { 150.dp.toPx() }
@@ -135,7 +139,9 @@ fun VsoftSwipeToDelete(
     ) {
         Box(
             Modifier.fillMaxSize(),
-            contentAlignment = if (rtl) Alignment.CenterStart else Alignment.CenterEnd
+            // The revealed delete action belongs on the side exposed by the swipe:
+            // physical left for RTL (swipe right), physical right for LTR (swipe left).
+            contentAlignment = Alignment.CenterEnd
         ) {
             AnimatedVisibility(
                 visible = progress > 0.12f,
