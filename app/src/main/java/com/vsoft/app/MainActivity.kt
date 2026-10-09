@@ -699,10 +699,25 @@ internal fun recoverLegacyOpeningBalance(
     val oldSmsTransactions = cardTransactions.filter {
         it.description.startsWith("ثبت خودکار از پیامک")
     }
-    val latestSmsDate = oldSmsTransactions.maxOfOrNull { it.date } ?: return legacyBalance
+    if (oldSmsTransactions.isEmpty()) return legacyBalance
+
+    // The confirmation-based legacy flow gave SMS transactions a wall-clock ID.
+    // This matters because an older SMS could be confirmed after a newer one and overwrite
+    // the saved card balance. Hash-based IDs from the older receiver flow are not timestamps.
+    val now = System.currentTimeMillis()
+    fun isEpochMillisId(id: Long) = id in 946_684_800_000L..(now + 86_400_000L)
+    val lastAppliedSms = oldSmsTransactions
+        .filter { isEpochMillisId(it.id) }
+        .maxByOrNull { it.id }
+    val cutoffDate = lastAppliedSms?.date
+        ?: oldSmsTransactions.maxOfOrNull { it.date }
+        ?: return legacyBalance
 
     val movementsAlreadyReflectedBySms = cardTransactions
-        .filter { it.date <= latestSmsDate }
+        .filter { transaction ->
+            transaction.date <= cutoffDate &&
+                (lastAppliedSms == null || !isEpochMillisId(transaction.id) || transaction.id <= lastAppliedSms.id)
+        }
         .sumOf { if (it.type == "income") it.amount else -it.amount }
 
     return legacyBalance - movementsAlreadyReflectedBySms
