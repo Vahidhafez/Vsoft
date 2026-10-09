@@ -681,10 +681,36 @@ fun encodeCards(list: List<BankCard>): String {
     return array.toString()
 }
 
+/**
+ * Older releases sometimes replaced the card's manually entered opening balance with
+ * the balance reported by a bank SMS. In that legacy format, the JSON field was named
+ * "balance". Recover the opening amount only when there is evidence of that old SMS
+ * path, and reverse only movements already reflected by the latest dated SMS transaction.
+ *
+ * If there is no old auto-imported SMS transaction, the legacy balance is presumed to
+ * still be the user's manually entered opening balance and is preserved exactly.
+ */
+private fun recoverLegacyOpeningBalance(
+    cardName: String,
+    legacyBalance: Long,
+    transactions: List<Transaction>
+): Long {
+    val cardTransactions = transactions.filter { it.card == cardName }
+    val oldSmsTransactions = cardTransactions.filter {
+        it.description.startsWith("ثبت خودکار از پیامک")
+    }
+    val latestSmsDate = oldSmsTransactions.maxOfOrNull { it.date } ?: return legacyBalance
+
+    val movementsAlreadyReflectedBySms = cardTransactions
+        .filter { it.date <= latestSmsDate }
+        .sumOf { if (it.type == "income") it.amount else -it.amount }
+
+    return legacyBalance - movementsAlreadyReflectedBySms
+}
+
 fun decodeCards(
     value: String,
-    transactions: List<Transaction> = emptyList(),
-    workDays: List<WorkDay> = emptyList()
+    transactions: List<Transaction> = emptyList()
 ): MutableList<BankCard> {
     val result = mutableListOf<BankCard>()
 
@@ -697,16 +723,9 @@ fun decodeCards(
             val openingBalance = when {
                 // New format is authoritative: never recalculate or overwrite a manually set opening balance.
                 o.has("openingBalance") && !o.isNull("openingBalance") -> o.optLong("openingBalance", 0L)
-                // Legacy builds could persist the live balance in the old "balance" field.
-                // Convert it back to an opening balance once, removing movements already represented in history.
-                o.has("balance") && !o.isNull("balance") -> {
-                    val legacyBalance = o.optLong("balance", 0L)
-                    val movement = transactions
-                        .filter { it.card == cardName }
-                        .sumOf { if (it.type == "income") it.amount else -it.amount }
-                    val workIncome = workDays.filter { it.card == cardName }.sumOf { it.income }
-                    legacyBalance - movement - workIncome
-                }
+                // Legacy builds could persist a live bank-reported balance in the old "balance" field.
+                o.has("balance") && !o.isNull("balance") ->
+                    recoverLegacyOpeningBalance(cardName, o.optLong("balance", 0L), transactions)
                 else -> 0L
             }
 
@@ -870,10 +889,13 @@ fun encodeBackup(data: VsoftBackup): String {
 fun decodeBackup(value: String): VsoftBackup? {
     return try {
         val o = JSONObject(value)
+        val transactions = decodeTransactions(o.optJSONArray("transactions")?.toString() ?: "[]")
+        val workDays = decodeWork(o.optJSONArray("workDays")?.toString() ?: "[]")
+        val cards = decodeCards(o.optJSONArray("cards")?.toString() ?: "[]", transactions)
         VsoftBackup(
-            decodeTransactions(o.optJSONArray("transactions")?.toString() ?: "[]"),
-            decodeWork(o.optJSONArray("workDays")?.toString() ?: "[]"),
-            decodeCards(o.optJSONArray("cards")?.toString() ?: "[]"),
+            transactions,
+            workDays,
+            cards,
             decodePeople(o.optJSONArray("people")?.toString() ?: "[]"),
             decodeWorkplaces(o.optJSONArray("workplaces")?.toString() ?: "[]"),
             decodeWorkPurchases(o.optJSONArray("workPurchases")?.toString() ?: "[]"),
@@ -991,7 +1013,7 @@ fun VsoftApp() {
             decodeWork(preferences[WORK_KEY] ?: "[]")
 
         cards =
-            decodeCards(preferences[CARDS_KEY] ?: "[]", transactions, workDays)
+            decodeCards(preferences[CARDS_KEY] ?: "[]", transactions)
 
         // Persist the normalized card format so legacy live balances are migrated only once.
         context.dataStore.edit { prefs ->
