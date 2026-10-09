@@ -3651,6 +3651,8 @@ private fun ReportStatTile(title: String, value: String, icon: androidx.compose.
 
 @Composable
 private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
+    var selectedMonth by remember(monthly) { mutableStateOf(monthly.lastOrNull()?.first.orEmpty()) }
+    val selectedPoint = monthly.firstOrNull { it.first == selectedMonth } ?: monthly.lastOrNull()
     val maxValue = monthly.flatMap { listOf(it.second, it.third) }.maxOrNull()?.coerceAtLeast(1L) ?: 1L
     Card(
         Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(26.dp)),
@@ -3682,8 +3684,9 @@ private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
                 verticalAlignment = Alignment.Bottom
             ) {
                 monthly.forEachIndexed { index, point ->
-                    val targetIncome = (point.second.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
-                    val targetExpense = (point.third.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
+                    val targetIncome = if (point.second > 0L) (point.second.toFloat() / maxValue.toFloat()).coerceIn(0.035f, 1f) else 0f
+                    val targetExpense = if (point.third > 0L) (point.third.toFloat() / maxValue.toFloat()).coerceIn(0.035f, 1f) else 0f
+                    val isSelected = point.first == selectedPoint?.first
                     val incomeFraction by animateFloatAsState(
                         targetValue = targetIncome,
                         animationSpec = tween(650, delayMillis = index * 70, easing = FastOutSlowInEasing),
@@ -3699,6 +3702,10 @@ private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom,
                         modifier = Modifier.weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = .08f) else Color.Transparent)
+                            .clickable { selectedMonth = point.first }
+                            .padding(horizontal = 2.dp, vertical = 5.dp)
                     ) {
                         Box(
                             Modifier.fillMaxWidth().height(140.dp),
@@ -3724,9 +3731,47 @@ private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(jalaliMonthName(month).take(3), fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1)
+                    }
+                }
+            }
+            selectedPoint?.let { point ->
+                Spacer(Modifier.height(10.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .42f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+                ) {
+                    Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(7.dp))
+                            Text(
+                                jalaliMonthName(point.first.substringAfterLast("/").toIntOrNull() ?: 1) + " " + point.first.substringBefore("/"),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 13.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                money(point.second - point.third),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 13.sp,
+                                color = if (point.second >= point.third) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(uiText("درآمد"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(money(point.second), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(uiText("هزینه"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(money(point.third), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1)
+                            }
+                        }
                     }
                 }
             }
