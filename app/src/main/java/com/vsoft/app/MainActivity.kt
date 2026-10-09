@@ -2192,58 +2192,48 @@ fun FinancePage(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item(key = "finance_header") {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                uiText("مدیریت تراکنش‌ها"),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(
-                                transactions.size.toString() + " " +
-                                    if (LocalVsoftLanguage.current == "en") "transactions" else "تراکنش",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = .10f)
-                        ) {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(10.dp).size(20.dp)
-                            )
-                        }
-                    }
-
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Card(
-                        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                     ) {
-                        Row(
-                            Modifier.padding(14.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Column(
+                            Modifier.fillMaxWidth().background(
+                                Brush.linearGradient(listOf(Color(0xFF18284E), Color(0xFF315AC1), Color(0xFF287F86)))
+                            ).padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            DashboardMiniStat(uiText("درآمد"), money(incomeTotal), Icons.Default.TrendingUp,
-                                MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                            DashboardMiniStat(uiText("هزینه"), money(expenseTotal), Icons.Default.TrendingDown,
-                                MaterialTheme.colorScheme.error, Modifier.weight(1f))
-                            DashboardMiniStat(uiText("خالص"), money(netTotal), Icons.Default.AccountBalanceWallet,
-                                if (netTotal >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                Modifier.weight(1f))
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(uiText("امور مالی"), color = Color.White.copy(alpha = .78f), fontSize = 12.sp)
+                                    Text(uiText("تراکنش‌های تو"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(
+                                        transactions.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "transactions" else "تراکنش ثبت‌شده",
+                                        color = Color.White.copy(alpha = .75f), fontSize = 11.sp
+                                    )
+                                }
+                                Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.AccountBalanceWallet, null, tint = Color.White, modifier = Modifier.size(25.dp))
+                                }
+                            }
+                            HorizontalDivider(color = Color.White.copy(alpha = .18f))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("درآمد"), color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                                    Text(money(incomeTotal), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("هزینه"), color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                                    Text(money(expenseTotal), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("خالص"), color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                                    Text(money(netTotal), color = if (netTotal >= 0) Color(0xFF9AF0CF) else Color(0xFFFFC0B7), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                            }
                         }
                     }
-
                     OutlinedTextField(
                         search, { search = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -2983,61 +2973,47 @@ fun WorkPage(
         ) {
             item(key = "work_header") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                uiText("مدیریت روزهای کاری"),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(
-                                if (LocalVsoftLanguage.current == "en")
-                                    "${workDays.size} workdays • ${String.format(Locale.US, "%.1f", totalHours)} hours"
-                                else
-                                    "${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = .10f)
-                        ) {
-                            Icon(
-                                Icons.Default.WorkHistory,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(10.dp).size(20.dp)
-                            )
-                        }
-                    }
-
                     Card(
-                        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                     ) {
-                        Row(
-                            Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Column(
+                            Modifier.fillMaxWidth().background(
+                                Brush.linearGradient(listOf(Color(0xFF0D665F), Color(0xFF128C83), Color(0xFF3A9E9A)))
+                            ).padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            DashboardMetric(
-                                "درآمد کاری", money(totalIncome), Icons.Default.Payments,
-                                MaterialTheme.colorScheme.secondary, Modifier.weight(1f)
-                            )
-                            DashboardMetric(
-                                "ساعت کاری", String.format(Locale.US, "%.1f", totalHours),
-                                Icons.Default.Schedule, MaterialTheme.colorScheme.primary, Modifier.weight(1f)
-                            )
-                            DashboardMetric(
-                                "محل‌های کار", workplaces.size.toString(), Icons.Default.Place,
-                                MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)
-                            )
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(uiText("مدیریت کار"), color = Color.White.copy(alpha = .78f), fontSize = 12.sp)
+                                    Text(uiText("روزهای کاری من"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(
+                                        if (LocalVsoftLanguage.current == "en")
+                                            "${workDays.size} workdays • ${String.format(Locale.US, "%.1f", totalHours)} hours"
+                                        else "${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
+                                        color = Color.White.copy(alpha = .78f), fontSize = 11.sp
+                                    )
+                                }
+                                Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .15f)), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.WorkHistory, null, tint = Color.White, modifier = Modifier.size(25.dp))
+                                }
+                            }
+                            HorizontalDivider(color = Color.White.copy(alpha = .2f))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("درآمد کاری"), color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                    Text(money(totalIncome), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("ساعت کاری"), color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                    Text(String.format(Locale.US, "%.1f", totalHours), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("محل‌های کار"), color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                    Text(workplaces.size.toString(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
@@ -3452,31 +3428,27 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(bottom = 28.dp)) {
         item {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        uiText("گزارش مالی، روند ماهانه و عملکرد کارت را یکجا ببینید."),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                FilledTonalButton(
-                    onClick = { showReceiptBuilder = true },
-                    modifier = Modifier.pressScale(0.98f),
-                    shape = RoundedCornerShape(15.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
+                Row(
+                    Modifier.fillMaxWidth().background(
+                        Brush.linearGradient(listOf(Color(0xFF4B327F), Color(0xFF7651B7), Color(0xFFB16DAD)))
+                    ).padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.ReceiptLong, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        if (LocalVsoftLanguage.current == "en") "Invoice"
-                        else if (LocalVsoftLanguage.current == "ar") "فاتورة"
-                        else "فاکتور"
-                    )
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(if (LocalVsoftLanguage.current == "en") "Your money, clearly" else "تصویر روشن از پولت", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(uiText("گزارش مالی، روند ماهانه و عملکرد کارت را یکجا ببینید."), color = Color.White.copy(alpha = .78f), fontSize = 11.sp)
+                    }
+                    IconButton(
+                        onClick = { showReceiptBuilder = true },
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = .15f))
+                    ) {
+                        Icon(Icons.Default.ReceiptLong, contentDescription = "فاکتور", tint = Color.White)
+                    }
                 }
             }
         }
