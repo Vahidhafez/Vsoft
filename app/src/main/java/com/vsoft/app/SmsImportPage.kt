@@ -45,8 +45,15 @@ fun SmsImportPage(
         onDispose { SmsStore.unregister(context, listener) }
     }
 
+    var enableAfterPermission by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         granted = smsPermissionGranted(context)
+        if (granted && enableAfterPermission) {
+            SmsStore.setEnabled(context, true)
+            enabled = true
+            message = "دریافت پیامک بانکی فعال شد."
+        }
+        enableAfterPermission = false
     }
 
     LazyColumn(
@@ -81,6 +88,7 @@ fun SmsImportPage(
                             checked = enabled,
                             onCheckedChange = { turnOn ->
                                 if (turnOn && !granted) {
+                                    enableAfterPermission = true
                                     permissionLauncher.launch(
                                         arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
                                     )
@@ -197,6 +205,7 @@ private fun SmsPendingCard(
     var selectedCard by remember(p.id) { mutableStateOf(matched?.name ?: "") }
     var cardMenuOpen by remember { mutableStateOf(false) }
     var bankMenuOpen by remember { mutableStateOf(false) }
+    var confirming by remember(p.id) { mutableStateOf(false) }
     val isIncome = p.type == "income"
     val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error
     val shownAmount = if (currency == "IRT") p.amountRial / 10 else p.amountRial
@@ -242,9 +251,18 @@ private fun SmsPendingCard(
             }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onReject, modifier = Modifier.weight(1f)) { Text("رد") }
-                Button(onClick = { onConfirm(selectedCard) }, enabled = selectedCard.isNotBlank(), modifier = Modifier.weight(1f)) {
-                    Text("تأیید و ثبت")
+                OutlinedButton(onClick = onReject, enabled = !confirming, modifier = Modifier.weight(1f)) { Text("رد") }
+                Button(
+                    onClick = {
+                        if (!confirming && selectedCard.isNotBlank()) {
+                            confirming = true
+                            onConfirm(selectedCard)
+                        }
+                    },
+                    enabled = selectedCard.isNotBlank() && !confirming,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if (confirming) "در حال ثبت…" else "تأیید و ثبت")
                 }
             }
         }
