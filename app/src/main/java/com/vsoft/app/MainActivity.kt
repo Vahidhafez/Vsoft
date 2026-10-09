@@ -2346,6 +2346,7 @@ fun TransactionCard(
 ) {
     val isIncome = transaction.type == "income"
     val accent = if (isIncome) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary
+    var actionsExpanded by remember(transaction.id) { mutableStateOf(false) }
     val iconScale by animateFloatAsState(
         targetValue = 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -2400,15 +2401,29 @@ fun TransactionCard(
                     color = accent, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp
                 )
                 if (showActions) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onReceipt, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.ReceiptLong, uiText("رسید"), modifier = Modifier.size(17.dp))
                         }
-                        IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Edit, null, modifier = Modifier.size(17.dp))
-                        }
-                        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(17.dp))
+                        Box {
+                            IconButton(onClick = { actionsExpanded = true }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.MoreVert, uiText("گزینه‌های تراکنش"), modifier = Modifier.size(18.dp))
+                            }
+                            DropdownMenu(
+                                expanded = actionsExpanded,
+                                onDismissRequest = { actionsExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(uiText("ویرایش تراکنش")) },
+                                    leadingIcon = { Icon(Icons.Default.Edit, null) },
+                                    onClick = { actionsExpanded = false; onEdit() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(uiText("حذف تراکنش")) },
+                                    leadingIcon = { Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) },
+                                    onClick = { actionsExpanded = false; onDelete() }
+                                )
+                            }
                         }
                     }
                 }
