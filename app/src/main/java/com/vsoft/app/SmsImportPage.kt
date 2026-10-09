@@ -64,6 +64,36 @@ fun SmsImportPage(
         item {
             Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("دریافت پیامک بانکی", fontWeight = FontWeight.Bold)
+                            Text(
+                                if (enabled) "فعال؛ پیامک‌های جدید فقط وارد صف بررسی می‌شوند."
+                                else "خاموش؛ پیامک‌های جدید پردازش نمی‌شوند.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = enabled,
+                            onCheckedChange = { turnOn ->
+                                if (turnOn && !granted) {
+                                    permissionLauncher.launch(
+                                        arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
+                                    )
+                                    message = "برای فعال‌سازی، ابتدا دسترسی پیامک را تأیید کن."
+                                } else {
+                                    SmsStore.setEnabled(context, turnOn)
+                                    enabled = turnOn
+                                    message = if (turnOn) "دریافت پیامک بانکی فعال شد."
+                                        else "دریافت پیامک خاموش شد؛ اطلاعات و صف قبلی حفظ شدند."
+                                }
+                            }
+                        )
+                    }
                     if (!granted) {
                         Text("برای خواندن پیامک‌های بانکی، دسترسی پیامک لازم است.", fontWeight = FontWeight.Bold)
                         Text("اگر پنجره درخواست باز نشد، دسترسی SMS برنامه Vsoft را از تنظیمات گوشی فعال کن.",
