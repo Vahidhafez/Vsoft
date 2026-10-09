@@ -10,7 +10,8 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.vsoft.app"
+        applicationId = if (providers.gradleProperty("VSOFT_PREVIEW").orNull == "true") "com.vsoft.app.preview" else "com.vsoft.app"
+        manifestPlaceholders["appLabel"] = if (providers.gradleProperty("VSOFT_PREVIEW").orNull == "true") "VSOFT آزمایشی" else "Vsoft"
         minSdk = 26
         targetSdk = 35
         versionCode = providers.gradleProperty("VSOFT_VERSION_CODE").orElse("2").get().toInt()
