@@ -3034,7 +3034,10 @@ fun WorkPage(
                 }
             } else {
                 itemsIndexed(
-                    workDays.sortedByDescending { it.id },
+                    workDays.sortedWith(
+                        compareByDescending<WorkDay> { it.startDate.ifBlank { it.date } }
+                            .thenByDescending { it.id }
+                    ),
                     key = { _, it -> it.id }
                 ) { index, w ->
                     VsoftEntrance(index.coerceAtMost(7)) {
@@ -3088,6 +3091,7 @@ fun WorkPage(
 fun WorkCard(work: WorkDay, onDelete: () -> Unit, onEdit: () -> Unit = {}) {
     val hours = calculateHours(work.start, work.end)
     val accent = MaterialTheme.colorScheme.primary
+    var actionsExpanded by remember(work.id) { mutableStateOf(false) }
     Card(
         Modifier.fillMaxWidth().clickable { onEdit() }.animateContentSize().pressScale(0.985f),
         shape = RoundedCornerShape(26.dp),
@@ -3114,11 +3118,25 @@ fun WorkCard(work: WorkDay, onDelete: () -> Unit, onEdit: () -> Unit = {}) {
                     else work.date
                     Text(dateText, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, uiText("ویرایش"), tint = MaterialTheme.colorScheme.primary)
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.DeleteOutline, uiText("حذف"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Box {
+                    IconButton(onClick = { actionsExpanded = true }) {
+                        Icon(Icons.Default.MoreVert, uiText("گزینه‌های روز کاری"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    DropdownMenu(
+                        expanded = actionsExpanded,
+                        onDismissRequest = { actionsExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(uiText("ویرایش روز کاری")) },
+                            leadingIcon = { Icon(Icons.Default.Edit, null) },
+                            onClick = { actionsExpanded = false; onEdit() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(uiText("حذف روز کاری")) },
+                            leadingIcon = { Icon(Icons.Default.DeleteOutline, null, tint = MaterialTheme.colorScheme.error) },
+                            onClick = { actionsExpanded = false; onDelete() }
+                        )
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
