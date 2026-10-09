@@ -1,0 +1,80 @@
+name: Build VSOFT Redesign Preview
+
+on:
+  push:
+    branches:
+      - preview/redesign
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Run regression tests
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Prepare release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "KEYSTORE_BASE64 is not configured."
+            exit 1
+          fi
+          mkdir -p app/signing
+          echo "$KEYSTORE_BASE64" | base64 --decode > app/signing/vsoft-release.jks
+          test -s app/signing/vsoft-release.jks
+
+      - name: Build isolated preview APK
+        env:
+          VSOFT_SIGNING_ENABLED: "true"
+          KSTOREPWD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          gradle assembleRelease --no-daemon --stacktrace \
+            -PVSOFT_PREVIEW=true \
+            -PVSOFT_VERSION_CODE="${{ github.run_number }}" \
+            -PVSOFT_VERSION_NAME="1.0-preview.${{ github.run_number }}"
+
+      - name: Verify preview APK identity and signature
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          APKANALYZER=$(find "$ANDROID_HOME/cmdline-tools" -name apkanalyzer -type f | sort -V | tail -n 1 || true)
+          if [ -n "$APKANALYZER" ]; then
+            test "$("$APKANALYZER" manifest application-id "$APK")" = "com.vsoft.app.preview"
+            "$APKANALYZER" manifest version-name "$APK"
+          fi
+
+      - name: Prepare preview APK
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/VSOFT-Preview-1.0.${{ github.run_number }}.apk"
+
+      - name: Upload preview APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VSOFT-Redesign-Preview-${{ github.run_number }}
+          path: app/build/outputs/apk/release/VSOFT-Preview-1.0.${{ github.run_number }}.apk
+          if-no-files-found: error
