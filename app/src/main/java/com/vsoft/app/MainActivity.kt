@@ -1472,6 +1472,15 @@ fun MainScreen(
                             Text(title, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                         }
                     }
+                    if (selectedPage == 10) {
+                        IconButton(
+                            onClick = { selectedPage = 2 },
+                            modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            Icon(Icons.Default.ArrowForward, contentDescription = "بازگشت به کار", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(Modifier.width(7.dp))
+                    }
                     IconButton(onClick = { selectedPage = 5 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)) {
                         Icon(Icons.Default.CreditCard, contentDescription = "کارت‌ها", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -1498,9 +1507,9 @@ fun MainScreen(
                 ) {
                     RedesignNavItem(strings.dashboard, Icons.Default.Home, selectedPage == 0, Modifier.weight(1f)) { selectedPage = 0 }
                     RedesignNavItem(strings.finance, Icons.Default.AccountBalanceWallet, selectedPage == 1, Modifier.weight(1f)) { selectedPage = 1 }
-                    RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2, Modifier.weight(1f)) { selectedPage = 2 }
+                    RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2 || selectedPage == 10, Modifier.weight(1f)) { selectedPage = 2 }
                     RedesignNavItem(strings.reports, Icons.Default.Insights, selectedPage == 3, Modifier.weight(1f)) { selectedPage = 3 }
-                    RedesignNavItem(if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر", Icons.Default.GridView, selectedPage >= 5, Modifier.weight(1f)) { selectedPage = 8 }
+                    RedesignNavItem(if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر", Icons.Default.GridView, selectedPage in 5..9, Modifier.weight(1f)) { selectedPage = 8 }
                 }
             }
         }
