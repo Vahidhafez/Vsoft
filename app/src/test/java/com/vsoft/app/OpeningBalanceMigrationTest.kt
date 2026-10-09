@@ -74,6 +74,58 @@ class OpeningBalanceMigrationTest {
         )
     }
 
+
+    @Test
+    fun usesLastConfirmedSmsEvenWhenItsMessageDateIsOlder() {
+        val firstConfirmation = System.currentTimeMillis() - 20_000L
+        val lastConfirmation = System.currentTimeMillis() - 10_000L
+        val transactions = listOf(
+            transaction(
+                type = "expense",
+                amount = 10_000_000L,
+                date = "1405/07/09",
+                description = "ثبت خودکار از پیامک بانک"
+            ).copy(id = firstConfirmation),
+            transaction(
+                type = "expense",
+                amount = 3_000_000L,
+                date = "1405/07/01",
+                description = "ثبت خودکار از پیامک بانک"
+            ).copy(id = lastConfirmation)
+        )
+
+        // The older message was confirmed last, so its 12M reported balance overwrote
+        // the card value. Only the 3M movement through that older SMS belongs in recovery.
+        assertEquals(
+            15_000_000L,
+            recoverLegacyOpeningBalance("کارت اصلی", 12_000_000L, transactions)
+        )
+    }
+
+    @Test
+    fun excludesSameDayTransactionsCreatedAfterTheLastSmsConfirmation() {
+        val smsConfirmation = System.currentTimeMillis() - 10_000L
+        val laterManualTransaction = System.currentTimeMillis()
+        val transactions = listOf(
+            transaction(
+                type = "expense",
+                amount = 10_000_000L,
+                date = "1405/07/09",
+                description = "ثبت خودکار از پیامک بانک"
+            ).copy(id = smsConfirmation),
+            transaction(
+                type = "expense",
+                amount = 2_000_000L,
+                date = "1405/07/09"
+            ).copy(id = laterManualTransaction)
+        )
+
+        assertEquals(
+            15_000_000L,
+            recoverLegacyOpeningBalance("کارت اصلی", 5_000_000L, transactions)
+        )
+    }
+
     @Test
     fun ignoresTransactionsBelongingToAnotherCard() {
         val transactions = listOf(
