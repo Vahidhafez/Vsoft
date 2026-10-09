@@ -1905,7 +1905,6 @@ fun DashboardPage(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 DashboardMetric("تراکنش‌ها", transactions.size.toString(), Icons.Default.ReceiptLong, Color(0xFF456DE2), Modifier.weight(1f).clickable { onNavigate(1) })
                 DashboardMetric("ساعت کاری", String.format(Locale.US, "%.1f", totalHours), Icons.Default.AccessTime, Color(0xFF0C9A81), Modifier.weight(1f).clickable { onNavigate(2) })
-                DashboardMetric("کارت‌ها", cards.size.toString(), Icons.Default.CreditCard, Color(0xFFB16DDB), Modifier.weight(1f).clickable { onNavigate(5) })
             }
         }
 
@@ -1951,26 +1950,6 @@ fun DashboardPage(
                         DashboardMiniStat("درآمد", money(monthIncome + monthWorkIncome), Icons.Default.TrendingUp, Color(0xFF0C9A81), Modifier.weight(1f))
                         DashboardMiniStat("هزینه", money(monthExpenses), Icons.Default.TrendingDown, Color(0xFFD66A5E), Modifier.weight(1f))
                         DashboardMiniStat("روز کاری", monthWorkDays.size.toString(), Icons.Default.EventAvailable, Color(0xFF456DE2), Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("کارت‌های بانکی", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                TextButton(onClick = { onNavigate(5) }) { Text("همه کارت‌ها") }
-            }
-        }
-        if (cards.isEmpty()) {
-            item { EmptyState("هنوز کارتی ثبت نشده", Icons.Default.CreditCard) }
-        } else {
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(end = 2.dp)) {
-                    items(cards, key = { it.id }) { card ->
-                        Box(Modifier.clip(RoundedCornerShape(26.dp)).clickable { onNavigate(5) }) {
-                            MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
-                        }
                     }
                 }
             }
