@@ -42,7 +42,6 @@ jobs:
         env:
           VSOFT_SIGNING_ENABLED: "true"
           KSTOREPWD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEYALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -euo pipefail
