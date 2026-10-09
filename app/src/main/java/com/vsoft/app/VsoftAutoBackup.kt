@@ -58,10 +58,13 @@ class VsoftAutoBackupWorker(
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result = runCatching {
         val p = applicationContext.dataStore.data.first()
+        val transactions = decodeTransactions(p[TRANSACTIONS_KEY] ?: "[]")
+        val workDays = decodeWork(p[WORK_KEY] ?: "[]")
+        val cards = decodeCards(p[CARDS_KEY] ?: "[]", transactions)
         val backup = VsoftBackup(
-            decodeTransactions(p[TRANSACTIONS_KEY] ?: "[]"),
-            decodeWork(p[WORK_KEY] ?: "[]"),
-            decodeCards(p[CARDS_KEY] ?: "[]"),
+            transactions,
+            workDays,
+            cards,
             decodePeople(p[PEOPLE_KEY] ?: "[]"),
             decodeWorkplaces(p[WORKPLACES_KEY] ?: "[]"),
             decodeWorkPurchases(p[WORK_PURCHASES_KEY] ?: "[]"),
