@@ -393,19 +393,84 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
         if (dayTransactions.isEmpty() && dayWork.isEmpty()) {
             item { Text(toolsText(language, "noActivity"), Modifier.padding(18.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         } else {
+            item {
+                val dayIncome = dayTransactions.filter { it.type == "income" }.sumOf { it.amount }
+                val dayExpense = dayTransactions.filter { it.type == "expense" }.sumOf { it.amount }
+                Card(
+                    Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            if (language == "en") "Daily summary" else if (language == "ar") "ملخص اليوم" else "خلاصه فعالیت روز",
+                            fontWeight = FontWeight.ExtraBold, fontSize = 15.sp
+                        )
+                        Text(
+                            if (language == "en") "${dayTransactions.size} transactions • ${dayWork.size} work entries"
+                            else if (language == "ar") "${dayTransactions.size} معاملات • ${dayWork.size} أيام عمل"
+                            else "${dayTransactions.size} تراکنش • ${dayWork.size} مورد کاری",
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(if (language == "en") "Income" else if (language == "ar") "الدخل" else "درآمد",
+                                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(money(dayIncome), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(if (language == "en") "Expenses" else if (language == "ar") "المصروفات" else "هزینه",
+                                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(money(dayExpense), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(if (language == "en") "Work income" else if (language == "ar") "دخل العمل" else "درآمد کار",
+                                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(money(dayWork.sumOf { it.income }), fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary)
+                            }
+                        }
+                    }
+                }
+            }
             items(dayTransactions, key = { "t" + it.id }) { t ->
-                ListItem(headlineContent = { Text(t.description.ifBlank { t.category }, fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text(toolsText(language, "transaction") + " • " + t.category) },
+                ListItem(
+                    headlineContent = { Text(t.description.ifBlank { t.category }, fontWeight = FontWeight.Bold) },
+                    supportingContent = {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text((if (language == "en") "Transaction" else if (language == "ar") "معاملة" else "تراکنش") +
+                                " • " + t.category + " • " + t.date)
+                            if (t.card.isNotBlank()) Text((if (language == "en") "Card" else if (language == "ar") "البطاقة" else "کارت") + ": " + t.card)
+                            if (t.person.isNotBlank()) Text((if (language == "en") "Person" else if (language == "ar") "الشخص" else "شخص مرتبط") + ": " + t.person)
+                            if (t.description.isNotBlank() && t.description != t.category) Text((if (language == "en") "Note" else if (language == "ar") "ملاحظة" else "توضیحات") + ": " + t.description)
+                        }
+                    },
                     leadingContent = { Icon(if (t.type == "income") Icons.Default.TrendingUp else Icons.Default.TrendingDown, null) },
-                    trailingContent = { Text(money(t.amount), fontWeight = FontWeight.Bold) },
-                    modifier = Modifier.vsoftGlass(RoundedCornerShape(18.dp)))
+                    trailingContent = {
+                        Text((if (t.type == "income") "+" else "−") + money(t.amount), fontWeight = FontWeight.Bold,
+                            color = if (t.type == "income") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                    },
+                    modifier = Modifier.vsoftGlass(RoundedCornerShape(18.dp))
+                )
             }
             items(dayWork, key = { "w" + it.id }) { w ->
-                ListItem(headlineContent = { Text(w.place.ifBlank { toolsText(language, "work") }, fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text(w.start + " → " + w.end + " • " + String.format(Locale.US, "%.1f", calculateHours(w.start, w.end)) + " " + toolsText(language, "hours")) },
+                ListItem(
+                    headlineContent = { Text(w.place.ifBlank { toolsText(language, "work") }, fontWeight = FontWeight.Bold) },
+                    supportingContent = {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(w.start + " → " + w.end + " • " +
+                                String.format(Locale.US, "%.1f", calculateHours(w.start, w.end)) + " " + toolsText(language, "hours"))
+                            if (w.card.isNotBlank()) Text((if (language == "en") "Card" else if (language == "ar") "البطاقة" else "کارت واریز") + ": " + w.card)
+                            if (w.person.isNotBlank()) Text((if (language == "en") "Person" else if (language == "ar") "الشخص" else "شخص مرتبط") + ": " + w.person)
+                            if (w.description.isNotBlank()) Text((if (language == "en") "Details" else if (language == "ar") "التفاصيل" else "توضیحات") + ": " + w.description)
+                        }
+                    },
                     leadingContent = { Icon(Icons.Default.Work, null) },
                     trailingContent = { Text(money(w.income), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary) },
-                    modifier = Modifier.vsoftGlass(RoundedCornerShape(18.dp)))
+                    modifier = Modifier.vsoftGlass(RoundedCornerShape(18.dp))
+                )
             }
         }
     }
