@@ -2160,6 +2160,8 @@ fun FinancePage(
         compareByDescending<Transaction> { it.date }
             .thenByDescending { it.id }
     )
+    // Preserve newest-first ordering, then render each calendar date as its own section.
+    val transactionGroups = list.groupBy { it.date }
     val incomeTotal = transactions.filter { it.type == "income" }.sumOf { it.amount }
     val expenseTotal = transactions.filter { it.type == "expense" }.sumOf { it.amount }
     val netTotal = incomeTotal - expenseTotal
@@ -2251,35 +2253,74 @@ fun FinancePage(
                     }
                 }
             } else {
-                itemsIndexed(list, key = { _, it -> it.id }) { index, t ->
-                    VsoftEntrance(index.coerceAtMost(7)) {
-                        VsoftSwipeToDelete(
-                            onDelete = {
-                                val x = transactions.toMutableList()
-                                x.removeAll { it.id == t.id }
-                                onTransactionsChange(x)
-                                scope.launch {
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = "تراکنش حذف شد",
-                                        actionLabel = "بازگردانی",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                    if (result == SnackbarResult.ActionPerformed) {
-                                        onTransactionsChange((x + t).sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending { it.id }).toMutableList())
-                                    }
-                                }
-                            }
+                transactionGroups.forEach { (transactionDate, entries) ->
+                    item(key = "finance_date_$transactionDate") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TransactionCard(
-                                t,
+                            Column(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Text(
+                                    transactionDate,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                val dayIncome = entries.filter { it.type == "income" }.sumOf { it.amount }
+                                val dayExpense = entries.filter { it.type == "expense" }.sumOf { it.amount }
+                                Text(
+                                    if (LocalVsoftLanguage.current == "en")
+                                        "${entries.size} transactions • +${money(dayIncome)} • −${money(dayExpense)}"
+                                    else "${entries.size} تراکنش • درآمد ${money(dayIncome)} • هزینه ${money(dayExpense)}",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(11.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = .08f)
+                            ) {
+                                Icon(
+                                    Icons.Default.CalendarMonth,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(8.dp).size(17.dp)
+                                )
+                            }
+                        }
+                    }
+                    itemsIndexed(entries, key = { _, it -> it.id }) { index, t ->
+                        VsoftEntrance(index.coerceAtMost(7)) {
+                            VsoftSwipeToDelete(
                                 onDelete = {
                                     val x = transactions.toMutableList()
                                     x.removeAll { it.id == t.id }
                                     onTransactionsChange(x)
-                                },
-                                onEdit = { edit = t; show = true },
-                                onReceipt = { receiptTransaction = t }
-                            )
+                                    scope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "تراکنش حذف شد",
+                                            actionLabel = "بازگردانی",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            onTransactionsChange((x + t).sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending { it.id }).toMutableList())
+                                        }
+                                    }
+                                }
+                            ) {
+                                TransactionCard(
+                                    t,
+                                    onDelete = {
+                                        val x = transactions.toMutableList()
+                                        x.removeAll { it.id == t.id }
+                                        onTransactionsChange(x)
+                                    },
+                                    onEdit = { edit = t; show = true },
+                                    onReceipt = { receiptTransaction = t }
+                                )
+                            }
                         }
                     }
                 }
