@@ -472,7 +472,8 @@ class GroupedNumberVisualTransformation : VisualTransformation {
 val LocalVsoftGlass = compositionLocalOf { false }
 val LocalVsoftCurrency = compositionLocalOf { "IRT" }
 
-fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier = this
+fun Modifier.vsoftGlass(shape: RoundedCornerShape = RoundedCornerShape(22.dp)): Modifier =
+    this.shadow(elevation = 5.dp, shape = shape, clip = false)
 @Composable
 fun money(value: Long): String {
     return when (LocalVsoftCurrency.current) {
@@ -1453,8 +1454,8 @@ fun MainScreen(
         topBar = {
             TopAppBar(
                 modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-                    .vsoftGlass(RoundedCornerShape(24.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .vsoftGlass(RoundedCornerShape(22.dp))
                     .border(
                         BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
                         RoundedCornerShape(24.dp)
@@ -1524,8 +1525,8 @@ fun MainScreen(
 
             NavigationBar(
                 modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .vsoftGlass(RoundedCornerShape(30.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .vsoftGlass(RoundedCornerShape(26.dp))
                     .border(
                         BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
                         RoundedCornerShape(30.dp)
@@ -1922,7 +1923,7 @@ fun DashboardPage(
             VsoftEntrance(1) {
                 Card(
                     Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(30.dp),
+                    shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
@@ -1933,12 +1934,12 @@ fun DashboardPage(
                                 Brush.linearGradient(
                                     listOf(
                                         MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.secondary.copy(alpha = .92f)
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = .96f),
+                                        MaterialTheme.colorScheme.primaryContainer
                                     )
                                 )
                             )
-                            .padding(22.dp)
+                            .padding(24.dp)
                     ) {
                         Column {
                             Row(
