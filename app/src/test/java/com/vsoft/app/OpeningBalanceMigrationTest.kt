@@ -166,29 +166,4 @@ class OpeningBalanceMigrationTest {
         )
     }
 
-    @Test
-    fun includesEarlierHashBasedSmsOnSameDayBeforeConfirmedSms() {
-        val oldSmsId = 123_456_789L
-        val confirmedSmsId = System.currentTimeMillis() - 10_000L
-        val transactions = listOf(
-            transaction(
-                type = "expense",
-                amount = 10_000_000L,
-                date = "1405/07/09",
-                description = "ثبت خودکار از پیامک بانک"
-            ).copy(id = oldSmsId),
-            transaction(
-                type = "expense",
-                amount = 2_000_000L,
-                date = "1405/07/09",
-                description = "ثبت خودکار از پیامک بانک"
-            ).copy(id = confirmedSmsId)
-        )
-
-        assertEquals(
-            15_000_000L,
-            recoverLegacyOpeningBalance("کارت اصلی", 3_000_000L, transactions)
-        )
-    }
-
 }

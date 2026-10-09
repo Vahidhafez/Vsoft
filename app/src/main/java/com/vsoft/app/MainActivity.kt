@@ -1524,16 +1524,18 @@ fun MainScreen(
 
             NavigationBar(
                 modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .vsoftGlass(RoundedCornerShape(30.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .height(72.dp)
+                    .vsoftGlass(RoundedCornerShape(26.dp))
                     .border(
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
-                        RoundedCornerShape(30.dp)
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .09f)),
+                        RoundedCornerShape(26.dp)
                     ),
                 containerColor = if (LocalVsoftGlass.current)
                     Color.Transparent
                 else MaterialTheme.colorScheme.surface,
-                tonalElevation = if (LocalVsoftGlass.current) 0.dp else 3.dp
+                tonalElevation = 0.dp,
+                windowInsets = WindowInsets(0, 0, 0, 0)
             ) {
 
                 NavigationBarItem(
@@ -1657,7 +1659,8 @@ fun MainScreen(
                     strings,
                     transactions,
                     workDays,
-                    cards
+                    cards,
+                    onNavigate = { destination -> selectedPage = destination }
                 )
 
                 1 -> FinancePage(
@@ -1847,7 +1850,8 @@ fun DashboardPage(
     strings: AppStrings,
     transactions: List<Transaction>,
     workDays: List<WorkDay>,
-    cards: List<BankCard>
+    cards: List<BankCard>,
+    onNavigate: (Int) -> Unit = {}
 ) {
     val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
     val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
@@ -2034,7 +2038,10 @@ fun DashboardPage(
         item {
             VsoftEntrance(3) {
                 Card(
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .clickable { onNavigate(3) },
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
@@ -2154,7 +2161,13 @@ fun DashboardPage(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
                         VsoftEntrance(index.coerceAtMost(5)) {
-                            MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
+                            Box(
+                                Modifier
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .clickable { onNavigate(5) }
+                            ) {
+                                MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
+                            }
                         }
                     }
                 }
@@ -2192,7 +2205,14 @@ fun DashboardPage(
                 key = { _, it -> it.id }
             ) { index, t ->
                 VsoftEntrance(index.coerceAtMost(4)) {
-                    TransactionCard(t, onDelete = {}, showActions = false)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(22.dp))
+                            .clickable { onNavigate(1) }
+                    ) {
+                        TransactionCard(t, onDelete = {}, showActions = false)
+                    }
                 }
             }
         }
