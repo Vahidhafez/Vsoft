@@ -4009,6 +4009,9 @@ fun SettingsPage(
     font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
     firebaseUser: FirebaseUser?, authError: String?, onGoogleSignIn: () -> Unit, onGoogleSignOut: () -> Unit
 ) {
+    val context = LocalContext.current
+    var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
+
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -4060,6 +4063,16 @@ fun SettingsPage(
                     options = listOf(strings.light to "light", strings.dark to "dark", strings.system to "system"),
                     selected = theme,
                     onSelected = onThemeChange
+                )
+                SettingsSwitchRow(
+                    title = uiText("دریافت پیامک بانکی"),
+                    subtitle = uiText("پیامک‌ها فقط پس از تأیید شما ثبت می‌شوند"),
+                    icon = Icons.Default.Sms,
+                    checked = smsEnabled,
+                    onCheckedChange = { enabled ->
+                        SmsStore.setEnabled(context, enabled)
+                        smsEnabled = enabled
+                    }
                 )
                 SettingsSwitchRow(
                     title = uiText("ظاهر شیشه‌ای"),
