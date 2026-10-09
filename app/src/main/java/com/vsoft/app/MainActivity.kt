@@ -681,7 +681,11 @@ fun encodeCards(list: List<BankCard>): String {
     return array.toString()
 }
 
-fun decodeCards(value: String): MutableList<BankCard> {
+fun decodeCards(
+    value: String,
+    transactions: List<Transaction> = emptyList(),
+    workDays: List<WorkDay> = emptyList()
+): MutableList<BankCard> {
     val result = mutableListOf<BankCard>()
 
     try {
@@ -689,15 +693,31 @@ fun decodeCards(value: String): MutableList<BankCard> {
 
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
+            val cardName = o.getString("name")
+            val openingBalance = when {
+                // New format is authoritative: never recalculate or overwrite a manually set opening balance.
+                o.has("openingBalance") && !o.isNull("openingBalance") -> o.optLong("openingBalance", 0L)
+                // Legacy builds could persist the live balance in the old "balance" field.
+                // Convert it back to an opening balance once, removing movements already represented in history.
+                o.has("balance") && !o.isNull("balance") -> {
+                    val legacyBalance = o.optLong("balance", 0L)
+                    val movement = transactions
+                        .filter { it.card == cardName }
+                        .sumOf { if (it.type == "income") it.amount else -it.amount }
+                    val workIncome = workDays.filter { it.card == cardName }.sumOf { it.income }
+                    legacyBalance - movement - workIncome
+                }
+                else -> 0L
+            }
 
             result.add(
                 BankCard(
                     o.getLong("id"),
                     o.getString("bank"),
-                    o.getString("name"),
+                    cardName,
                     o.optString("cardNumber", o.optString("last4", "")),
                     o.optString("last4", "").takeLast(4),
-                    o.optLong("openingBalance", o.optLong("balance", 0L))
+                    openingBalance
                 )
             )
         }
@@ -971,7 +991,12 @@ fun VsoftApp() {
             decodeWork(preferences[WORK_KEY] ?: "[]")
 
         cards =
-            decodeCards(preferences[CARDS_KEY] ?: "[]")
+            decodeCards(preferences[CARDS_KEY] ?: "[]", transactions, workDays)
+
+        // Persist the normalized card format so legacy live balances are migrated only once.
+        context.dataStore.edit { prefs ->
+            prefs[CARDS_KEY] = encodeCards(cards)
+        }
 
         people =
             decodePeople(preferences[PEOPLE_KEY] ?: "[]")
