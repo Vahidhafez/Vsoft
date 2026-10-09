@@ -1208,41 +1208,41 @@ fun VsoftApp() {
 
         val colors = if (darkTheme) {
             darkColorScheme(
-                primary = Color(0xFF9DBBFF),
-                onPrimary = Color(0xFF07111F),
-                secondary = Color(0xFF7EE2C4),
-                onSecondary = Color(0xFF062018),
-                tertiary = Color(0xFFFFC078),
+                primary = Color(0xFF7CE0B8),
+                onPrimary = Color(0xFF09251B),
+                secondary = Color(0xFF86BDF9),
+                onSecondary = Color(0xFF10243B),
+                tertiary = Color(0xFFF5C878),
                 onTertiary = Color(0xFF2A1600),
-                background = Color(0xFF070B12),
-                onBackground = Color(0xFFF2F6FC),
-                surface = Color(0xFF111824),
-                onSurface = Color(0xFFF2F6FC),
-                surfaceVariant = Color(0xFF202A38),
-                onSurfaceVariant = Color(0xFFC3CDDB),
-                outline = Color(0xFF66758A)
+                background = Color(0xFF0B1020),
+                onBackground = Color(0xFFF4F7FC),
+                surface = Color(0xFF121A2A),
+                onSurface = Color(0xFFF4F7FC),
+                surfaceVariant = Color(0xFF202C40),
+                onSurfaceVariant = Color(0xFFBCC9DA),
+                outline = Color(0xFF53647D)
             )
         } else {
             lightColorScheme(
-                primary = Color(0xFF315EFB),
+                primary = Color(0xFF137A62),
                 onPrimary = Color.White,
-                secondary = Color(0xFF087F68),
+                secondary = Color(0xFF4169E1),
                 onSecondary = Color.White,
-                tertiary = Color(0xFFC96F12),
+                tertiary = Color(0xFFC47A25),
                 onTertiary = Color.White,
-                background = Color(0xFFF5F7FB),
+                background = Color(0xFFF3F6FA),
                 onBackground = Color(0xFF101828),
                 surface = Color.White,
                 onSurface = Color(0xFF101828),
-                surfaceVariant = Color(0xFFEDF1F7),
+                surfaceVariant = Color(0xFFEAF0F6),
                 onSurfaceVariant = Color(0xFF596579),
-                outline = Color(0xFF7A8799)
+                outline = Color(0xFF8795A8)
             )
         }
 
         val themedColors = if (glass) {
             if (darkTheme) colors.copy(
-                background = Color(0xFF070B12),
+                background = Color(0xFF0B1020),
                 surface = Color(0xCC18212C),
                 surfaceVariant = Color(0x661F2B38)
             ) else colors.copy(
@@ -1265,11 +1265,11 @@ fun VsoftApp() {
                 labelSmall = t.labelSmall.copy(fontFamily = appFont)
             ) },
             shapes = Shapes(
-                extraSmall = RoundedCornerShape(10.dp),
-                small = RoundedCornerShape(14.dp),
-                medium = RoundedCornerShape(20.dp),
-                large = RoundedCornerShape(28.dp),
-                extraLarge = RoundedCornerShape(32.dp)
+                extraSmall = RoundedCornerShape(8.dp),
+                small = RoundedCornerShape(12.dp),
+                medium = RoundedCornerShape(18.dp),
+                large = RoundedCornerShape(24.dp),
+                extraLarge = RoundedCornerShape(30.dp)
             )
         ) {
             CompositionLocalProvider(
@@ -1889,16 +1889,10 @@ fun DashboardPage(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "VSOFT",
-                            fontSize = 11.sp,
+                            "خلاصه وضعیت مالی",
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 1.8.sp
-                        )
-                        Text(
-                            strings.dashboard,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             uiText("وضعیت مالی و کاری شما در یک نگاه"),
