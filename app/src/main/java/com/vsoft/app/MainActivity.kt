@@ -3128,17 +3128,7 @@ fun WorkPage(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Surface(
-                                shape = RoundedCornerShape(11.dp),
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = .08f)
-                            ) {
-                                Icon(
-                                    Icons.Default.CalendarMonth,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(8.dp).size(17.dp)
-                                )
-                            }
+
                         }
                     }
                     itemsIndexed(entries, key = { _, it -> it.id }) { index, w ->
