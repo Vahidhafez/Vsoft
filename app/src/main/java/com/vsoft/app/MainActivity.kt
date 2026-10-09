@@ -2723,11 +2723,11 @@ fun WorkPurchasesPage(
         ) {
             item {
                 Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(uiText("خریدهای کار"), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        uiText("ابزار، تجهیزات، قطعات و سایر خریدهای مرتبط با کار"),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    VsoftPremiumPageHero(
+                        title = uiText("خریدهای کار"),
+                        subtitle = uiText("ابزار، تجهیزات، قطعات و سایر خریدهای مرتبط با کار"),
+                        icon = Icons.Default.ShoppingCart,
+                        accent = Color(0xFFB65B45)
                     )
                     Card(
                         Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(22.dp)),
@@ -3828,7 +3828,7 @@ fun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:Li
 // ---------------- SETTINGS ----------------
 
 @Composable
-private fun VsoftPremiumPageHero(
+fun VsoftPremiumPageHero(
     title: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
