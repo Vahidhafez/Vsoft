@@ -1839,11 +1839,7 @@ fun DashboardPage(
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Box(
-                    Modifier.fillMaxWidth().background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF142D63), Color(0xFF2458C6), Color(0xFF138A83))
-                        )
-                    ).padding(22.dp)
+                    Modifier.fillMaxWidth().background(Color(0xFF172844)).padding(22.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1890,6 +1886,35 @@ fun DashboardPage(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 DashboardMetric("تراکنش‌ها", transactions.size.toString(), Icons.Default.ReceiptLong, Color(0xFF456DE2), Modifier.weight(1f).clickable { onNavigate(1) })
                 DashboardMetric("ساعت کاری", String.format(Locale.US, "%.1f", totalHours), Icons.Default.AccessTime, Color(0xFF0C9A81), Modifier.weight(1f).clickable { onNavigate(2) })
+            }
+        }
+
+        if (cards.isNotEmpty()) {
+            item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("کارت‌های بانکی", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("موجودی فعلی هر کارت", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = { onNavigate(4) }) {
+                        Text("مدیریت کارت‌ها")
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(end = 2.dp, start = 2.dp)
+                ) {
+                    items(cards, key = { it.id }) { card ->
+                        MiniBankCard(
+                            card = card,
+                            balance = cardCurrentBalance(card, transactions, workDays)
+                        )
+                    }
+                }
             }
         }
 
