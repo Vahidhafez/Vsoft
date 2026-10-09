@@ -81,9 +81,9 @@ fun VsoftSwipeToDelete(
     // Require a deliberate long swipe, scaled in dp so the gesture feels consistent across phones.
     val threshold = with(density) { 150.dp.toPx() }
     val maxOffset = with(density) { 220.dp.toPx() }
-    // Keep the gesture direction consistent across locales: swipe left to delete.
-    // RTL changes text layout, not the physical direction of this gesture.
-    val swipeDirection = -1f
+    // Match the reading direction: Persian/Arabic delete gestures reveal the action
+    // by moving the row from left to right; English uses right to left.
+    val swipeDirection = if (rtl) 1f else -1f
     val targetOffset = if (deleting) swipeDirection * maxOffset * 3f else offsetX
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffset,
@@ -103,8 +103,8 @@ fun VsoftSwipeToDelete(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = progress))
-            .pointerInput(enabled) {
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = progress * 0.92f))
+            .pointerInput(enabled, rtl) {
                 if (!enabled) return@pointerInput
                 detectHorizontalDragGestures(
                     onHorizontalDrag = { _, drag ->
@@ -135,9 +135,19 @@ fun VsoftSwipeToDelete(
     ) {
         Box(
             Modifier.fillMaxSize(),
-            contentAlignment = Alignment.CenterEnd
+            contentAlignment = if (rtl) Alignment.CenterStart else Alignment.CenterEnd
         ) {
-            Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onErrorContainer)
+            AnimatedVisibility(
+                visible = progress > 0.12f,
+                enter = fadeIn(tween(100)) + androidx.compose.animation.scaleIn(tween(120)),
+                exit = fadeOut(tween(90)) + androidx.compose.animation.scaleOut(tween(90))
+            ) {
+                Icon(
+                    Icons.Default.DeleteOutline,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
         }
         androidx.compose.foundation.layout.Box(
             Modifier
