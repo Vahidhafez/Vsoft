@@ -2463,21 +2463,13 @@ fun AddTransactionDialog(
                 Modifier.padding(22.dp).heightIn(max = 680.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(13.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
-                            .background(typeColor.copy(alpha = .13f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.ReceiptLong, null, tint = typeColor, modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(if (existing == null) uiText("ثبت تراکنش جدید") else uiText("ویرایش تراکنش"), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(uiText("اطلاعات مالی را دقیق و سریع ثبت کنید"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, uiText("بستن")) }
-                }
+                VsoftFormHeader(
+                    title = if (existing == null) uiText("ثبت تراکنش جدید") else uiText("ویرایش تراکنش"),
+                    subtitle = uiText("اطلاعات مالی را دقیق و سریع ثبت کنید"),
+                    icon = Icons.Default.ReceiptLong,
+                    accent = typeColor,
+                    onDismiss = onDismiss
+                )
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .62f)).padding(4.dp),
@@ -2890,15 +2882,13 @@ fun WorkPurchaseDialog(
                 Modifier.padding(20.dp).heightIn(max = 680.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(25.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(if (existing == null) "ثبت خرید کار" else "ویرایش خرید کار", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("جزئیات خرید را ثبت کنید", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "بستن") }
-                }
+                VsoftFormHeader(
+                    title = if (existing == null) "ثبت خرید کار" else "ویرایش خرید کار",
+                    subtitle = "جزئیات خرید، پرداخت و محل کار",
+                    icon = Icons.Default.ShoppingCart,
+                    accent = Color(0xFFB65B45),
+                    onDismiss = onDismiss
+                )
                 OutlinedTextField(title, { title = it }, label = { Text("عنوان خرید") }, leadingIcon = { Icon(Icons.Default.ShoppingCart, null) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
                 OutlinedTextField(amount, { amount = normalizeAmountInput(it) }, label = { Text("مبلغ") }, leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
                 Box(Modifier.fillMaxWidth()) {
@@ -3223,18 +3213,13 @@ fun AddWorkDialog(
                 Modifier.padding(22.dp).heightIn(max = 700.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(13.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Work, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(if (existing == null) uiText("ثبت روز کاری") else uiText("ویرایش روز کاری"), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(uiText("ساعت، درآمد و جزئیات کار را یکجا ثبت کنید"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, uiText("بستن")) }
-                }
+                VsoftFormHeader(
+                    title = if (existing == null) uiText("ثبت روز کاری") else uiText("ویرایش روز کاری"),
+                    subtitle = uiText("زمان، درآمد و جزئیات کار"),
+                    icon = Icons.Default.Work,
+                    accent = Color(0xFF0B9B83),
+                    onDismiss = onDismiss
+                )
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ placeOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)) {
@@ -3870,6 +3855,55 @@ fun VsoftPremiumPageHero(
 }
 
 @Composable
+fun VsoftFormHeader(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().background(
+                Brush.linearGradient(listOf(accent, Color(0xFF263B70), Color(0xFF173D4C)))
+            ).padding(start = 14.dp, end = 7.dp, top = 13.dp, bottom = 13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier.size(45.dp).clip(RoundedCornerShape(15.dp))
+                    .background(Color.White.copy(alpha = .15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(23.dp))
+            }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    "VSOFT  /  ENTRY",
+                    fontSize = 9.sp,
+                    color = Color.White.copy(alpha = .72f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                Text(subtitle, fontSize = 10.sp, color = Color.White.copy(alpha = .82f))
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(alpha = .12f))
+            ) {
+                Icon(Icons.Default.Close, contentDescription = uiText("بستن"), tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+@Composable
 fun SettingsPage(
     strings: AppStrings, language: String, theme: String, currency: String,
     onLanguageChange: (String) -> Unit, onCurrencyChange: (String) -> Unit,
@@ -4288,17 +4322,13 @@ fun EditWorkplaceDialog(place: Workplace, onDismiss: () -> Unit, onSave: (Workpl
             color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .94f) else MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp, shadowElevation = 18.dp) {
             Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)), contentAlignment=Alignment.Center) {
-                        Icon(Icons.Default.Edit, null, tint=MaterialTheme.colorScheme.primary, modifier=Modifier.size(23.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(uiText("ویرایش محل کار"), fontSize=21.sp, fontWeight=FontWeight.ExtraBold)
-                        Text(uiText("نام محل کار را به‌روزرسانی کنید"), fontSize=12.sp, color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick=onDismiss){Icon(Icons.Default.Close, uiText("بستن"))}
-                }
+                VsoftFormHeader(
+                    title = uiText("ویرایش محل کار"),
+                    subtitle = uiText("اطلاعات محل کار را به‌روزرسانی کنید"),
+                    icon = Icons.Default.Place,
+                    accent = Color(0xFF0B9B83),
+                    onDismiss = onDismiss
+                )
                 OutlinedTextField(name,{name=it},label={Text(uiText("نام محل کار"))},leadingIcon={Icon(Icons.Default.Place,null)},
                     singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -4398,40 +4428,13 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(11.dp)
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        Modifier.size(48.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = .12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(23.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            uiText("ویرایش شخص"),
-                            fontSize = 21.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Text(
-                            uiText("اطلاعات فرد را به‌روزرسانی کنید"),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, uiText("بستن"))
-                    }
-                }
+                VsoftFormHeader(
+                    title = uiText("ویرایش شخص"),
+                    subtitle = uiText("اطلاعات فرد را به‌روزرسانی کنید"),
+                    icon = Icons.Default.Person,
+                    accent = Color(0xFF7357D8),
+                    onDismiss = onDismiss
+                )
 
                 Row(
                     Modifier.fillMaxWidth()
@@ -4836,7 +4839,13 @@ fun AddCardDialog(onDismiss:()->Unit,onSave:(BankCard)->Unit){
  var bank by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var cardNumber by remember{mutableStateOf("")};var balance by remember{mutableStateOf("")}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=660.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.CreditCard,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("کارت بانکی جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("مشخصات کارت را وارد کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   VsoftFormHeader(
+       title = uiText("کارت بانکی جدید"),
+       subtitle = uiText("مشخصات کارت را وارد کنید"),
+       icon = Icons.Default.CreditCard,
+       accent = Color(0xFF3D71D9),
+       onDismiss = onDismiss
+   )
    AnimatedVisibility(cardNumber.isNotBlank()){val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=.92f),c.second.copy(alpha=.88f)))).padding(16.dp)){Column{Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.ExtraBold);Spacer(Modifier.height(13.dp));Text(if(cardNumber.length>=4)"••••  ••••  ••••  "+cardNumber.takeLast(4)else cardNumber,color=Color.White,fontSize=14.sp,letterSpacing=1.5.sp);Spacer(Modifier.height(7.dp));Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=.72f),fontSize=11.sp)}}}
    OutlinedTextField(bank,{bank=it},label={Text(uiText("نام بانک"))},leadingIcon={Icon(Icons.Default.AccountBalance,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(name,{name=it},label={Text(uiText("عنوان کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Personal card" else "مثلاً کارت شخصی")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
@@ -4852,7 +4861,13 @@ fun EditCardDialog(card:BankCard,onDismiss:()->Unit,onSave:(BankCard)->Unit){
  var bank by remember(card.id){mutableStateOf(card.bank)};var name by remember(card.id){mutableStateOf(card.name)};var num by remember(card.id){mutableStateOf(card.cardNumber)};var balance by remember(card.id){mutableStateOf(card.openingBalance.toString())}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=650.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.Edit,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("ویرایش کارت"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("اطلاعات کارت را به‌روزرسانی کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   VsoftFormHeader(
+       title = uiText("ویرایش کارت"),
+       subtitle = uiText("اطلاعات کارت را به‌روزرسانی کنید"),
+       icon = Icons.Default.CreditCard,
+       accent = Color(0xFF3D71D9),
+       onDismiss = onDismiss
+   )
    val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=.92f),c.second.copy(alpha=.88f)))).padding(15.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.CreditCard,null,tint=Color.White);Spacer(Modifier.width(9.dp));Column(Modifier.weight(1f)){Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.ExtraBold);Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=.72f),fontSize=11.sp)};Text("•••• "+num.filter(Char::isDigit).takeLast(4),color=Color.White,fontSize=12.sp)}}
    OutlinedTextField(bank,{bank=it},label={Text(uiText("بانک"))},leadingIcon={Icon(Icons.Default.AccountBalance,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(name,{name=it},label={Text(uiText("نام کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
@@ -4868,7 +4883,13 @@ fun AddWorkplaceDialog(onDismiss:()->Unit,onSave:(Workplace)->Unit){
  var name by remember{mutableStateOf("")}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.Place,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("محل کار جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("محل کار مورد استفاده را اضافه کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   VsoftFormHeader(
+       title = uiText("محل کار جدید"),
+       subtitle = uiText("محل کار مورد استفاده را اضافه کنید"),
+       icon = Icons.Default.Place,
+       accent = Color(0xFF0B9B83),
+       onDismiss = onDismiss
+   )
    OutlinedTextField(name,{name=it},label={Text(uiText("نام محل کار"))},leadingIcon={Icon(Icons.Default.Place,null)},placeholder={Text(uiText("مثلاً پروژه، شرکت یا کارگاه"))},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={onSave(Workplace(System.currentTimeMillis(),name.trim()))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
   }
@@ -4952,7 +4973,13 @@ fun AddPersonDialog(onDismiss:()->Unit,onSave:(Person)->Unit){
  var name by remember{mutableStateOf("")};var phone by remember{mutableStateOf("")};var job by remember{mutableStateOf("")};var note by remember{mutableStateOf("")}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(11.dp)){
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.secondary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.PersonAdd,null,tint=MaterialTheme.colorScheme.secondary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("شخص جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("اطلاعات فرد را برای کار و مالی ثبت کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   VsoftFormHeader(
+       title = uiText("شخص جدید"),
+       subtitle = uiText("اطلاعات فرد را برای کار و مالی ثبت کنید"),
+       icon = Icons.Default.PersonAdd,
+       accent = Color(0xFF7357D8),
+       onDismiss = onDismiss
+   )
    OutlinedTextField(name,{name=it},label={Text(uiText("نام و نام خانوادگی"))},leadingIcon={Icon(Icons.Default.PersonOutline,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(phone,{phone=it},label={Text(uiText("شماره تماس"))},leadingIcon={Icon(Icons.Default.Phone,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(job,{job=it},label={Text(uiText("شغل / نقش"))},leadingIcon={Icon(Icons.Default.Badge,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Employer / Electrician" else "مثلاً کارفرما / برق‌کش")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
