@@ -83,21 +83,22 @@ fun VsoftSwipeToDelete(
         LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val density = LocalDensity.current
     // Require a deliberate long swipe, scaled in dp so the gesture feels consistent across phones.
-    val threshold = with(density) { 150.dp.toPx() }
-    val maxOffset = with(density) { 220.dp.toPx() }
+    // A deliberately longer threshold prevents accidental deletes while scrolling.
+    val threshold = with(density) { 175.dp.toPx() }
+    val maxOffset = with(density) { 235.dp.toPx() }
     // Match the reading direction: Persian/Arabic delete gestures reveal the action
     // by moving the row from left to right; English uses right to left.
     val swipeDirection = if (rtl) 1f else -1f
     val targetOffset = if (deleting) swipeDirection * maxOffset * 3f else offsetX
     val animatedOffset by animateFloatAsState(
         targetValue = targetOffset,
-        animationSpec = if (deleting) tween(420, easing = FastOutSlowInEasing)
+        animationSpec = if (deleting) tween(560, easing = FastOutSlowInEasing)
             else spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy),
         label = "swipe_delete_offset"
     )
     LaunchedEffect(deleting) {
         if (deleting) {
-            delay(420)
+            delay(560)
             onDelete()
         }
     }
@@ -108,7 +109,7 @@ fun VsoftSwipeToDelete(
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
             .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = progress * 0.92f))
-            .pointerInput(enabled, rtl) {
+            .pointerInput(enabled, rtl, threshold, maxOffset) {
                 if (!enabled) return@pointerInput
                 detectHorizontalDragGestures(
                     onHorizontalDrag = { _, drag ->
