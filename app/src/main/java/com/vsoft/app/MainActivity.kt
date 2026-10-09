@@ -717,9 +717,14 @@ internal fun recoverLegacyOpeningBalance(
                     // Epoch IDs are creation/confirmation times; don't reverse later
                     // entries merely because the user backdated their transaction.
                     transaction.id <= lastConfirmedSms.value.id
+                } else if (transaction.description.startsWith("ثبت خودکار از پیامک")) {
+                    // A hash-based legacy SMS row before this confirmation in the
+                    // persisted list may already be reflected even on the same date.
+                    indexedCardTransactions.firstOrNull { it.value.id == transaction.id }?.index
+                        ?.let { it <= lastConfirmedSms.index } == true
                 } else {
-                    // Hash-based IDs from the older SMS receiver have no usable clock.
-                    // Same-day rows cannot be ordered reliably against the SMS.
+                    // Non-SMS rows with no usable timestamp are only safe to reverse
+                    // when their Jalali date is strictly earlier than the SMS date.
                     transaction.date < cutoffDate
                 }
             }
