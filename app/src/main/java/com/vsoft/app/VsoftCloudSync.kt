@@ -26,7 +26,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 class VsoftCloudSync(
     context: Context,
     private val userId: String,
-    private val onStatus: (String) -> Unit
+    private val onStatus: (String) -> Unit,
+    private val onRemoteApplied: (Map<String, String>) -> Unit
 ) {
     private val appContext = context.applicationContext
     private val firestore = FirebaseFirestore.getInstance()
@@ -81,6 +82,7 @@ class VsoftCloudSync(
                                 }
                             }
                             pendingLocalPayload = cloudPayload
+                            onRemoteApplied(cloudPayload)
                             onStatus("همگام‌سازی انجام شد")
                         } catch (t: Throwable) {
                             onStatus("دریافت اطلاعات ناموفق بود: ${t.localizedMessage ?: "خطای ناشناخته"}")
