@@ -85,12 +85,12 @@ private fun pruneOldBackups(directory: File, keep: Int) {
 }
 
 /** Creates an encrypted backup in persistent, app-private storage and applies the configured retention limit. */
-fun createStoredVsoftBackup(context: Context, backup: VsoftBackup, automatic: Boolean): File {
+suspend fun createStoredVsoftBackup(context: Context, backup: VsoftBackup, automatic: Boolean): File {
     val directory = context.filesDir
     val target = File(directory, createBackupFileName(automatic))
     val encrypted = encryptVsoftAutoBackup(encodeBackup(backup).toByteArray(Charsets.UTF_8))
     target.writeBytes(encrypted)
-    val prefs = kotlinx.coroutines.runBlocking { context.dataStore.data.first() }
+    val prefs = context.dataStore.data.first()
     pruneOldBackups(directory, backupRetention(prefs[BACKUP_RETENTION_KEY]))
     return target
 }
