@@ -1426,6 +1426,7 @@ fun VsoftApp() {
                 onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
                 firebaseUser = firebaseUser,
                 authError = authError,
+                cloudSyncStatus = syncStatusText,
                 onGoogleSignIn = {
                     authError = null
                     googleLauncher.launch(googleClient.signInIntent)
@@ -1474,6 +1475,7 @@ fun MainScreen(
     onRestore: () -> Unit,
     firebaseUser: FirebaseUser?,
     authError: String?,
+    cloudSyncStatus: String,
     onGoogleSignIn: () -> Unit,
     onGoogleSignOut: () -> Unit
 ) {
