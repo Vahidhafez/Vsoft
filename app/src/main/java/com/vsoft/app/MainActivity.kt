@@ -1095,7 +1095,7 @@ fun VsoftApp() {
     val firebaseAuth = remember { FirebaseAuth.getInstance() }
     var firebaseUser by remember { mutableStateOf<FirebaseUser?>(firebaseAuth.currentUser) }
     var authError by remember { mutableStateOf<String?>(null) }
-    var cloudSyncStatus by remember { mutableStateOf("برای همگام‌سازی، وارد حساب Google شوید") }
+    var cloudSyncStatus by remember { mutableStateOf("برای همگام‌سازی، با شماره تلفن یا حساب Google وارد شوید") }
 
     val googleClient = remember(context) {
         createGoogleSignInClient(context, context.getString(R.string.default_web_client_id))
@@ -1139,7 +1139,7 @@ fun VsoftApp() {
     DisposableEffect(firebaseUser?.uid, loaded) {
         val user = firebaseUser
         if (!loaded || user == null) {
-            cloudSyncStatus = if (user == null) "برای همگام‌سازی، در هر دو گوشی با یک حساب Google وارد شوید" else "در حال آماده‌سازی اطلاعات…"
+            cloudSyncStatus = if (user == null) "برای همگام‌سازی، در هر دو گوشی با یک شماره تأییدشده یا حساب Google وارد شوید" else "در حال آماده‌سازی اطلاعات…"
             onDispose { }
         } else {
             val sync = VsoftCloudSync(
@@ -4520,7 +4520,7 @@ fun SettingsPage(
                 } else {
                     OutlinedTextField(
                         value = smsCode,
-                        onValueChange = { smsCode = it.filter(Char::isDigit).take(6) },
+                        onValueChange = { smsCode = normalizeDigits(it).filter(Char::isDigit).take(6) },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("کد پیامکی") },
                         singleLine = true,
@@ -4579,7 +4579,7 @@ fun SettingsPage(
                     fontSize = 12.sp
                 )
                 Text(
-                    "برای انتقال خودکار اطلاعات، روی هر دو گوشی از همین حساب Google استفاده کنید. همگام‌سازی ابری به اتصال اینترنت نیاز دارد.",
+                    "برای همگام‌سازی، روی هر دو گوشی با همان شماره تأییدشده یا همان حساب Google وارد شوید. اتصال اینترنت لازم است.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
