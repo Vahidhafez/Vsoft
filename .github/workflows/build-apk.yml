@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/backup-retention-phone-sync
 
 jobs:
   build:
