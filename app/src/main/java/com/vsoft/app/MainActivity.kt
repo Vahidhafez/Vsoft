@@ -996,7 +996,7 @@ fun VsoftApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var cloudSyncStatus by remember { mutableStateOf("برای همگام‌سازی، با شماره تلفن یا حساب Google وارد شوید") }
+    var syncStatusText by remember { mutableStateOf("برای همگام‌سازی، با شماره تلفن یا حساب Google وارد شوید") }
 
     var language by remember { mutableStateOf("fa") }
     var currency by remember { mutableStateOf("IRT") }
@@ -1140,13 +1140,13 @@ fun VsoftApp() {
     DisposableEffect(firebaseUser?.uid, loaded) {
         val user = firebaseUser
         if (!loaded || user == null) {
-            cloudSyncStatus = if (user == null) "برای همگام‌سازی، در هر دو گوشی با یک شماره تأییدشده یا حساب Google وارد شوید" else "در حال آماده‌سازی اطلاعات…"
+            syncStatusText = if (user == null) "برای همگام‌سازی، در هر دو گوشی با یک شماره تأییدشده یا حساب Google وارد شوید" else "در حال آماده‌سازی اطلاعات…"
             onDispose { }
         } else {
             val sync = VsoftCloudSync(
                 context = context,
                 userId = user.uid,
-                onStatus = { status -> cloudSyncStatus = status },
+                onStatus = { status -> syncStatusText = status },
                 onRemoteApplied = { payload ->
                     scope.launch {
                         transactions = decodeTransactions(payload["transactions"] ?: "[]")
@@ -1662,7 +1662,7 @@ fun MainScreen(
                     onRestore = onRestore,
                     firebaseUser = firebaseUser,
                     authError = authError,
-                    cloudSyncStatus = cloudSyncStatus,
+                    cloudSyncStatus = syncStatusText,
                     onGoogleSignIn = onGoogleSignIn,
                     onGoogleSignOut = onGoogleSignOut
                 )
