@@ -6,6 +6,10 @@ on:
     branches:
       - main
       - 'redesign/**'
+      - 'feature/**'
+  pull_request:
+    branches:
+      - 'redesign/**'
 
 jobs:
   build:
