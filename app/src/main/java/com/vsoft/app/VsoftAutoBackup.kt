@@ -84,6 +84,11 @@ private fun pruneOldBackups(directory: File, keep: Int) {
     backupFiles(directory).drop(keep).forEach { it.delete() }
 }
 
+fun pruneStoredVsoftBackups(context: Context, keep: Int) {
+    require(keep == 3 || keep == 5 || keep == 10)
+    pruneOldBackups(context.filesDir, keep)
+}
+
 /** Creates an encrypted backup in persistent, app-private storage and applies the configured retention limit. */
 suspend fun createStoredVsoftBackup(context: Context, backup: VsoftBackup, automatic: Boolean): File {
     val directory = context.filesDir
