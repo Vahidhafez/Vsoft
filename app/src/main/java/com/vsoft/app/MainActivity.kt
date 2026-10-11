@@ -1552,12 +1552,7 @@ fun MainScreen(
                     glass, onGlassChange,
                     font, onFontChange,
                     onBackup = onBackup,
-                    onRestore = onRestore,
-                    firebaseUser = firebaseUser,
-                    authError = authError,
-                    cloudSyncStatus = cloudSyncStatus,
-                    onGoogleSignIn = onGoogleSignIn,
-                    onGoogleSignOut = onGoogleSignOut
+                    onRestore = onRestore
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
