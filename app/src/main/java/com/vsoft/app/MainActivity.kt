@@ -10,9 +10,6 @@ import android.graphics.Typeface
 import android.content.Intent
 import android.provider.MediaStore
 import android.content.Context
-import android.app.Activity
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.common.api.ApiException
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
@@ -82,8 +79,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalContext
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -99,6 +94,9 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.math.BigInteger
 
 val android.content.Context.dataStore by preferencesDataStore("vsoft_data")
@@ -318,11 +316,6 @@ fun uiText(key: String): String {
             "شماره تماس" -> "Phone number"
             "شغل / نقش" -> "Job / role"
             "یادداشت" -> "Note"
-            "حساب و همگام‌سازی" -> "Account & sync"
-            "با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم." -> "Sign in with Google to securely connect your Vsoft data to your account."
-            "ورود با Google" -> "Sign in with Google"
-            "حساب Google" -> "Google account"
-            "خروج از حساب" -> "Sign out"
             "انتخاب" -> "Select"
             "ذخیره" -> "Save"
             "لغو" -> "Cancel"
@@ -397,11 +390,6 @@ fun uiText(key: String): String {
             "شماره تماس" -> "رقم الهاتف"
             "شغل / نقش" -> "المهنة / الدور"
             "یادداشت" -> "ملاحظة"
-            "حساب و همگام‌سازی" -> "الحساب والمزامنة"
-            "با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم." -> "سجّل الدخول باستخدام Google لربط بيانات Vsoft بحسابك بأمان."
-            "ورود با Google" -> "تسجيل الدخول باستخدام Google"
-            "حساب Google" -> "حساب Google"
-            "خروج از حساب" -> "تسجيل الخروج"
             "انتخاب" -> "اختيار"
             "ذخیره" -> "حفظ"
             "لغو" -> "إلغاء"
@@ -997,6 +985,8 @@ fun VsoftApp() {
     var theme by remember { mutableStateOf("system") }
     var glass by remember { mutableStateOf(false) }
     var font by remember { mutableStateOf("sans") }
+    var backupRetention by remember { mutableIntStateOf(3) }
+    var showRestoreConfirmation by remember { mutableStateOf(false) }
 
     var transactions by remember {
         mutableStateOf(mutableListOf<Transaction>())
@@ -1043,6 +1033,7 @@ fun VsoftApp() {
         theme = preferences[THEME_KEY] ?: "system"
         glass = false
         font = preferences[FONT_KEY] ?: "sans"
+        backupRetention = preferences[BACKUP_RETENTION_KEY]?.toIntOrNull()?.takeIf { it == 3 || it == 5 || it == 10 } ?: 3
 
         transactions =
             decodeTransactions(preferences[TRANSACTIONS_KEY] ?: "[]")
@@ -1088,49 +1079,6 @@ fun VsoftApp() {
 
     var pendingRestore by remember { mutableStateOf<VsoftBackup?>(null) }
 
-    val firebaseAuth = remember { FirebaseAuth.getInstance() }
-    var firebaseUser by remember { mutableStateOf<FirebaseUser?>(firebaseAuth.currentUser) }
-    var authError by remember { mutableStateOf<String?>(null) }
-
-    val googleClient = remember(context) {
-        createGoogleSignInClient(context, context.getString(R.string.default_web_client_id))
-    }
-
-    val googleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        scope.launch {
-            authError = null
-            val intent = result.data
-            val signInTask = GoogleSignIn.getSignedInAccountFromIntent(intent)
-
-            runCatching {
-                val account = signInTask.getResult(ApiException::class.java)
-                val idToken = account.idToken ?: error("Google did not return an ID token")
-                firebaseSignInWithGoogleIdToken(idToken)
-            }.onFailure { error ->
-                val apiError = error as? ApiException
-                val statusCode = apiError?.statusCode
-                val statusMessage = apiError?.status?.statusMessage
-                authError = buildString {
-                    append("Google sign-in failed")
-                    if (statusCode != null) append(" (code $statusCode)")
-                    if (!statusMessage.isNullOrBlank()) append(": $statusMessage")
-                    else if (!error.message.isNullOrBlank()) append(": " + error.message)
-                    if (result.resultCode != Activity.RESULT_OK) {
-                        append(" [resultCode=" + result.resultCode + "]")
-                    }
-                }
-            }
-        }
-    }
-
-    DisposableEffect(firebaseAuth) {
-        val listener = FirebaseAuth.AuthStateListener { auth -> firebaseUser = auth.currentUser }
-        firebaseAuth.addAuthStateListener(listener)
-        onDispose { firebaseAuth.removeAuthStateListener(listener) }
-    }
-
     val backupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -1153,27 +1101,18 @@ fun VsoftApp() {
         if (uri != null) {
             runCatching {
                 val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                if (text != null) pendingRestore = decodeBackup(text)
+                if (text != null) {
+                    val decoded = decodeBackup(text)
+                    if (decoded != null) {
+                        pendingRestore = decoded
+                        showRestoreConfirmation = true
+                    }
+                }
             }
         }
     }
 
-    LaunchedEffect(pendingRestore) {
-        val data = pendingRestore ?: return@LaunchedEffect
-        restoreBackup(context, data)
-        transactions = data.transactions.toMutableList()
-        workDays = data.workDays.toMutableList()
-        cards = data.cards.toMutableList()
-        people = data.people.toMutableList()
-        workplaces = data.workplaces.toMutableList()
-        workPurchases = data.workPurchases.toMutableList()
-        language = data.language
-        currency = data.currency
-        theme = data.theme
-        glass = data.glass
-        font = data.font
-        pendingRestore = null
-    }
+
 
     val appStrings = strings(language)
     val appFont = when (font) {
@@ -1378,18 +1317,66 @@ fun VsoftApp() {
                 },
                 onBackup = { backupLauncher.launch("vsoft-backup.json") },
                 onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
-                firebaseUser = firebaseUser,
-                authError = authError,
-                onGoogleSignIn = {
-                    authError = null
-                    googleLauncher.launch(googleClient.signInIntent)
+                backupRetention = backupRetention,
+                onBackupRetentionChange = { value ->
+                    backupRetention = value
+                    scope.launch { context.dataStore.edit { prefs -> prefs[BACKUP_RETENTION_KEY] = value.toString() } }
                 },
-                onGoogleSignOut = {
-                    authError = null
-                    runCatching { signOutFromGoogle(context) }
-                        .onFailure { authError = it.message ?: "Sign-out failed" }
+                backupSnapshot = VsoftBackup(
+                    transactions, workDays, cards, people, workplaces, workPurchases,
+                    language, currency, theme, glass, font
+                ),
+                onStoredBackupRestore = { data ->
+                    scope.launch {
+                        restoreBackup(context, data)
+                        transactions = data.transactions.toMutableList()
+                        workDays = data.workDays.toMutableList()
+                        cards = data.cards.toMutableList()
+                        people = data.people.toMutableList()
+                        workplaces = data.workplaces.toMutableList()
+                        workPurchases = data.workPurchases.toMutableList()
+                        language = data.language
+                        currency = data.currency
+                        theme = data.theme
+                        glass = data.glass
+                        font = data.font
+                    }
                 }
             )
+
+            if (showRestoreConfirmation && pendingRestore != null) {
+                AlertDialog(
+                    onDismissRequest = { showRestoreConfirmation = false; pendingRestore = null },
+                    title = { Text("تأیید بازیابی پشتیبان") },
+                    text = { Text("با بازیابی این نسخه، اطلاعات فعلی برنامه با اطلاعات پشتیبان جایگزین می‌شود. قبل از ادامه مطمئن شو که نسخه مناسبی انتخاب کرده‌ای.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val data = pendingRestore
+                            if (data != null) {
+                                scope.launch {
+                                    restoreBackup(context, data)
+                                    transactions = data.transactions.toMutableList()
+                                    workDays = data.workDays.toMutableList()
+                                    cards = data.cards.toMutableList()
+                                    people = data.people.toMutableList()
+                                    workplaces = data.workplaces.toMutableList()
+                                    workPurchases = data.workPurchases.toMutableList()
+                                    language = data.language
+                                    currency = data.currency
+                                    theme = data.theme
+                                    glass = data.glass
+                                    font = data.font
+                                    pendingRestore = null
+                                    showRestoreConfirmation = false
+                                }
+                            }
+                        }) { Text("بازیابی و جایگزینی") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showRestoreConfirmation = false; pendingRestore = null }) { Text("انصراف") }
+                    }
+                )
+            }
         }
         }
         }
@@ -1426,10 +1413,10 @@ fun MainScreen(
     onFontChange: (String) -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
-    firebaseUser: FirebaseUser?,
-    authError: String?,
-    onGoogleSignIn: () -> Unit,
-    onGoogleSignOut: () -> Unit
+    backupRetention: Int,
+    onBackupRetentionChange: (Int) -> Unit,
+    backupSnapshot: VsoftBackup,
+    onStoredBackupRestore: (VsoftBackup) -> Unit
 ) {
 
     var selectedPage by remember { mutableStateOf(0) }
@@ -1687,10 +1674,10 @@ fun MainScreen(
                     font, onFontChange,
                     onBackup = onBackup,
                     onRestore = onRestore,
-                    firebaseUser = firebaseUser,
-                    authError = authError,
-                    onGoogleSignIn = onGoogleSignIn,
-                    onGoogleSignOut = onGoogleSignOut
+                    backupRetention = backupRetention,
+                    onBackupRetentionChange = onBackupRetentionChange,
+                    backupSnapshot = backupSnapshot,
+                    onStoredBackupRestore = onStoredBackupRestore
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
@@ -4042,10 +4029,15 @@ fun SettingsPage(
     onLanguageChange: (String) -> Unit, onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit, glass: Boolean, onGlassChange: (Boolean) -> Unit,
     font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
-    firebaseUser: FirebaseUser?, authError: String?, onGoogleSignIn: () -> Unit, onGoogleSignOut: () -> Unit
+    backupRetention: Int, onBackupRetentionChange: (Int) -> Unit,
+    backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
+    var storedBackups by remember { mutableStateOf(listStoredVsoftBackups(context)) }
+    var selectedBackup by remember { mutableStateOf<File?>(null) }
+    var backupMessage by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -4130,45 +4122,120 @@ fun SettingsPage(
             }
         }
         item {
-            SettingsSection(uiText("حساب و همگام‌سازی"), Icons.Default.AccountCircle) {
-                if (firebaseUser == null) {
-                    Text(uiText("با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم."),
-                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = onGoogleSignIn, modifier = Modifier.fillMaxWidth().pressScale()) {
-                        Icon(Icons.Default.AccountCircle, null); Spacer(Modifier.width(8.dp)); Text(uiText("ورود با Google"))
-                    }
-                } else {
-                    ListItem(
-                        headlineContent = { Text(firebaseUser.displayName ?: uiText("حساب Google"), fontWeight = FontWeight.Bold) },
-                        supportingContent = { Text(firebaseUser.email ?: "") },
-                        leadingContent = { Icon(Icons.Default.AccountCircle, null) }
-                    )
-                    OutlinedButton(onClick = onGoogleSignOut, modifier = Modifier.fillMaxWidth().pressScale()) {
-                        Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text(uiText("خروج از حساب"))
-                    }
-                }
-                if (!authError.isNullOrBlank()) Text(authError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-            }
-        }
-        item {
             SettingsSection(uiText("پشتیبان‌گیری و بازیابی"), Icons.Default.Backup) {
                 ListItem(
                     headlineContent = { Text(uiText("پشتیبان کامل اطلاعات")) },
-                    supportingContent = { Text(uiText("تراکنش‌ها، کارها، خریدهای کار، کارت‌ها و تنظیمات")) },
+                    supportingContent = { Text(uiText("نسخه‌های خودکار رمزگذاری‌شده، نسخه دستی، فهرست نسخه‌ها و بازیابی با تأیید")) },
                     leadingContent = { Icon(Icons.Default.Security, null) }
                 )
+                Text("حداکثر نسخه‌های نگهداری‌شده", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(3, 5, 10).forEach { limit ->
+                        FilterChip(
+                            selected = backupRetention == limit,
+                            onClick = { onBackupRetentionChange(limit) },
+                            label = { Text("$limit نسخه") }
+                        )
+                    }
+                }
+                Text(
+                    "نسخه خودکار هر ۲۴ ساعت ساخته می‌شود. فایل‌ها در حافظه خصوصی و پایدار برنامه با رمزگذاری نگهداری می‌شوند.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(
+                    onClick = {
+                        backupMessage = null
+                        scope.launch {
+                            runCatching {
+                                withContext(Dispatchers.IO) {
+                                    createStoredVsoftBackup(context, backupSnapshot, automatic = false)
+                                }
+                            }.onSuccess {
+                                storedBackups = listStoredVsoftBackups(context)
+                                backupMessage = "نسخه دستی با موفقیت ساخته شد."
+                            }.onFailure {
+                                backupMessage = "ساخت نسخه پشتیبان ناموفق بود."
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().pressScale()
+                ) {
+                    Icon(Icons.Default.AddToDrive, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("ایجاد نسخه پشتیبان دستی")
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = onBackup, modifier = Modifier.weight(1f).pressScale()) {
-                        Icon(Icons.Default.Upload, null); Spacer(Modifier.width(6.dp)); Text(uiText("ایجاد پشتیبان"))
+                    OutlinedButton(onClick = onBackup, modifier = Modifier.weight(1f).pressScale()) {
+                        Icon(Icons.Default.FileDownload, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("خروجی فایل")
                     }
                     OutlinedButton(onClick = onRestore, modifier = Modifier.weight(1f).pressScale()) {
-                        Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text(uiText("بازیابی"))
+                        Icon(Icons.Default.FileUpload, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("واردکردن فایل")
+                    }
+                }
+                if (!backupMessage.isNullOrBlank()) {
+                    Text(backupMessage!!, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("نسخه‌های موجود (${storedBackups.size})", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { storedBackups = listStoredVsoftBackups(context) }) {
+                        Icon(Icons.Default.Refresh, "تازه‌سازی فهرست")
+                    }
+                }
+                if (storedBackups.isEmpty()) {
+                    Text("هنوز نسخه پشتیبانی ذخیره نشده است.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    storedBackups.forEach { file ->
+                        val automatic = file.name.contains("-auto-") || file.name.startsWith("vsoft-auto-backup-")
+                        val date = java.text.SimpleDateFormat("yyyy/MM/dd  HH:mm", Locale.getDefault()).format(Date(file.lastModified()))
+                        ListItem(
+                            headlineContent = { Text(date, fontWeight = FontWeight.SemiBold) },
+                            supportingContent = {
+                                Text((if (automatic) "خودکار" else "دستی") + " • " + String.format(Locale.getDefault(), "%.1f KB", file.length() / 1024.0))
+                            },
+                            leadingContent = { Icon(if (automatic) Icons.Default.Schedule else Icons.Default.Save, null) },
+                            trailingContent = {
+                                IconButton(onClick = { selectedBackup = file }) {
+                                    Icon(Icons.Default.Restore, "بازیابی این نسخه")
+                                }
+                            }
+                        )
+                        HorizontalDivider()
                     }
                 }
             }
         }
     }
+    if (selectedBackup != null) {
+        AlertDialog(
+            onDismissRequest = { selectedBackup = null },
+            title = { Text("بازیابی نسخه پشتیبان؟") },
+            text = { Text("با تأیید، اطلاعات فعلی برنامه با نسخه انتخاب‌شده جایگزین می‌شود. برای جلوگیری از ازدست‌رفتن اطلاعات جدید، ابتدا یک نسخه دستی بساز.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val file = selectedBackup
+                    selectedBackup = null
+                    if (file != null) {
+                        scope.launch {
+                            val data = withContext(Dispatchers.IO) { readStoredVsoftBackup(file) }
+                            if (data != null) {
+                                onStoredBackupRestore(data)
+                                backupMessage = "بازیابی نسخه انتخاب‌شده آغاز شد."
+                            } else {
+                                backupMessage = "این نسخه خراب است یا قابل بازیابی نیست."
+                            }
+                        }
+                    }
+                }) { Text("تأیید و جایگزینی") }
+            },
+            dismissButton = { TextButton(onClick = { selectedBackup = null }) { Text("لغو") } }
+        )
+    }
+
 }
 
 @Composable
