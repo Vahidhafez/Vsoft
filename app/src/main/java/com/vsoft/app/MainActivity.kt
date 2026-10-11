@@ -1,30 +1,31 @@
 package com.vsoft.app
 
-import android.os.Bundle
+import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
-import android.content.Intent
+import android.os.Bundle
 import android.provider.MediaStore
-import android.content.Context
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -32,71 +33,78 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.*
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import java.util.concurrent.TimeUnit
-import org.json.JSONArray
-import org.json.JSONObject
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import java.io.File
+import java.math.BigInteger
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.math.BigInteger
 
 val android.content.Context.dataStore by preferencesDataStore("vsoft_data")
@@ -316,6 +324,11 @@ fun uiText(key: String): String {
             "شماره تماس" -> "Phone number"
             "شغل / نقش" -> "Job / role"
             "یادداشت" -> "Note"
+            "حساب و همگام‌سازی" -> "Account & sync"
+            "با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم." -> "Sign in with Google to securely connect your Vsoft data to your account."
+            "ورود با Google" -> "Sign in with Google"
+            "حساب Google" -> "Google account"
+            "خروج از حساب" -> "Sign out"
             "انتخاب" -> "Select"
             "ذخیره" -> "Save"
             "لغو" -> "Cancel"
@@ -390,6 +403,11 @@ fun uiText(key: String): String {
             "شماره تماس" -> "رقم الهاتف"
             "شغل / نقش" -> "المهنة / الدور"
             "یادداشت" -> "ملاحظة"
+            "حساب و همگام‌سازی" -> "الحساب والمزامنة"
+            "با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم." -> "سجّل الدخول باستخدام Google لربط بيانات Vsoft بحسابك بأمان."
+            "ورود با Google" -> "تسجيل الدخول باستخدام Google"
+            "حساب Google" -> "حساب Google"
+            "خروج از حساب" -> "تسجيل الخروج"
             "انتخاب" -> "اختيار"
             "ذخیره" -> "حفظ"
             "لغو" -> "إلغاء"
@@ -1414,13 +1432,11 @@ fun MainScreen(
     onFontChange: (String) -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
-    backupRetention: Int,
-    onBackupRetentionChange: (Int) -> Unit,
-    backupSnapshot: VsoftBackup,
-    onStoredBackupRestore: (VsoftBackup) -> Unit
+    backupRetention: Int, onBackupRetentionChange: (Int) -> Unit, backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit
 ) {
 
-    var selectedPage by remember { mutableStateOf(0) }
+    var selectedPage by rememberSaveable { mutableStateOf(0) }
+    val pageStateHolder = rememberSaveableStateHolder()
 
     val pages = listOf(
         strings.dashboard,
@@ -1439,137 +1455,62 @@ fun MainScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-                    .vsoftGlass(RoundedCornerShape(24.dp))
-                    .border(
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f)),
-                        RoundedCornerShape(24.dp)
-                    ),
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (LocalVsoftGlass.current)
-                        Color.Transparent
-                    else MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = if (LocalVsoftGlass.current)
-                        Color.Transparent
-                    else MaterialTheme.colorScheme.surface
-                ),
-                title = {
-                    AnimatedContent(
-                        targetState = pages[selectedPage],
-                        transitionSpec = {
-                            val rtl = language != "en"
-                            val direction = if (targetState != initialState) {
-                                if (rtl) -1 else 1
-                            } else {
-                                1
-                            }
-                            (fadeIn(tween(180)) + slideInHorizontally(tween(260)) { direction * it / 5 }) togetherWith
-                                (fadeOut(tween(140)) + slideOutHorizontally(tween(200)) { -direction * it / 6 })
-                        },
-                        label = "top_title"
-                    ) { title ->
-                        Column {
-                            Text(
-                                "VSOFT",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 1.5.sp
-                            )
-                            Text(title, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+            Surface(
+                color = MaterialTheme.colorScheme.background,
+                tonalElevation = 0.dp
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 20.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("VSOFT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.primary)
+                        AnimatedContent(
+                            targetState = pages[selectedPage],
+                            transitionSpec = {
+                                (fadeIn(tween(160)) + slideInHorizontally(tween(200)) { it / 8 }) togetherWith
+                                    (fadeOut(tween(100)) + slideOutHorizontally(tween(140)) { -it / 10 })
+                            },
+                            label = "redesign_page_title"
+                        ) { title ->
+                            Text(title, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                         }
                     }
-                },
-                actions = {
-                    TopActionIcon(Icons.Default.CreditCard, "کارت‌ها", selectedPage == 5) { selectedPage = 5 }
-                    TopActionIcon(Icons.Default.Place, "محل‌های کار", selectedPage == 6) { selectedPage = 6 }
-                    TopActionIcon(Icons.Default.Person, "افراد", selectedPage == 7) { selectedPage = 7 }
-                    TopActionIcon(Icons.Default.Sms, "پیامک", selectedPage == 9) { selectedPage = 9 }
-                },
-                navigationIcon = {
-                    IconButton(modifier = Modifier.pressScale(0.92f), onClick = { selectedPage = 4 }) {
-                        Box(
-                            Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
-                            contentAlignment = Alignment.Center
+                    if (selectedPage == 10) {
+                        IconButton(
+                            onClick = { selectedPage = 2 },
+                            modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)
                         ) {
-                            Icon(
-                                Icons.Default.Settings,
-                                contentDescription = strings.settings,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(21.dp)
-                            )
+                            Icon(Icons.Default.ArrowForward, contentDescription = "بازگشت به کار", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        Spacer(Modifier.width(7.dp))
+                    }
+                    IconButton(onClick = { selectedPage = 4 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = .12f))) {
+                        Icon(Icons.Default.Settings, contentDescription = strings.settings, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
-            )
+            }
         },
         bottomBar = {
-
-            NavigationBar(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .vsoftGlass(RoundedCornerShape(30.dp))
-                    .border(
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
-                        RoundedCornerShape(30.dp)
-                    ),
-                containerColor = if (LocalVsoftGlass.current)
-                    Color.Transparent
-                else MaterialTheme.colorScheme.surface,
-                tonalElevation = if (LocalVsoftGlass.current) 0.dp else 3.dp
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 9.dp),
+                shape = RoundedCornerShape(27.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .09f)),
+                shadowElevation = 8.dp,
+                tonalElevation = 0.dp
             ) {
-
-                NavigationBarItem(
-                    selected = selectedPage == 0,
-                    onClick = { selectedPage = 0 },
-                    icon = { AnimatedNavIcon(Icons.Default.Home, selectedPage == 0) },
-                    label = {
-                        Text(strings.dashboard)
-                    }
-                )
-
-                NavigationBarItem(
-                    selected = selectedPage == 1,
-                    onClick = { selectedPage = 1 },
-                    icon = { AnimatedNavIcon(Icons.Default.AccountBalanceWallet, selectedPage == 1) },
-                    label = {
-                        Text(strings.finance)
-                    },
-                    alwaysShowLabel = true
-                )
-
-                NavigationBarItem(
-                    selected = selectedPage == 2,
-                    onClick = { selectedPage = 2 },
-                    icon = { AnimatedNavIcon(Icons.Default.Work, selectedPage == 2) },
-                    label = {
-                        Text(strings.work)
-                    }
-                )
-
-                NavigationBarItem(
-                    selected = selectedPage == 3,
-                    onClick = { selectedPage = 3 },
-                    icon = { AnimatedNavIcon(Icons.Default.BarChart, selectedPage == 3) },
-                    label = {
-                        Text(strings.reports)
-                    }
-                )
-
-                NavigationBarItem(
-                    selected = selectedPage == 8,
-                    onClick = { selectedPage = 8 },
-                    icon = { AnimatedNavIcon(Icons.Default.MoreHoriz, selectedPage == 8) },
-                    label = {
-                        Text(if (language == "en") "Tools" else if (language == "ar") "الأدوات" else "ابزارها")
-                    }
-                )
-
+                Row(
+                    Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 5.dp, vertical = 5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RedesignNavItem(strings.dashboard, Icons.Default.Home, selectedPage == 0, Modifier.weight(1f)) { selectedPage = 0 }
+                    RedesignNavItem(strings.finance, Icons.Default.AccountBalanceWallet, selectedPage == 1, Modifier.weight(1f)) { selectedPage = 1 }
+                    RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2 || selectedPage == 10, Modifier.weight(1f)) { selectedPage = 2 }
+                    RedesignNavItem(strings.reports, Icons.Default.Insights, selectedPage == 3, Modifier.weight(1f)) { selectedPage = 3 }
+                    RedesignNavItem(if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر", Icons.Default.GridView, selectedPage in 5..9, Modifier.weight(1f)) { selectedPage = 8 }
+                }
             }
         }
     ) { padding ->
@@ -1638,14 +1579,15 @@ fun MainScreen(
                 .fillMaxSize(),
             label = "page"
         ) { page ->
-
+            pageStateHolder.SaveableStateProvider(page) {
             when (page) {
 
                 0 -> DashboardPage(
                     strings,
                     transactions,
                     workDays,
-                    cards
+                    cards,
+                    onNavigate = { destination -> selectedPage = destination }
                 )
 
                 1 -> FinancePage(
@@ -1698,7 +1640,7 @@ fun MainScreen(
                     cards = cards,
                     people = people,
                     workplaces = workplaces,
-                    onWorkPurchases = { selectedPage = 10 }
+                    onNavigate = { destination -> selectedPage = destination }
                 )
                 10 -> WorkPurchasesPage(
                     purchases = workPurchases,
@@ -1708,6 +1650,7 @@ fun MainScreen(
                     onTransactionsChange = onTransactionsChange,
                     transactions = transactions
                 )
+            }
             }
         }
         }
@@ -1808,23 +1751,12 @@ fun AnimatedNavIcon(
 @Composable
 fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
     val visible = remember { MutableTransitionState(false) }
-    val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay((index * 42L).coerceAtMost(250L))
-        visible.targetState = true
-    }
+    LaunchedEffect(Unit) { visible.targetState = true }
+    // No per-row stagger: rows entering the viewport must be visible immediately.
     AnimatedVisibility(
         visibleState = visible,
-        enter = fadeIn(tween(320)) + slideInHorizontally(
-            animationSpec = tween(300, easing = FastOutSlowInEasing)
-        ) { direction * it / 14 } + scaleIn(
-            animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
-            initialScale = 0.985f
-        ),
-        exit = fadeOut(tween(160)) + scaleOut(
-            animationSpec = tween(160, easing = FastOutSlowInEasing),
-            targetScale = 0.99f
-        )
+        enter = fadeIn(tween(90)),
+        exit = fadeOut(tween(70))
     ) { content() }
 }
 
@@ -1835,357 +1767,8 @@ fun DashboardPage(
     strings: AppStrings,
     transactions: List<Transaction>,
     workDays: List<WorkDay>,
-    cards: List<BankCard>
-) {
-    val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
-    val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
-    val workIncome = workDays.sumOf { it.income }
-    val openingBalance = cards.sumOf { it.openingBalance }
-    val balance = openingBalance + income + workIncome - expense
-    val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
-
-    val currentJalali = today()
-    val monthPrefix = currentJalali.substringBeforeLast("/") + "/"
-    val monthWorkDays = workDays.filter { it.date.startsWith(monthPrefix) }
-    val monthWorkIncome = monthWorkDays.sumOf { it.income }
-    val monthExpenses = transactions
-        .filter { it.type == "expense" && it.date.startsWith(monthPrefix) }
-        .sumOf { it.amount }
-    val monthIncome = transactions
-        .filter { it.type == "income" && it.date.startsWith(monthPrefix) }
-        .sumOf { it.amount }
-    val monthNet = monthWorkIncome + monthIncome - monthExpenses
-    val monthAverage = if (monthWorkDays.isEmpty()) 0L else monthWorkIncome / monthWorkDays.size
-
-    val animatedBalance by animateFloatAsState(balance.toFloat(), tween(650), label = "balance")
-    val animatedIncome by animateFloatAsState((income + workIncome).toFloat(), tween(750), label = "income")
-    val animatedExpense by animateFloatAsState(expense.toFloat(), tween(800), label = "expense")
-
-    LazyColumn(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = PaddingValues(bottom = 28.dp)
-    ) {
-        item {
-            VsoftEntrance(0) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "VSOFT",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 1.8.sp
-                        )
-                        Text(
-                            strings.dashboard,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Text(
-                            uiText("وضعیت مالی و کاری شما در یک نگاه"),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp
-                        )
-                    }
-                    Box(
-                        Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Dashboard,
-                            null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(23.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            VsoftEntrance(1) {
-                Card(
-                    Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(30.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                    elevation = CardDefaults.cardElevation(0.dp)
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.secondary.copy(alpha = .92f)
-                                    )
-                                )
-                            )
-                            .padding(22.dp)
-                    ) {
-                        Column {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = .16f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.AccountBalanceWallet,
-                                        null,
-                                        tint = Color.White
-                                    )
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        uiText("موجودی کل"),
-                                        color = Color.White.copy(alpha = .76f),
-                                        fontSize = 13.sp
-                                    )
-                                    Text(
-                                        money(animatedBalance.toLong()),
-                                        color = Color.White,
-                                        fontSize = 26.sp,
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
-                                }
-                                Icon(
-                                    Icons.Default.TrendingUp,
-                                    null,
-                                    tint = Color.White.copy(alpha = .82f),
-                                    modifier = Modifier.size(25.dp)
-                                )
-                            }
-                            Spacer(Modifier.height(18.dp))
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                DashboardPill(
-                                    uiText("درآمد"),
-                                    money(animatedIncome.toLong()),
-                                    Icons.Default.AddCircleOutline,
-                                    Modifier.weight(1f)
-                                )
-                                DashboardPill(
-                                    uiText("هزینه"),
-                                    money(animatedExpense.toLong()),
-                                    Icons.Default.RemoveCircleOutline,
-                                    Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                DashboardMetric(
-                    uiText("ساعت کاری"),
-                    String.format(Locale.US, "%.1f ساعت", totalHours),
-                    Icons.Default.AccessTime,
-                    MaterialTheme.colorScheme.primary,
-                    Modifier.weight(1f)
-                )
-                DashboardMetric(
-                    uiText("کارت بانکی"),
-                    cards.size.toString(),
-                    Icons.Default.CreditCard,
-                    MaterialTheme.colorScheme.secondary,
-                    Modifier.weight(1f)
-                )
-            }
-        }
-
-        item {
-            VsoftEntrance(3) {
-                Card(
-                    Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline.copy(alpha = .08f)
-                    )
-                ) {
-                    Column(Modifier.padding(18.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    if (LocalVsoftLanguage.current == "en") "This month"
-                                    else if (LocalVsoftLanguage.current == "ar") "هذا الشهر"
-                                    else "این ماه",
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    uiText("خلاصه عملکرد این ماه"),
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Box(
-                                Modifier
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(
-                                        if (monthNet >= 0) MaterialTheme.colorScheme.secondary.copy(alpha = .12f)
-                                        else MaterialTheme.colorScheme.error.copy(alpha = .12f)
-                                    )
-                                    .padding(horizontal = 11.dp, vertical = 7.dp)
-                            ) {
-                                Text(
-                                    money(monthNet),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (monthNet >= 0)
-                                        MaterialTheme.colorScheme.secondary
-                                    else MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(14.dp))
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(9.dp)
-                        ) {
-                            DashboardMiniStat(
-                                if (LocalVsoftLanguage.current == "en") "Work income" else if (LocalVsoftLanguage.current == "ar") "دخل العمل" else "درآمد کاری",
-                                money(monthWorkIncome),
-                                Icons.Default.Work,
-                                MaterialTheme.colorScheme.secondary,
-                                Modifier.weight(1f)
-                            )
-                            DashboardMiniStat(
-                                if (LocalVsoftLanguage.current == "en") "Expenses" else if (LocalVsoftLanguage.current == "ar") "المصروفات" else "هزینه‌ها",
-                                money(monthExpenses),
-                                Icons.Default.TrendingDown,
-                                MaterialTheme.colorScheme.tertiary,
-                                Modifier.weight(1f)
-                            )
-                            DashboardMiniStat(
-                                if (LocalVsoftLanguage.current == "en") "Workdays" else if (LocalVsoftLanguage.current == "ar") "أيام العمل" else "روز کاری",
-                                monthWorkDays.size.toString(),
-                                Icons.Default.Event,
-                                MaterialTheme.colorScheme.primary,
-                                Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            DashboardMetric(
-                if (LocalVsoftLanguage.current == "en") "Average workday income"
-                else if (LocalVsoftLanguage.current == "ar") "متوسط دخل يوم العمل"
-                else "میانگین درآمد هر روز کاری",
-                money(monthAverage),
-                Icons.Default.AutoGraph,
-                MaterialTheme.colorScheme.primary,
-                Modifier.fillMaxWidth()
-            )
-        }
-
-        item {
-            VsoftEntrance(4) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        uiText("کارت‌های بانکی"),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        cards.size.toString(),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        item {
-            if (cards.isEmpty()) {
-                EmptyState(uiText("هنوز کارتی ثبت نشده"), Icons.Default.CreditCard)
-            } else {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    itemsIndexed(cards, key = { _, it -> it.id }) { index, card ->
-                        VsoftEntrance(index.coerceAtMost(5)) {
-                            MiniBankCard(card, cardCurrentBalance(card, transactions, workDays))
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            VsoftEntrance(6) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        uiText("آخرین تراکنش‌ها"),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        transactions.size.toString(),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        if (transactions.isEmpty()) {
-            item {
-                EmptyState(uiText("هنوز تراکنشی ثبت نشده"), Icons.Default.ReceiptLong)
-            }
-        } else {
-            itemsIndexed(
-                transactions.sortedByDescending { it.id }.take(5),
-                key = { _, it -> it.id }
-            ) { index, t ->
-                VsoftEntrance(index.coerceAtMost(4)) {
-                    TransactionCard(t, onDelete = {}, showActions = false)
-                }
-            }
-        }
-    }
-}
+    cards: List<BankCard>,
+    onNavigate: (Int) -> Unit = {}
 
 @Composable
 fun DashboardPill(
@@ -2354,6 +1937,8 @@ fun FinancePage(
         compareByDescending<Transaction> { it.date }
             .thenByDescending { it.id }
     )
+    // Preserve newest-first ordering, then render each calendar date as its own section.
+    val transactionGroups = list.groupBy { it.date }
     val incomeTotal = transactions.filter { it.type == "income" }.sumOf { it.amount }
     val expenseTotal = transactions.filter { it.type == "expense" }.sumOf { it.amount }
     val netTotal = incomeTotal - expenseTotal
@@ -2370,58 +1955,48 @@ fun FinancePage(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item(key = "finance_header") {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                uiText("مدیریت تراکنش‌ها"),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(
-                                transactions.size.toString() + " " +
-                                    if (LocalVsoftLanguage.current == "en") "transactions" else "تراکنش",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = .10f)
-                        ) {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(10.dp).size(20.dp)
-                            )
-                        }
-                    }
-
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Card(
-                        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                     ) {
-                        Row(
-                            Modifier.padding(14.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Column(
+                            Modifier.fillMaxWidth().background(
+                                Brush.linearGradient(listOf(Color(0xFF18284E), Color(0xFF315AC1), Color(0xFF287F86)))
+                            ).padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            DashboardMiniStat(uiText("درآمد"), money(incomeTotal), Icons.Default.TrendingUp,
-                                MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                            DashboardMiniStat(uiText("هزینه"), money(expenseTotal), Icons.Default.TrendingDown,
-                                MaterialTheme.colorScheme.error, Modifier.weight(1f))
-                            DashboardMiniStat(uiText("خالص"), money(netTotal), Icons.Default.AccountBalanceWallet,
-                                if (netTotal >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                Modifier.weight(1f))
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(uiText("امور مالی"), color = Color.White.copy(alpha = .78f), fontSize = 12.sp)
+                                    Text(uiText("تراکنش‌های تو"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(
+                                        transactions.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "transactions" else "تراکنش ثبت‌شده",
+                                        color = Color.White.copy(alpha = .75f), fontSize = 11.sp
+                                    )
+                                }
+                                Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.AccountBalanceWallet, null, tint = Color.White, modifier = Modifier.size(25.dp))
+                                }
+                            }
+                            HorizontalDivider(color = Color.White.copy(alpha = .18f))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("درآمد"), color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                                    Text(money(incomeTotal), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("هزینه"), color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                                    Text(money(expenseTotal), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("خالص"), color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                                    Text(money(netTotal), color = if (netTotal >= 0) Color(0xFF9AF0CF) else Color(0xFFFFC0B7), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                            }
                         }
                     }
-
                     OutlinedTextField(
                         search, { search = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -2455,35 +2030,64 @@ fun FinancePage(
                     }
                 }
             } else {
-                itemsIndexed(list, key = { _, it -> it.id }) { index, t ->
-                    VsoftEntrance(index.coerceAtMost(7)) {
-                        VsoftSwipeToDelete(
-                            onDelete = {
-                                val x = transactions.toMutableList()
-                                x.removeAll { it.id == t.id }
-                                onTransactionsChange(x)
-                                scope.launch {
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = "تراکنش حذف شد",
-                                        actionLabel = "بازگردانی",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                    if (result == SnackbarResult.ActionPerformed) {
-                                        onTransactionsChange((x + t).sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending { it.id }).toMutableList())
-                                    }
-                                }
-                            }
+                transactionGroups.forEach { (transactionDate, entries) ->
+                    item(key = "finance_date_$transactionDate") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TransactionCard(
-                                t,
+                            Column(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Text(
+                                    transactionDate,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                val dayIncome = entries.filter { it.type == "income" }.sumOf { it.amount }
+                                val dayExpense = entries.filter { it.type == "expense" }.sumOf { it.amount }
+                                Text(
+                                    if (LocalVsoftLanguage.current == "en")
+                                        "${entries.size} transactions • +${money(dayIncome)} • −${money(dayExpense)}"
+                                    else "${entries.size} تراکنش • درآمد ${money(dayIncome)} • هزینه ${money(dayExpense)}",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                        }
+                    }
+                    itemsIndexed(entries, key = { _, it -> it.id }) { index, t ->
+                        VsoftEntrance(index.coerceAtMost(7)) {
+                            VsoftSwipeToDelete(
                                 onDelete = {
                                     val x = transactions.toMutableList()
                                     x.removeAll { it.id == t.id }
                                     onTransactionsChange(x)
-                                },
-                                onEdit = { edit = t; show = true },
-                                onReceipt = { receiptTransaction = t }
-                            )
+                                    scope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "تراکنش حذف شد",
+                                            actionLabel = "بازگردانی",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            onTransactionsChange((x + t).sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending { it.id }).toMutableList())
+                                        }
+                                    }
+                                }
+                            ) {
+                                TransactionCard(
+                                    t,
+                                    onDelete = {
+                                        val x = transactions.toMutableList()
+                                        x.removeAll { it.id == t.id }
+                                        onTransactionsChange(x)
+                                    },
+                                    onEdit = { edit = t; show = true },
+                                    onReceipt = { receiptTransaction = t }
+                                )
+                            }
                         }
                     }
                 }
@@ -2511,6 +2115,11 @@ fun FinancePage(
         if (i >= 0) x[i] = t else x.add(t)
         onTransactionsChange(x)
         show = false
+    }
+    // The receipt icon stores the selected transaction; render its dialog here so taps
+    // actually open the receipt instead of silently doing nothing.
+    receiptTransaction?.let { selected ->
+        TransactionReceiptDialog(selected) { receiptTransaction = null }
     }
 }
 
@@ -2642,21 +2251,18 @@ fun AddTransactionDialog(
                 Modifier.padding(22.dp).heightIn(max = 680.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(13.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
-                            .background(typeColor.copy(alpha = .13f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.ReceiptLong, null, tint = typeColor, modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(if (existing == null) uiText("ثبت تراکنش جدید") else uiText("ویرایش تراکنش"), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(uiText("اطلاعات مالی را دقیق و سریع ثبت کنید"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, uiText("بستن")) }
-                }
+                VsoftFormHeader(
+                    title = if (existing == null) uiText("ثبت تراکنش جدید") else uiText("ویرایش تراکنش"),
+                    subtitle = uiText("اطلاعات مالی را دقیق و سریع ثبت کنید"),
+                    icon = Icons.Default.ReceiptLong,
+                    accent = typeColor,
+                    onDismiss = onDismiss
+                )
+                VsoftFormSectionLabel(
+                    title = "نوع تراکنش",
+                    subtitle = "درآمد یا هزینه را انتخاب کنید",
+                    icon = Icons.Default.SwapVert
+                )
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .62f)).padding(4.dp),
@@ -2700,12 +2306,43 @@ fun AddTransactionDialog(
                         }
                     }
                 }
-                OutlinedTextField(
-                    amount, { amount = normalizeAmountInput(it) }, label = { Text(strings.amount) },
-                    leadingIcon = { Icon(Icons.Default.Payments, null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true,
-                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = typeColor.copy(alpha = .065f),
+                    border = BorderStroke(1.dp, typeColor.copy(alpha = .20f))
+                ) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Payments, null, tint = typeColor, modifier = Modifier.size(19.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("مبلغ تراکنش", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                Text("مبلغ را وارد کنید؛ جداکننده‌ها خودکار نمایش داده می‌شوند",
+                                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        OutlinedTextField(
+                            amount, { amount = normalizeAmountInput(it) },
+                            label = { Text(strings.amount) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = GroupedNumberVisualTransformation(),
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = typeColor,
+                                focusedLabelColor = typeColor,
+                                cursorColor = typeColor
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(17.dp)
+                        )
+                    }
+                }
+                VsoftFormSectionLabel(
+                    title = "جزئیات تراکنش",
+                    subtitle = "دسته‌بندی و توضیحات را مشخص کنید",
+                    icon = Icons.Default.Label
                 )
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton(
@@ -2739,6 +2376,11 @@ fun AddTransactionDialog(
                     description, { description = it }, label = { Text(strings.description) },
                     leadingIcon = { Icon(Icons.Default.Notes, null) }, minLines = 2, maxLines = 3,
                     modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                )
+                VsoftFormSectionLabel(
+                    title = "اطلاعات تکمیلی",
+                    subtitle = "تاریخ، کارت و شخص مرتبط (اختیاری)",
+                    icon = Icons.Default.Tune
                 )
                 OutlinedButton(
                     { dateOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
@@ -2816,7 +2458,9 @@ fun AddTransactionDialog(
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
+                    OutlinedButton(
+                        onDismiss, Modifier.weight(.78f).height(52.dp), shape = RoundedCornerShape(17.dp)
+                    ) { Text(strings.cancel) }
                     Button(
                         onClick = {
                             val v = normalizeDigits(amount).toLongOrNull() ?: 0L
@@ -2824,8 +2468,10 @@ fun AddTransactionDialog(
                                 onSave(Transaction(existing?.id ?: System.currentTimeMillis(), type, v, category, description, date, card, person))
                         },
                         enabled = normalizeDigits(amount).toLongOrNull()?.let { it > 0 } == true && category.isNotBlank(),
-                        modifier = Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)
-                    ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save) }
+                        modifier = Modifier.weight(1.22f).height(52.dp).pressScale(),
+                        shape = RoundedCornerShape(17.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = typeColor, contentColor = Color.White)
+                    ) { Icon(Icons.Default.CheckCircle, null); Spacer(Modifier.width(7.dp)); Text(strings.save, fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -2902,11 +2548,11 @@ fun WorkPurchasesPage(
         ) {
             item {
                 Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(uiText("خریدهای کار"), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        uiText("ابزار، تجهیزات، قطعات و سایر خریدهای مرتبط با کار"),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    VsoftPremiumPageHero(
+                        title = uiText("خریدهای کار"),
+                        subtitle = uiText("ابزار، تجهیزات، قطعات و سایر خریدهای مرتبط با کار"),
+                        icon = Icons.Default.ShoppingCart,
+                        accent = Color(0xFFB65B45)
                     )
                     Card(
                         Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(22.dp)),
@@ -3069,15 +2715,13 @@ fun WorkPurchaseDialog(
                 Modifier.padding(20.dp).heightIn(max = 680.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(25.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(if (existing == null) "ثبت خرید کار" else "ویرایش خرید کار", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("جزئیات خرید را ثبت کنید", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "بستن") }
-                }
+                VsoftFormHeader(
+                    title = if (existing == null) "ثبت خرید کار" else "ویرایش خرید کار",
+                    subtitle = "جزئیات خرید، پرداخت و محل کار",
+                    icon = Icons.Default.ShoppingCart,
+                    accent = Color(0xFFB65B45),
+                    onDismiss = onDismiss
+                )
                 OutlinedTextField(title, { title = it }, label = { Text("عنوان خرید") }, leadingIcon = { Icon(Icons.Default.ShoppingCart, null) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
                 OutlinedTextField(amount, { amount = normalizeAmountInput(it) }, label = { Text("مبلغ") }, leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp))
                 Box(Modifier.fillMaxWidth()) {
@@ -3151,6 +2795,15 @@ fun WorkPage(
     val listState = rememberLazyListState()
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
     val totalIncome = workDays.sumOf { it.income }
+    val sortedWorkDays = remember(workDays) {
+        workDays.sortedWith(
+            compareByDescending<WorkDay> { it.startDate.ifBlank { it.date } }
+                .thenByDescending { it.id }
+        )
+    }
+    val workGroups = remember(sortedWorkDays) {
+        sortedWorkDays.groupBy { it.startDate.ifBlank { it.date } }
+    }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LazyColumn(
@@ -3161,61 +2814,47 @@ fun WorkPage(
         ) {
             item(key = "work_header") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                uiText("مدیریت روزهای کاری"),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(
-                                if (LocalVsoftLanguage.current == "en")
-                                    "${workDays.size} workdays • ${String.format(Locale.US, "%.1f", totalHours)} hours"
-                                else
-                                    "${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = .10f)
-                        ) {
-                            Icon(
-                                Icons.Default.WorkHistory,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(10.dp).size(20.dp)
-                            )
-                        }
-                    }
-
                     Card(
-                        Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f)),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                     ) {
-                        Row(
-                            Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Column(
+                            Modifier.fillMaxWidth().background(
+                                Brush.linearGradient(listOf(Color(0xFF0D665F), Color(0xFF128C83), Color(0xFF3A9E9A)))
+                            ).padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            DashboardMetric(
-                                "درآمد کاری", money(totalIncome), Icons.Default.Payments,
-                                MaterialTheme.colorScheme.secondary, Modifier.weight(1f)
-                            )
-                            DashboardMetric(
-                                "ساعت کاری", String.format(Locale.US, "%.1f", totalHours),
-                                Icons.Default.Schedule, MaterialTheme.colorScheme.primary, Modifier.weight(1f)
-                            )
-                            DashboardMetric(
-                                "محل‌های کار", workplaces.size.toString(), Icons.Default.Place,
-                                MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)
-                            )
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(uiText("مدیریت کار"), color = Color.White.copy(alpha = .78f), fontSize = 12.sp)
+                                    Text(uiText("روزهای کاری من"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(
+                                        if (LocalVsoftLanguage.current == "en")
+                                            "${workDays.size} workdays • ${String.format(Locale.US, "%.1f", totalHours)} hours"
+                                        else "${workDays.size} روز کاری • ${String.format(Locale.US, "%.1f", totalHours)} ساعت",
+                                        color = Color.White.copy(alpha = .78f), fontSize = 11.sp
+                                    )
+                                }
+                                Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .15f)), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.WorkHistory, null, tint = Color.White, modifier = Modifier.size(25.dp))
+                                }
+                            }
+                            HorizontalDivider(color = Color.White.copy(alpha = .2f))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("درآمد کاری"), color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                    Text(money(totalIncome), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("ساعت کاری"), color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                    Text(String.format(Locale.US, "%.1f", totalHours), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(uiText("محل‌های کار"), color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                    Text(workplaces.size.toString(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
@@ -3242,27 +2881,48 @@ fun WorkPage(
                     }
                 }
             } else {
-                itemsIndexed(
-                    workDays.sortedByDescending { it.id },
-                    key = { _, it -> it.id }
-                ) { index, w ->
-                    VsoftEntrance(index.coerceAtMost(7)) {
-                        VsoftSwipeToDelete(
-                            onDelete = {
-                                val x = workDays.toMutableList()
-                                x.removeAll { it.id == w.id }
-                                onWorkChange(x)
-                            }
+                workGroups.forEach { (workDate, entries) ->
+                    item(key = "work_date_$workDate") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            WorkCard(
-                                w,
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    workDate,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Text(
+                                    if (LocalVsoftLanguage.current == "en")
+                                        "${entries.size} entries • ${money(entries.sumOf { it.income })}"
+                                    else "${entries.size} مورد • ${money(entries.sumOf { it.income })}",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                        }
+                    }
+                    itemsIndexed(entries, key = { _, it -> it.id }) { index, w ->
+                        VsoftEntrance(index.coerceAtMost(7)) {
+                            VsoftSwipeToDelete(
                                 onDelete = {
                                     val x = workDays.toMutableList()
                                     x.removeAll { it.id == w.id }
                                     onWorkChange(x)
-                                },
-                                onEdit = { edit = w; show = true }
-                            )
+                                }
+                            ) {
+                                WorkCard(
+                                    w,
+                                    onDelete = {
+                                        val x = workDays.toMutableList()
+                                        x.removeAll { it.id == w.id }
+                                        onWorkChange(x)
+                                    },
+                                    onEdit = { edit = w; show = true }
+                                )
+                            }
                         }
                     }
                 }
@@ -3416,18 +3076,18 @@ fun AddWorkDialog(
                 Modifier.padding(22.dp).heightIn(max = 700.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(13.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Work, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(if (existing == null) uiText("ثبت روز کاری") else uiText("ویرایش روز کاری"), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(uiText("ساعت، درآمد و جزئیات کار را یکجا ثبت کنید"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, uiText("بستن")) }
-                }
+                VsoftFormHeader(
+                    title = if (existing == null) uiText("ثبت روز کاری") else uiText("ویرایش روز کاری"),
+                    subtitle = uiText("زمان، درآمد و جزئیات کار"),
+                    icon = Icons.Default.Work,
+                    accent = Color(0xFF0B9B83),
+                    onDismiss = onDismiss
+                )
+                VsoftFormSectionLabel(
+                    title = "محل و زمان کار",
+                    subtitle = "محل انجام کار و بازه زمانی را ثبت کنید",
+                    icon = Icons.Default.EventAvailable
+                )
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ placeOpen = true }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 13.dp)) {
@@ -3505,10 +3165,43 @@ fun AddWorkDialog(
                         Icon(Icons.Default.Timer, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = .7f))
                     }
                 }
-                OutlinedTextField(
-                    income, { income = normalizeAmountInput(it) }, label = { Text(uiText("درآمد کار")) },
-                    leadingIcon = { Icon(Icons.Default.Payments, null) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    visualTransformation = GroupedNumberVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = .07f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = .22f))
+                ) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Payments, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(19.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("دستمزد این کار", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                Text("درآمد ثبت‌شده به محاسبات مالی اضافه می‌شود",
+                                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        OutlinedTextField(
+                            income, { income = normalizeAmountInput(it) },
+                            label = { Text(uiText("درآمد کار")) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            visualTransformation = GroupedNumberVisualTransformation(),
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                                cursorColor = MaterialTheme.colorScheme.secondary
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(17.dp)
+                        )
+                    }
+                }
+                VsoftFormSectionLabel(
+                    title = "تکمیل اطلاعات",
+                    subtitle = "کارت مقصد، کارفرما و شرح کار (اختیاری)",
+                    icon = Icons.Default.Assignment
                 )
                 if (selectedCard != null) {
                     val colors = bankCardColors(selectedCard.bank)
@@ -3572,7 +3265,9 @@ fun AddWorkDialog(
                     shape = RoundedCornerShape(17.dp), placeholder = { Text(uiText("مثلاً نصب تابلو، تعمیر موتور، سیم‌کشی...")) }
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onDismiss, Modifier.weight(1f), shape = RoundedCornerShape(17.dp)) { Text(strings.cancel) }
+                    OutlinedButton(
+                        onDismiss, Modifier.weight(.78f).height(52.dp), shape = RoundedCornerShape(17.dp)
+                    ) { Text(strings.cancel) }
                     Button(
                         onClick = {
                             onSave(WorkDay(
@@ -3581,8 +3276,10 @@ fun AddWorkDialog(
                             ))
                         },
                         enabled = place.isNotBlank() && startDate.isNotBlank() && endDate.isNotBlank(),
-                        modifier = Modifier.weight(1f).pressScale(), shape = RoundedCornerShape(17.dp)
-                    ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(6.dp)); Text(strings.save) }
+                        modifier = Modifier.weight(1.22f).height(52.dp).pressScale(),
+                        shape = RoundedCornerShape(17.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)
+                    ) { Icon(Icons.Default.CheckCircle, null); Spacer(Modifier.width(7.dp)); Text(strings.save, fontWeight = FontWeight.Bold) }
                 }
             }
         }
@@ -3630,31 +3327,27 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(bottom = 28.dp)) {
         item {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(strings.monthlyReport, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        uiText("گزارش مالی، روند ماهانه و عملکرد کارت را یکجا ببینید."),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                FilledTonalButton(
-                    onClick = { showReceiptBuilder = true },
-                    modifier = Modifier.pressScale(0.98f),
-                    shape = RoundedCornerShape(15.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
+                Row(
+                    Modifier.fillMaxWidth().background(
+                        Brush.linearGradient(listOf(Color(0xFF4B327F), Color(0xFF7651B7), Color(0xFFB16DAD)))
+                    ).padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.ReceiptLong, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        if (LocalVsoftLanguage.current == "en") "Invoice"
-                        else if (LocalVsoftLanguage.current == "ar") "فاتورة"
-                        else "فاکتور"
-                    )
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(if (LocalVsoftLanguage.current == "en") "Your money, clearly" else "تصویر روشن از پولت", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(uiText("گزارش مالی، روند ماهانه و عملکرد کارت را یکجا ببینید."), color = Color.White.copy(alpha = .78f), fontSize = 11.sp)
+                    }
+                    IconButton(
+                        onClick = { showReceiptBuilder = true },
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = .15f))
+                    ) {
+                        Icon(Icons.Default.ReceiptLong, contentDescription = "فاکتور", tint = Color.White)
+                    }
                 }
             }
         }
@@ -3729,10 +3422,15 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                                                 Text(card.bank, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, maxLines = 1)
                                             }
                                             Text(card.name, color = Color.White.copy(alpha = .82f), fontSize = 10.sp, maxLines = 1)
-                                            Text(
-                                                "•••• " + card.last4.ifBlank { card.cardNumber.takeLast(4) },
-                                                color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
-                                            )
+                                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                                Text(
+                                                    "•••• " + card.last4.ifBlank { card.cardNumber.takeLast(4) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    textAlign = TextAlign.Start,
+                                                    color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                                                    maxLines = 1
+                                                )
+                                            }
                                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
                                                     money(cardCurrentBalance(card, transactions, workDays)),
@@ -3848,6 +3546,8 @@ private fun ReportStatTile(title: String, value: String, icon: androidx.compose.
 
 @Composable
 private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
+    var selectedMonth by remember(monthly) { mutableStateOf(monthly.lastOrNull()?.first.orEmpty()) }
+    val selectedPoint = monthly.firstOrNull { it.first == selectedMonth } ?: monthly.lastOrNull()
     val maxValue = monthly.flatMap { listOf(it.second, it.third) }.maxOrNull()?.coerceAtLeast(1L) ?: 1L
     Card(
         Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(26.dp)),
@@ -3879,8 +3579,9 @@ private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
                 verticalAlignment = Alignment.Bottom
             ) {
                 monthly.forEachIndexed { index, point ->
-                    val targetIncome = (point.second.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
-                    val targetExpense = (point.third.toFloat() / maxValue.toFloat()).coerceIn(0.04f, 1f)
+                    val targetIncome = if (point.second > 0L) (point.second.toFloat() / maxValue.toFloat()).coerceIn(0.035f, 1f) else 0f
+                    val targetExpense = if (point.third > 0L) (point.third.toFloat() / maxValue.toFloat()).coerceIn(0.035f, 1f) else 0f
+                    val isSelected = point.first == selectedPoint?.first
                     val incomeFraction by animateFloatAsState(
                         targetValue = targetIncome,
                         animationSpec = tween(650, delayMillis = index * 70, easing = FastOutSlowInEasing),
@@ -3896,6 +3597,10 @@ private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom,
                         modifier = Modifier.weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = .08f) else Color.Transparent)
+                            .clickable { selectedMonth = point.first }
+                            .padding(horizontal = 2.dp, vertical = 5.dp)
                     ) {
                         Box(
                             Modifier.fillMaxWidth().height(140.dp),
@@ -3921,9 +3626,47 @@ private fun VsoftReportMonthlyChart(monthly: List<Triple<String, Long, Long>>) {
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(jalaliMonthName(month).take(3), fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1)
+                    }
+                }
+            }
+            selectedPoint?.let { point ->
+                Spacer(Modifier.height(10.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .42f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+                ) {
+                    Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(7.dp))
+                            Text(
+                                jalaliMonthName(point.first.substringAfterLast("/").toIntOrNull() ?: 1) + " " + point.first.substringBefore("/"),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 13.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                money(point.second - point.third),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 13.sp,
+                                color = if (point.second >= point.third) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(uiText("درآمد"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(money(point.second), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(uiText("هزینه"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(money(point.third), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, maxLines = 1)
+                            }
+                        }
                     }
                 }
             }
@@ -3961,12 +3704,86 @@ private fun VsoftChartLegend(color: Color, label: String) {
 }
 
 @Composable
-fun TransactionReceiptDialog(transaction:Transaction,onDismiss:()->Unit){
-    val context=LocalContext.current
-    AlertDialog(onDismissRequest=onDismiss,icon={Icon(Icons.Default.ReceiptLong,null)},title={Text(uiText("رسید تراکنش"))},
-        text={Text(uiText("یک رسید تصویری تمیز با تمام جزئیات مهم این تراکنش ساخته می‌شود."))},
-        confirmButton={Button(onClick={shareVsoftReceipt(context,listOf(transaction),emptyList(),transaction.date,transaction.date,"رسید تراکنش");onDismiss()}){Icon(Icons.Default.Image,null);Spacer(Modifier.width(6.dp));Text(uiText("ساخت عکس"))}},
-        dismissButton={TextButton(onClick=onDismiss){Text(uiText("لغو"))}})
+fun TransactionReceiptDialog(transaction: Transaction, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val isIncome = transaction.type == "income"
+    val accent = if (isIncome) Color(0xFF16866B) else MaterialTheme.colorScheme.error
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Box(
+                Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(25.dp))
+            }
+        },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(uiText("رسید تراکنش"), fontWeight = FontWeight.ExtraBold)
+                Text(uiText("پیش‌نمایش اطلاعات رسید"), fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
+                    border = BorderStroke(1.dp, accent.copy(alpha = .25f))
+                ) {
+                    Column(Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(transaction.category.ifBlank { uiText("تراکنش") },
+                                    fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                                Text(if (isIncome) uiText("رسید درآمد") else uiText("رسید هزینه"),
+                                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Icon(if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                null, tint = accent, modifier = Modifier.size(26.dp))
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Text(
+                            (if (isIncome) "+" else "−") + money(transaction.amount),
+                            fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = accent
+                        )
+                        ReceiptDetailRow(Icons.Default.CalendarMonth, uiText("تاریخ"), transaction.date)
+                        if (transaction.card.isNotBlank())
+                            ReceiptDetailRow(Icons.Default.CreditCard, uiText("کارت"), transaction.card)
+                        if (transaction.person.isNotBlank())
+                            ReceiptDetailRow(Icons.Default.Person, uiText("شخص مرتبط"), transaction.person)
+                        if (transaction.description.isNotBlank())
+                            ReceiptDetailRow(Icons.Default.Notes, uiText("توضیحات"), transaction.description)
+                    }
+                }
+                Text(uiText("با ساخت تصویر، رسید آمادهٔ ذخیره یا اشتراک‌گذاری می‌شود."),
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    shareVsoftReceipt(context, listOf(transaction), emptyList(),
+                        transaction.date, transaction.date, "رسید تراکنش")
+                    onDismiss()
+                },
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.Image, null)
+                Spacer(Modifier.width(7.dp))
+                Text(uiText("ساخت تصویر رسید"), fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(uiText("بازگشت")) }
+        }
+    )
 }
 @Composable
 fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,cards:List<BankCard>,onDismiss:()->Unit){
@@ -4030,8 +3847,7 @@ fun SettingsPage(
     onLanguageChange: (String) -> Unit, onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit, glass: Boolean, onGlassChange: (Boolean) -> Unit,
     font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
-    backupRetention: Int, onBackupRetentionChange: (Int) -> Unit,
-    backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit
+    backupRetention: Int, onBackupRetentionChange: (Int) -> Unit, backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -4042,17 +3858,62 @@ fun SettingsPage(
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(bottom = 28.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 4.dp, bottom = 34.dp)
     ) {
         item {
-            Column(Modifier.padding(vertical = 6.dp)) {
-                Text(strings.settings, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                Text(
-                    uiText("تنظیمات را به‌صورت فهرست مرتب و ساده مدیریت کنید"),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth()
+                        .background(Brush.linearGradient(listOf(Color(0xFF192B49), Color(0xFF354FC2), Color(0xFF117C83))))
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("VSOFT  /  CONTROL CENTER", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp, color = Color.White.copy(alpha = .68f))
+                            Text("تنظیمات برنامه", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                            Text("همه‌چیز رو مطابق سلیقه‌ات تنظیم کن", fontSize = 12.sp, color = Color.White.copy(alpha = .82f))
+                        }
+                        Box(
+                            Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Tune, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(
+                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(Icons.Default.Language, null, tint = Color.White.copy(alpha = .9f), modifier = Modifier.size(17.dp))
+                            Text("زبان", fontSize = 10.sp, color = Color.White.copy(alpha = .7f))
+                            Text(when (language) { "en" -> "English"; "ar" -> "العربية"; else -> "فارسی" }, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                        Column(
+                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(Icons.Default.Palette, null, tint = Color.White.copy(alpha = .9f), modifier = Modifier.size(17.dp))
+                            Text("پوسته", fontSize = 10.sp, color = Color.White.copy(alpha = .7f))
+                            Text(when (theme) { "light" -> "روشن"; "dark" -> "تاریک"; else -> "سیستم" }, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                        Column(
+                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(Icons.Default.Sms, null, tint = Color.White.copy(alpha = .9f), modifier = Modifier.size(17.dp))
+                            Text("پیامک بانکی", fontSize = 10.sp, color = Color.White.copy(alpha = .7f))
+                            Text(if (smsEnabled) "فعال" else "غیرفعال", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                    }
+                }
             }
         }
         item {
@@ -4271,17 +4132,14 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
             contentPadding = PaddingValues(top = 14.dp, bottom = 110.dp)
         ) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(uiText("کارت‌های بانکی"), fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        if (LocalVsoftLanguage.current == "en")
-                            "${cards.size} cards • ${positiveCount} active"
-                        else
-                            "${cards.size} کارت • ${positiveCount} کارت دارای موجودی",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp
-                    )
-                }
+                VsoftPremiumPageHero(
+                    title = uiText("کارت‌های بانکی"),
+                    subtitle = if (LocalVsoftLanguage.current == "en")
+                        "${cards.size} cards • ${positiveCount} active"
+                    else "${cards.size} کارت • ${positiveCount} کارت دارای موجودی",
+                    icon = Icons.Default.CreditCard,
+                    accent = Color(0xFF3D71D9)
+                )
             }
             item {
                 Card(
@@ -4445,10 +4303,12 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
             item {
-                Column {
-                    Text(if (LocalVsoftLanguage.current == "en") "Workplaces" else "محل‌های کار", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(workplaces.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "workplaces" else "محل کار", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                VsoftPremiumPageHero(
+                    title = if (LocalVsoftLanguage.current == "en") "Workplaces" else "محل‌های کار",
+                    subtitle = workplaces.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "workplaces" else "محل کار",
+                    icon = Icons.Default.Place,
+                    accent = Color(0xFF0B9B83)
+                )
             }
             item {
                 OutlinedTextField(
@@ -4456,8 +4316,24 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     shape = RoundedCornerShape(18.dp),
                     label = { Text(uiText("جستجوی محل کار")) },
-                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = {
+                        AnimatedVisibility(search.isNotBlank()) {
+                            IconButton(onClick = { search = "" }) {
+                                Icon(Icons.Default.Close, uiText("پاک‌کردن جستجو"))
+                            }
+                        }
+                    }
                 )
+            }
+            if (filteredWorkplaces.isEmpty()) {
+                item {
+                    EmptyState(
+                        if (workplaces.isEmpty()) uiText("هنوز محل کاری ثبت نشده")
+                        else uiText("محل کاری با این جستجو پیدا نشد"),
+                        Icons.Default.Place
+                    )
+                }
             }
             itemsIndexed(filteredWorkplaces, key = { _, it -> it.id }) { index, workplace ->
                 VsoftEntrance(index.coerceAtMost(7)) {
@@ -4529,17 +4405,13 @@ fun EditWorkplaceDialog(place: Workplace, onDismiss: () -> Unit, onSave: (Workpl
             color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .94f) else MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp, shadowElevation = 18.dp) {
             Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)), contentAlignment=Alignment.Center) {
-                        Icon(Icons.Default.Edit, null, tint=MaterialTheme.colorScheme.primary, modifier=Modifier.size(23.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(uiText("ویرایش محل کار"), fontSize=21.sp, fontWeight=FontWeight.ExtraBold)
-                        Text(uiText("نام محل کار را به‌روزرسانی کنید"), fontSize=12.sp, color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick=onDismiss){Icon(Icons.Default.Close, uiText("بستن"))}
-                }
+                VsoftFormHeader(
+                    title = uiText("ویرایش محل کار"),
+                    subtitle = uiText("اطلاعات محل کار را به‌روزرسانی کنید"),
+                    icon = Icons.Default.Place,
+                    accent = Color(0xFF0B9B83),
+                    onDismiss = onDismiss
+                )
                 OutlinedTextField(name,{name=it},label={Text(uiText("نام محل کار"))},leadingIcon={Icon(Icons.Default.Place,null)},
                     singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -4568,10 +4440,12 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)) {
             item {
-                Column {
-                    Text("افراد", fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(people.size.toString() + " نفر", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                VsoftPremiumPageHero(
+                    title = if (LocalVsoftLanguage.current == "en") "People" else "افراد",
+                    subtitle = people.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "contacts" else "نفر ثبت‌شده",
+                    icon = Icons.Default.PeopleAlt,
+                    accent = Color(0xFF7357D8)
+                )
             }
             item {
                 OutlinedTextField(
@@ -4579,8 +4453,24 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     shape = RoundedCornerShape(18.dp),
                     label = { Text(uiText("جستجوی افراد")) },
-                    leadingIcon = { Icon(Icons.Default.Search, null) }
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = {
+                        AnimatedVisibility(search.isNotBlank()) {
+                            IconButton(onClick = { search = "" }) {
+                                Icon(Icons.Default.Close, uiText("پاک‌کردن جستجو"))
+                            }
+                        }
+                    }
                 )
+            }
+            if (filteredPeople.isEmpty()) {
+                item {
+                    EmptyState(
+                        if (people.isEmpty()) uiText("هنوز فردی ثبت نشده")
+                        else uiText("فردی با این جستجو پیدا نشد"),
+                        Icons.Default.PeopleAlt
+                    )
+                }
             }
             itemsIndexed(filteredPeople, key = { _, it -> it.id }) { index, person ->
                 VsoftEntrance(index.coerceAtMost(7)) {
@@ -4637,40 +4527,13 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(11.dp)
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        Modifier.size(48.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = .12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(23.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            uiText("ویرایش شخص"),
-                            fontSize = 21.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Text(
-                            uiText("اطلاعات فرد را به‌روزرسانی کنید"),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, uiText("بستن"))
-                    }
-                }
+                VsoftFormHeader(
+                    title = uiText("ویرایش شخص"),
+                    subtitle = uiText("اطلاعات فرد را به‌روزرسانی کنید"),
+                    icon = Icons.Default.Person,
+                    accent = Color(0xFF7357D8),
+                    onDismiss = onDismiss
+                )
 
                 Row(
                     Modifier.fillMaxWidth()
@@ -5034,13 +4897,18 @@ fun CardItem(
                     },
                     label = "card_number_reveal"
                 ) { value ->
-                    Text(
-                        value,
-                        fontSize = 16.sp,
-                        letterSpacing = 1.4.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            value,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp,
+                            letterSpacing = 1.4.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White,
+                            maxLines = 1
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(18.dp))
@@ -5075,7 +4943,13 @@ fun AddCardDialog(onDismiss:()->Unit,onSave:(BankCard)->Unit){
  var bank by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var cardNumber by remember{mutableStateOf("")};var balance by remember{mutableStateOf("")}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=660.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.CreditCard,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("کارت بانکی جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("مشخصات کارت را وارد کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   VsoftFormHeader(
+       title = uiText("کارت بانکی جدید"),
+       subtitle = uiText("مشخصات کارت را وارد کنید"),
+       icon = Icons.Default.CreditCard,
+       accent = Color(0xFF3D71D9),
+       onDismiss = onDismiss
+   )
    AnimatedVisibility(cardNumber.isNotBlank()){val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=.92f),c.second.copy(alpha=.88f)))).padding(16.dp)){Column{Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.ExtraBold);Spacer(Modifier.height(13.dp));Text(if(cardNumber.length>=4)"••••  ••••  ••••  "+cardNumber.takeLast(4)else cardNumber,color=Color.White,fontSize=14.sp,letterSpacing=1.5.sp);Spacer(Modifier.height(7.dp));Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=.72f),fontSize=11.sp)}}}
    OutlinedTextField(bank,{bank=it},label={Text(uiText("نام بانک"))},leadingIcon={Icon(Icons.Default.AccountBalance,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(name,{name=it},label={Text(uiText("عنوان کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Personal card" else "مثلاً کارت شخصی")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
@@ -5091,7 +4965,13 @@ fun EditCardDialog(card:BankCard,onDismiss:()->Unit,onSave:(BankCard)->Unit){
  var bank by remember(card.id){mutableStateOf(card.bank)};var name by remember(card.id){mutableStateOf(card.name)};var num by remember(card.id){mutableStateOf(card.cardNumber)};var balance by remember(card.id){mutableStateOf(card.openingBalance.toString())}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=650.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.Edit,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("ویرایش کارت"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("اطلاعات کارت را به‌روزرسانی کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   VsoftFormHeader(
+       title = uiText("ویرایش کارت"),
+       subtitle = uiText("اطلاعات کارت را به‌روزرسانی کنید"),
+       icon = Icons.Default.CreditCard,
+       accent = Color(0xFF3D71D9),
+       onDismiss = onDismiss
+   )
    val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=.92f),c.second.copy(alpha=.88f)))).padding(15.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.CreditCard,null,tint=Color.White);Spacer(Modifier.width(9.dp));Column(Modifier.weight(1f)){Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.ExtraBold);Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=.72f),fontSize=11.sp)};Text("•••• "+num.filter(Char::isDigit).takeLast(4),color=Color.White,fontSize=12.sp)}}
    OutlinedTextField(bank,{bank=it},label={Text(uiText("بانک"))},leadingIcon={Icon(Icons.Default.AccountBalance,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(name,{name=it},label={Text(uiText("نام کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
@@ -5107,7 +4987,13 @@ fun AddWorkplaceDialog(onDismiss:()->Unit,onSave:(Workplace)->Unit){
  var name by remember{mutableStateOf("")}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.Place,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("محل کار جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("محل کار مورد استفاده را اضافه کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   VsoftFormHeader(
+       title = uiText("محل کار جدید"),
+       subtitle = uiText("محل کار مورد استفاده را اضافه کنید"),
+       icon = Icons.Default.Place,
+       accent = Color(0xFF0B9B83),
+       onDismiss = onDismiss
+   )
    OutlinedTextField(name,{name=it},label={Text(uiText("نام محل کار"))},leadingIcon={Icon(Icons.Default.Place,null)},placeholder={Text(uiText("مثلاً پروژه، شرکت یا کارگاه"))},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={onSave(Workplace(System.currentTimeMillis(),name.trim()))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
   }
@@ -5191,7 +5077,13 @@ fun AddPersonDialog(onDismiss:()->Unit,onSave:(Person)->Unit){
  var name by remember{mutableStateOf("")};var phone by remember{mutableStateOf("")};var job by remember{mutableStateOf("")};var note by remember{mutableStateOf("")}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(11.dp)){
-   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(48.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.secondary.copy(alpha=.12f)),contentAlignment=Alignment.Center){Icon(Icons.Default.PersonAdd,null,tint=MaterialTheme.colorScheme.secondary,modifier=Modifier.size(23.dp))};Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(uiText("شخص جدید"),fontSize=21.sp,fontWeight=FontWeight.ExtraBold);Text(uiText("اطلاعات فرد را برای کار و مالی ثبت کنید"),fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)};IconButton(onClick=onDismiss){Icon(Icons.Default.Close,uiText("بستن"))}}
+   VsoftFormHeader(
+       title = uiText("شخص جدید"),
+       subtitle = uiText("اطلاعات فرد را برای کار و مالی ثبت کنید"),
+       icon = Icons.Default.PersonAdd,
+       accent = Color(0xFF7357D8),
+       onDismiss = onDismiss
+   )
    OutlinedTextField(name,{name=it},label={Text(uiText("نام و نام خانوادگی"))},leadingIcon={Icon(Icons.Default.PersonOutline,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(phone,{phone=it},label={Text(uiText("شماره تماس"))},leadingIcon={Icon(Icons.Default.Phone,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(job,{job=it},label={Text(uiText("شغل / نقش"))},leadingIcon={Icon(Icons.Default.Badge,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Employer / Electrician" else "مثلاً کارفرما / برق‌کش")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
@@ -5257,15 +5149,48 @@ fun JalaliDatePickerDialog(
                 val calendar = java.util.Calendar.getInstance().apply {
                     set(gregorian[0], gregorian[1] - 1, gregorian[2])
                 }
-                val offset = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+                val language = LocalVsoftLanguage.current
+                // Jalali/Persian weeks start on Saturday; English calendar starts on Sunday.
+                val offset = if (language == "en") {
+                    (calendar.get(java.util.Calendar.DAY_OF_WEEK) - 1) % 7
+                } else {
+                    calendar.get(java.util.Calendar.DAY_OF_WEEK) % 7
+                }
+                val weekdays = if (language == "en") {
+                    listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                } else {
+                    listOf("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه")
+                }
 
                 val cells = mutableListOf<Int?>()
                 repeat(offset) { cells.add(null) }
                 for (i in 1..jalaliMonthDays(year, month)) cells.add(i)
                 while (cells.size % 7 != 0) cells.add(null)
 
-                cells.chunked(7).forEach { row ->
-                    Row(Modifier.fillMaxWidth()) {
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides if (language == "en") LayoutDirection.Ltr else LayoutDirection.Rtl
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+                        weekdays.forEachIndexed { index, weekday ->
+                            Box(
+                                Modifier.weight(1f).height(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    weekday,
+                                    fontSize = if (language == "en") 10.sp else 9.sp,
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if ((language == "en" && weekday == "Sat") ||
+                                        (language != "en" && weekday == "جمعه"))
+                                        MaterialTheme.colorScheme.tertiary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    cells.chunked(7).forEach { row ->
+                        Row(Modifier.fillMaxWidth()) {
                         row.forEach { value ->
                             Box(
                                 Modifier.weight(1f),
@@ -5301,6 +5226,7 @@ fun JalaliDatePickerDialog(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
@@ -5345,4 +5271,194 @@ fun SmallInfoCard(modifier: Modifier, title: String, value: String,
 @Composable
 fun SectionTitle(text: String) {
     Text(text, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+}
+
+@Composable
+fun RedesignNavItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val background by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = .12f) else Color.Transparent,
+        animationSpec = tween(180),
+        label = "redesign_nav_background"
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(180),
+        label = "redesign_nav_tint"
+    )
+    Column(
+        modifier = modifier.fillMaxHeight().clip(RoundedCornerShape(20.dp)).background(background).clickable(onClick = onClick).padding(horizontal = 2.dp, vertical = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(if (selected) 23.dp else 21.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(label, color = iconTint, fontSize = 10.sp, fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium, maxLines = 1)
+    }
+}
+
+
+@Composable
+fun DashboardQuickAction(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier.clip(RoundedCornerShape(22.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f), RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp, horizontal = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+        }
+        Text(title, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+    }
+}
+
+
+@Composable
+private fun ReceiptDetailRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
+    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(icon, null, modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+
+@Composable
+fun VsoftPremiumPageHero(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth()
+                .background(Brush.linearGradient(listOf(accent, Color(0xFF243B73), Color(0xFF116F73))))
+                .padding(horizontal = 19.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    "VSOFT  /  PERSONAL FINANCE",
+                    color = Color.White.copy(alpha = .72f),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.1.sp
+                )
+                Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                Text(subtitle, color = Color.White.copy(alpha = .82f), fontSize = 11.sp)
+            }
+            Spacer(Modifier.width(12.dp))
+            Box(
+                Modifier.size(52.dp).clip(RoundedCornerShape(17.dp))
+                    .background(Color.White.copy(alpha = .15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(27.dp))
+            }
+        }
+    }
+}
+
+
+@Composable
+fun VsoftFormSectionLabel(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 3.dp, bottom = 1.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+            Text(subtitle, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+
+@Composable
+fun VsoftFormHeader(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().background(
+                Brush.linearGradient(listOf(accent, Color(0xFF263B70), Color(0xFF173D4C)))
+            ).padding(start = 14.dp, end = 7.dp, top = 13.dp, bottom = 13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                Modifier.size(45.dp).clip(RoundedCornerShape(15.dp))
+                    .background(Color.White.copy(alpha = .15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(23.dp))
+            }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    "VSOFT  /  ENTRY",
+                    fontSize = 9.sp,
+                    color = Color.White.copy(alpha = .72f),
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                Text(subtitle, fontSize = 10.sp, color = Color.White.copy(alpha = .82f))
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(alpha = .12f))
+            ) {
+                Icon(Icons.Default.Close, contentDescription = uiText("بستن"), tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
 }
