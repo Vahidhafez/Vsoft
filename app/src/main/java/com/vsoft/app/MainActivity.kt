@@ -4176,30 +4176,6 @@ fun SettingsPage(
 ) {
     val context = LocalContext.current
     var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
-    var phoneNumber by rememberSaveable { mutableStateOf("") }
-    var smsCode by rememberSaveable { mutableStateOf("") }
-    var phoneVerificationId by remember { mutableStateOf<String?>(null) }
-    var phoneAuthStatus by remember { mutableStateOf("") }
-    var phoneAuthBusy by remember { mutableStateOf(false) }
-    val phoneAuth = remember { FirebaseAuth.getInstance() }
-    val completePhoneCredential: (com.google.firebase.auth.PhoneAuthCredential) -> Unit = { credential ->
-        val currentUser = phoneAuth.currentUser
-        val task = if (currentUser == null) {
-            phoneAuth.signInWithCredential(credential)
-        } else if (currentUser.phoneNumber == null) {
-            currentUser.linkWithCredential(credential)
-        } else {
-            phoneAuth.signInWithCredential(credential)
-        }
-        task.addOnSuccessListener {
-            phoneAuthBusy = false
-            phoneAuthStatus = "شماره تأیید شد؛ همگام‌سازی حساب فعال است."
-        }.addOnFailureListener { error ->
-            phoneAuthBusy = false
-            phoneAuthStatus = error.localizedMessage ?: "تأیید شماره انجام نشد."
-        }
-    }
-
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
