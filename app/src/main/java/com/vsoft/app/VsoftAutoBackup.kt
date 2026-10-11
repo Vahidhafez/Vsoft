@@ -186,7 +186,7 @@ suspend fun createStoredVsoftBackup(context: Context, backup: VsoftBackup, autom
     val prefs = context.dataStore.data.first()
     pruneOldBackups(context, backupRetention(prefs[BACKUP_RETENTION_KEY]))
     // Return a temporary readable copy so existing restore UI can continue using File.
-    if (storedFile) {
+    return if (storedFile) {
         val temp = File(context.cacheDir, "$PUBLIC_BACKUP_CACHE_PREFIX$name")
         temp.writeBytes(encrypted)
         temp.setLastModified(System.currentTimeMillis())
