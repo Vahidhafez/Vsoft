@@ -1,11 +1,15 @@
 package com.vsoft.app
 
 import android.content.Context
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.flow.first
 import java.io.File
 import java.security.KeyStore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import javax.crypto.Cipher
@@ -15,7 +19,9 @@ import javax.crypto.spec.GCMParameterSpec
 
 private const val KEYSTORE = "AndroidKeyStore"
 private const val KEY_ALIAS = "VsoftAutoBackupKey"
-private const val BACKUP_FILE = "vsoft-auto-backup.enc"
+private const val BACKUP_PREFIX = "vsoft-auto-backup-"
+private const val BACKUP_SUFFIX = ".enc"
+private val BACKUP_RETENTION_KEY = stringPreferencesKey("backup_retention")
 
 private fun vsoftSecretKey(): SecretKey {
     val ks = KeyStore.getInstance(KEYSTORE).apply { load(null) }
@@ -52,6 +58,26 @@ fun decryptVsoftAutoBackup(payload: ByteArray): ByteArray {
     return cipher.doFinal(encrypted)
 }
 
+private fun backupRetention(raw: String?): Int = when (raw?.toIntOrNull()) {
+    3 -> 3
+    5 -> 5
+    10 -> 10
+    else -> 3
+}
+
+private fun createBackupFileName(now: Date = Date()): String {
+    val stamp = SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.US).format(now)
+    return "$BACKUP_PREFIX$stamp$BACKUP_SUFFIX"
+}
+
+private fun pruneOldBackups(directory: File, keep: Int) {
+    val backups = directory.listFiles()
+        .orEmpty()
+        .filter { it.isFile && it.name.startsWith(BACKUP_PREFIX) && it.name.endsWith(BACKUP_SUFFIX) }
+        .sortedByDescending { it.lastModified() }
+    backups.drop(keep).forEach { it.delete() }
+}
+
 class VsoftAutoBackupWorker(
     appContext: Context,
     params: WorkerParameters
@@ -74,8 +100,11 @@ class VsoftAutoBackupWorker(
             p[GLASS_KEY]?.toBoolean() ?: false,
             p[FONT_KEY] ?: "sans"
         )
+        val directory = applicationContext.filesDir
+        val target = File(directory, createBackupFileName())
         val encrypted = encryptVsoftAutoBackup(encodeBackup(backup).toByteArray(Charsets.UTF_8))
-        File(applicationContext.filesDir, BACKUP_FILE).writeBytes(encrypted)
+        target.writeBytes(encrypted)
+        pruneOldBackups(directory, backupRetention(p[BACKUP_RETENTION_KEY]))
         Result.success()
     }.getOrElse { Result.retry() }
 }
