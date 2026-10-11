@@ -5515,31 +5515,6 @@ fun RedesignNavItem(
 
 
 @Composable
-fun DashboardQuickAction(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier.clip(RoundedCornerShape(22.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f), RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 16.dp, horizontal = 7.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(9.dp)
-    ) {
-        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
-        }
-        Text(title, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
-    }
-}
-
-
-@Composable
 private fun ReceiptDetailRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
