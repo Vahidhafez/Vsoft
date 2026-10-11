@@ -1093,6 +1093,7 @@ fun VsoftApp() {
     val firebaseAuth = remember { FirebaseAuth.getInstance() }
     var firebaseUser by remember { mutableStateOf<FirebaseUser?>(firebaseAuth.currentUser) }
     var authError by remember { mutableStateOf<String?>(null) }
+    var cloudSyncStatus by remember { mutableStateOf("برای همگام‌سازی، وارد حساب Google شوید") }
 
     val googleClient = remember(context) {
         createGoogleSignInClient(context, context.getString(R.string.default_web_client_id))
@@ -1131,6 +1132,46 @@ fun VsoftApp() {
         val listener = FirebaseAuth.AuthStateListener { auth -> firebaseUser = auth.currentUser }
         firebaseAuth.addAuthStateListener(listener)
         onDispose { firebaseAuth.removeAuthStateListener(listener) }
+    }
+
+    DisposableEffect(firebaseUser?.uid, loaded) {
+        val user = firebaseUser
+        if (!loaded || user == null) {
+            cloudSyncStatus = if (user == null) "برای همگام‌سازی، در هر دو گوشی با یک حساب Google وارد شوید" else "در حال آماده‌سازی اطلاعات…"
+            onDispose { }
+        } else {
+            val sync = VsoftCloudSync(
+                context = context,
+                userId = user.uid,
+                onStatus = { status -> cloudSyncStatus = status },
+                onRemoteApplied = { payload ->
+                    scope.launch {
+                        transactions = decodeTransactions(payload["transactions"] ?: "[]")
+                        workDays = decodeWork(payload["work_days"] ?: "[]")
+                        cards = decodeCards(payload["cards"] ?: "[]", transactions)
+                        people = decodePeople(payload["people"] ?: "[]")
+                        workplaces = decodeWorkplaces(payload["workplaces"] ?: "[]")
+                        workPurchases = decodeWorkPurchases(payload["work_purchases"] ?: "[]")
+                        language = payload["language"] ?: "fa"
+                        currency = payload["currency"] ?: "IRT"
+                        theme = payload["theme"] ?: "system"
+                        glass = payload["glass"]?.toBoolean() ?: false
+                        font = payload["font"] ?: "sans"
+                        if (cards.isEmpty()) {
+                            cards = mutableListOf(
+                                BankCard(1L, "بانک ملی", "بانک ملی", "", "", 0L),
+                                BankCard(2L, "بانک مسکن", "بانک مسکن", "", "", 0L),
+                                BankCard(3L, "بلو بانک", "بلو بانک", "", "", 0L),
+                                BankCard(4L, "رد بانک", "رد بانک", "", "", 0L),
+                                BankCard(5L, "بانک مهر", "بانک مهر", "", "", 0L)
+                            )
+                        }
+                    }
+                }
+            )
+            sync.start()
+            onDispose { sync.stop() }
+        }
     }
 
     val backupLauncher = rememberLauncherForActivityResult(
@@ -1618,6 +1659,7 @@ fun MainScreen(
                     onRestore = onRestore,
                     firebaseUser = firebaseUser,
                     authError = authError,
+                    cloudSyncStatus = cloudSyncStatus,
                     onGoogleSignIn = onGoogleSignIn,
                     onGoogleSignOut = onGoogleSignOut
                 )
@@ -4250,7 +4292,8 @@ fun SettingsPage(
     onLanguageChange: (String) -> Unit, onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit, glass: Boolean, onGlassChange: (Boolean) -> Unit,
     font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
-    firebaseUser: FirebaseUser?, authError: String?, onGoogleSignIn: () -> Unit, onGoogleSignOut: () -> Unit
+    firebaseUser: FirebaseUser?, authError: String?, cloudSyncStatus: String,
+    onGoogleSignIn: () -> Unit, onGoogleSignOut: () -> Unit
 ) {
     val context = LocalContext.current
     var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
@@ -4401,6 +4444,17 @@ fun SettingsPage(
                         Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text(uiText("خروج از حساب"))
                     }
                 }
+                Text(
+                    cloudSyncStatus,
+                    color = if (cloudSyncStatus.contains("خطا") || cloudSyncStatus.contains("ناموفق") || cloudSyncStatus.contains("نشد"))
+                        MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    fontSize = 12.sp
+                )
+                Text(
+                    "برای انتقال خودکار اطلاعات، روی هر دو گوشی از همین حساب Google استفاده کنید. همگام‌سازی ابری به اتصال اینترنت نیاز دارد.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if (!authError.isNullOrBlank()) Text(authError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
             }
         }
