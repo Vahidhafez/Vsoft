@@ -9,31 +9,55 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Generate signing key and store it as repository secrets
+      - name: Check existing signing secrets
         env:
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "Missing UPDATE_TOKEN"
+            echo "::error::Missing UPDATE_TOKEN. Configure it with permission to manage repository Actions secrets."
             exit 1
           fi
 
+          # Secret values cannot be read back from GitHub. Check their names
+          # and refuse to rotate an existing signing identity accidentally.
+          existing="$(gh secret list --repo "$GH_REPO" --json name --jq '.[].name')"
+          for secret_name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if printf '%s\n' "$existing" | grep -Fxq "$secret_name"; then
+              echo "::error::Signing secret $secret_name already exists. Refusing to generate a new keystore."
+              echo "If you intentionally need to recover or rotate signing, do so as a separate, carefully planned operation."
+              exit 1
+            fi
+          done
+
+      - name: Generate signing key and save secrets once
+        env:
+          GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
           STORE_PASS="$(openssl rand -hex 24)"
           KEY_PASS="$(openssl rand -hex 24)"
           ALIAS="vsoft"
 
-          keytool -genkeypair -v             -keystore vsoft-release.jks             -storepass "$STORE_PASS"             -keypass "$KEY_PASS"             -alias "$ALIAS"             -keyalg RSA             -keysize 2048             -validity 10000             -dname "CN=Vsoft"
+          keytool -genkeypair -v \
+            -keystore vsoft-release.jks \
+            -storepass "$STORE_PASS" \
+            -keypass "$KEY_PASS" \
+            -alias "$ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Vsoft"
 
           base64 -w 0 vsoft-release.jks > vsoft-release.b64
-
-          gh secret set KEYSTORE_BASE64 < vsoft-release.b64
-          printf '%s' "$STORE_PASS" | gh secret set KEYSTORE_PASSWORD
-          printf '%s' "$ALIAS" | gh secret set KEY_ALIAS
-          printf '%s' "$KEY_PASS" | gh secret set KEY_PASSWORD
+          gh secret set KEYSTORE_BASE64 --repo "$GH_REPO" < vsoft-release.b64
+          printf '%s' "$STORE_PASS" | gh secret set KEYSTORE_PASSWORD --repo "$GH_REPO"
+          printf '%s' "$ALIAS" | gh secret set KEY_ALIAS --repo "$GH_REPO"
+          printf '%s' "$KEY_PASS" | gh secret set KEY_PASSWORD --repo "$GH_REPO"
 
           rm -f vsoft-release.jks vsoft-release.b64
-
-          echo "Vsoft signing secrets initialized successfully."
+          echo "Vsoft signing secrets initialized. This workflow must not be rerun to rotate the key."
