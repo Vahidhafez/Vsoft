@@ -179,7 +179,7 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
     val fallbackFactor = if (text.contains("تومان")) 10L else 1L
     fun factorAfter(endExclusive: Int): Long {
         val tail = text.substring(endExclusive.coerceIn(0, text.length))
-        val unit = Regex("""^\\s*[+-]?\\s*(ریال|تومان|IRR|rial)""", RegexOption.IGNORE_CASE)
+        val unit = Regex("""^\s*[+-]?\s*(ریال|تومان|IRR|rial)""", RegexOption.IGNORE_CASE)
             .find(tail)?.groupValues?.getOrNull(1)
         return when {
             unit.equals("تومان", ignoreCase = true) -> 10L
@@ -215,7 +215,7 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
         text.contains("ریال") || text.contains("تومان")
     if (!hasContext) return null
 
-    val amountRial = amount * factor
+    val amountRial = amount * amountFactor
     if (amountRial < 1000L) return null
 
     // Use normalized sender/body plus the SMS timestamp: identical transactions on different days
@@ -228,7 +228,7 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
         body = rawBody,
         type = type,
         amountRial = amountRial,
-        balanceRial = if (balance != null) balance * factor else -1L,
+        balanceRial = if (balance != null) balance * balanceFactor else -1L,
         last4 = last4,
         time = time
     )
