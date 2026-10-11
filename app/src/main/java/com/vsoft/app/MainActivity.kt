@@ -4215,7 +4215,7 @@ fun SettingsPage(
                     }
                 }
                 Text(
-                    "نسخه خودکار هر ۲۴ ساعت ساخته می‌شود. فایل‌ها در حافظه خصوصی و پایدار برنامه با رمزگذاری نگهداری می‌شوند.",
+                    "نسخه خودکار هر ۲۴ ساعت ساخته می‌شود. بکاپ‌های رمزگذاری‌شده در Documents/Vsoft/Backups و در پوشه‌های Automatic و Manual ذخیره می‌شوند.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
