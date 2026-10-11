@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - feature/backup-retention-phone-sync
+      - 'redesign/**'
 
 jobs:
   build:
