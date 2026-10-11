@@ -1320,6 +1320,7 @@ fun VsoftApp() {
                 backupRetention = backupRetention,
                 onBackupRetentionChange = { value ->
                     backupRetention = value
+                    pruneStoredVsoftBackups(context, value)
                     scope.launch { context.dataStore.edit { prefs -> prefs[BACKUP_RETENTION_KEY] = value.toString() } }
                 },
                 backupSnapshot = VsoftBackup(
@@ -4133,7 +4134,10 @@ fun SettingsPage(
                     listOf(3, 5, 10).forEach { limit ->
                         FilterChip(
                             selected = backupRetention == limit,
-                            onClick = { onBackupRetentionChange(limit) },
+                            onClick = {
+                                onBackupRetentionChange(limit)
+                                storedBackups = listStoredVsoftBackups(context)
+                            },
                             label = { Text("$limit نسخه") }
                         )
                     }
