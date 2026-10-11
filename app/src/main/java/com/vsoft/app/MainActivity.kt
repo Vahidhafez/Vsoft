@@ -105,7 +105,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.math.BigInteger
 
 val android.content.Context.dataStore by preferencesDataStore("vsoft_data")
 
@@ -1640,7 +1639,7 @@ fun MainScreen(
                     cards = cards,
                     people = people,
                     workplaces = workplaces,
-                    onNavigate = { destination -> selectedPage = destination }
+                    onWorkPurchases = { selectedPage = 10 }
                 )
                 10 -> WorkPurchasesPage(
                     purchases = workPurchases,
@@ -1769,6 +1768,218 @@ fun DashboardPage(
     workDays: List<WorkDay>,
     cards: List<BankCard>,
     onNavigate: (Int) -> Unit = {}
+) {
+    val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
+    val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val workIncome = workDays.sumOf { it.income }
+    val balance = cards.sumOf { it.openingBalance } + income + workIncome - expense
+    val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
+    val currentJalali = today()
+    val monthPrefix = currentJalali.substringBeforeLast("/") + "/"
+    val monthWorkDays = workDays.filter { it.date.startsWith(monthPrefix) }
+    val monthWorkIncome = monthWorkDays.sumOf { it.income }
+    val monthExpenses = transactions.filter { it.type == "expense" && it.date.startsWith(monthPrefix) }.sumOf { it.amount }
+    val monthIncome = transactions.filter { it.type == "income" && it.date.startsWith(monthPrefix) }.sumOf { it.amount }
+    val monthNet = monthWorkIncome + monthIncome - monthExpenses
+    val recent = transactions.sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending { it.id }).take(4)
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 30.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("سلام، خوش اومدی", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("مدیریت مالی تو", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(today(), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Box(
+                    Modifier.size(48.dp).clip(RoundedCornerShape(17.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Wallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(25.dp))
+                }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onNavigate(3) },
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Box(
+                    Modifier.fillMaxWidth().background(Color(0xFF172844)).padding(22.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("موجودی کل حساب‌ها", color = Color.White.copy(alpha = .78f), fontSize = 13.sp)
+                                Spacer(Modifier.height(7.dp))
+                                Text(money(balance), color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                            Box(
+                                Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                                    .background(Color.White.copy(alpha = .14f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.AccountBalanceWallet, null, tint = Color.White, modifier = Modifier.size(25.dp))
+                            }
+                        }
+                        HorizontalDivider(color = Color.White.copy(alpha = .18f))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.ArrowDownward, null, tint = Color(0xFF8DF0CD), modifier = Modifier.size(15.dp))
+                                    Spacer(Modifier.width(5.dp))
+                                    Text("درآمد", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(money(income + workIncome), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.ArrowUpward, null, tint = Color(0xFFFFC3B9), modifier = Modifier.size(15.dp))
+                                    Spacer(Modifier.width(5.dp))
+                                    Text("هزینه", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(money(expense), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DashboardMetric("تراکنش‌ها", transactions.size.toString(), Icons.Default.ReceiptLong, Color(0xFF456DE2), Modifier.weight(1f).clickable { onNavigate(1) })
+                DashboardMetric("ساعت کاری", String.format(Locale.US, "%.1f", totalHours), Icons.Default.AccessTime, Color(0xFF0C9A81), Modifier.weight(1f).clickable { onNavigate(2) })
+            }
+        }
+
+        if (cards.isNotEmpty()) {
+            item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("کارت‌های بانکی", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("موجودی فعلی هر کارت", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = { onNavigate(5) }) {
+                        Text("مدیریت کارت‌ها")
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Default.ArrowBack, null, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(end = 2.dp, start = 2.dp)
+                ) {
+                    items(cards, key = { it.id }) { card ->
+                        MiniBankCard(
+                            card = card,
+                            balance = cardCurrentBalance(card, transactions, workDays)
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("دسترسی سریع", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("بخش موردنظرت رو انتخاب کن", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DashboardQuickAction("تراکنش جدید", Icons.Default.AddCard, Color(0xFF456DE2), Modifier.weight(1f)) { onNavigate(1) }
+                DashboardQuickAction("ثبت روز کاری", Icons.Default.WorkHistory, Color(0xFF0C9A81), Modifier.weight(1f)) { onNavigate(2) }
+                DashboardQuickAction("گزارش مالی", Icons.Default.QueryStats, Color(0xFFB16DDB), Modifier.weight(1f)) { onNavigate(3) }
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onNavigate(3) },
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f))
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("خلاصهٔ این ماه", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("درآمد و هزینهٔ ثبت‌شده", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Box(
+                            Modifier.clip(RoundedCornerShape(13.dp))
+                                .background((if (monthNet >= 0) Color(0xFF0C9A81) else MaterialTheme.colorScheme.error).copy(alpha = .12f))
+                                .padding(horizontal = 11.dp, vertical = 8.dp)
+                        ) {
+                            Text(money(monthNet), color = if (monthNet >= 0) Color(0xFF0C9A81) else MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        DashboardMiniStat("درآمد", money(monthIncome + monthWorkIncome), Icons.Default.TrendingUp, Color(0xFF0C9A81), Modifier.weight(1f))
+                        DashboardMiniStat("هزینه", money(monthExpenses), Icons.Default.TrendingDown, Color(0xFFD66A5E), Modifier.weight(1f))
+                        DashboardMiniStat("روز کاری", monthWorkDays.size.toString(), Icons.Default.EventAvailable, Color(0xFF456DE2), Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("آخرین تراکنش‌ها", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { onNavigate(1) }) { Text("مشاهده همه") }
+            }
+        }
+        if (recent.isEmpty()) {
+            item { EmptyState("هنوز تراکنشی ثبت نشده", Icons.Default.ReceiptLong) }
+        } else {
+            items(recent, key = { it.id }) { transaction ->
+                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).clickable { onNavigate(1) }) {
+                    TransactionCard(transaction, onDelete = {}, showActions = false)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DashboardQuickAction(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier.clip(RoundedCornerShape(22.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f), RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp, horizontal = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+        }
+        Text(title, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+    }
+}
 
 @Composable
 fun DashboardPill(
