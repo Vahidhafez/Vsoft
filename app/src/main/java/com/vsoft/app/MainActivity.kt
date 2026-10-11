@@ -86,6 +86,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.PhoneAuthOptions
+import com.google.firebase.auth.PhoneAuthProvider
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -4297,6 +4299,29 @@ fun SettingsPage(
 ) {
     val context = LocalContext.current
     var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
+    var phoneNumber by rememberSaveable { mutableStateOf("") }
+    var smsCode by rememberSaveable { mutableStateOf("") }
+    var phoneVerificationId by remember { mutableStateOf<String?>(null) }
+    var phoneAuthStatus by remember { mutableStateOf("") }
+    var phoneAuthBusy by remember { mutableStateOf(false) }
+    val phoneAuth = remember { FirebaseAuth.getInstance() }
+    val completePhoneCredential: (com.google.firebase.auth.PhoneAuthCredential) -> Unit = { credential ->
+        val currentUser = phoneAuth.currentUser
+        val task = if (currentUser == null) {
+            phoneAuth.signInWithCredential(credential)
+        } else if (currentUser.phoneNumber == null) {
+            currentUser.linkWithCredential(credential)
+        } else {
+            phoneAuth.signInWithCredential(credential)
+        }
+        task.addOnSuccessListener {
+            phoneAuthBusy = false
+            phoneAuthStatus = "شماره تأیید شد؛ همگام‌سازی حساب فعال است."
+        }.addOnFailureListener { error ->
+            phoneAuthBusy = false
+            phoneAuthStatus = error.localizedMessage ?: "تأیید شماره انجام نشد."
+        }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -4427,6 +4452,109 @@ fun SettingsPage(
         }
         item {
             SettingsSection(uiText("حساب و همگام‌سازی"), Icons.Default.AccountCircle) {
+                Text(
+                    "ورود با شماره تلفن برای همگام‌سازی دو گوشی",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("شماره تلفن با کد کشور") },
+                    placeholder = { Text("+989121234567") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                )
+                if (phoneVerificationId == null) {
+                    Button(
+                        enabled = !phoneAuthBusy && phoneNumber.isNotBlank(),
+                        onClick = {
+                            val activity = context as? Activity
+                            if (activity == null) {
+                                phoneAuthStatus = "این عملیات فقط داخل برنامه قابل انجام است."
+                            } else {
+                                var normalizedPhone = normalizeDigits(phoneNumber).filter { it.isDigit() || it == '+' }
+                                if (normalizedPhone.startsWith("00")) normalizedPhone = "+" + normalizedPhone.drop(2)
+                                else if (normalizedPhone.startsWith("0")) normalizedPhone = "+98" + normalizedPhone.drop(1)
+                                else if (normalizedPhone.startsWith("98")) normalizedPhone = "+$normalizedPhone"
+                                if (!normalizedPhone.startsWith("+") || normalizedPhone.length !in 9..16) {
+                                    phoneAuthStatus = "شماره را با کد کشور وارد کن؛ برای ایران مثل +989121234567"
+                                } else {
+                                    phoneAuthBusy = true
+                                    phoneAuthStatus = "در حال ارسال کد تأیید…"
+                                    val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+                                        override fun onVerificationCompleted(credential: com.google.firebase.auth.PhoneAuthCredential) {
+                                            completePhoneCredential(credential)
+                                        }
+                                        override fun onVerificationFailed(error: com.google.firebase.FirebaseException) {
+                                            phoneAuthBusy = false
+                                            phoneAuthStatus = error.localizedMessage ?: "ارسال کد ناموفق بود؛ تنظیمات ورود با شماره در Firebase را بررسی کن."
+                                        }
+                                        override fun onCodeSent(
+                                            verificationId: String,
+                                            token: PhoneAuthProvider.ForceResendingToken
+                                        ) {
+                                            phoneVerificationId = verificationId
+                                            phoneAuthBusy = false
+                                            phoneAuthStatus = "کد پیامکی ارسال شد."
+                                        }
+                                    }
+                                    val options = PhoneAuthOptions.newBuilder(phoneAuth)
+                                        .setPhoneNumber(normalizedPhone)
+                                        .setTimeout(60L, TimeUnit.SECONDS)
+                                        .setActivity(activity)
+                                        .setCallbacks(callbacks)
+                                        .build()
+                                    PhoneAuthProvider.verifyPhoneNumber(options)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().pressScale()
+                    ) {
+                        if (phoneAuthBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Default.Sms, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("ارسال کد تأیید")
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = smsCode,
+                        onValueChange = { smsCode = it.filter(Char::isDigit).take(6) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("کد پیامکی") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
+                    )
+                    Button(
+                        enabled = !phoneAuthBusy && smsCode.length >= 6,
+                        onClick = {
+                            val id = phoneVerificationId
+                            if (id != null) {
+                                phoneAuthBusy = true
+                                val credential = PhoneAuthProvider.getCredential(id, smsCode)
+                                completePhoneCredential(credential)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().pressScale()
+                    ) {
+                        Text(if (phoneAuthBusy) "در حال بررسی…" else "تأیید و ورود")
+                    }
+                    TextButton(onClick = {
+                        phoneVerificationId = null
+                        smsCode = ""
+                        phoneAuthStatus = ""
+                    }) { Text("تغییر شماره") }
+                }
+                if (phoneAuthStatus.isNotBlank()) {
+                    Text(
+                        phoneAuthStatus,
+                        color = if (phoneAuthStatus.contains("ناموفق") || phoneAuthStatus.contains("نشد") || phoneAuthStatus.contains("خطا"))
+                            MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp
+                    )
+                }
+                Divider()
                 if (firebaseUser == null) {
                     Text(uiText("با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم."),
                         fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
