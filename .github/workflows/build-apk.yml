@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'redesign/**'
+      - 'feature/backup-retention-phone-sync'
 
 jobs:
   build:
