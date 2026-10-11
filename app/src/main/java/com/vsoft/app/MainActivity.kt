@@ -1664,7 +1664,7 @@ fun MainScreen(
                     onRestore = onRestore,
                     firebaseUser = firebaseUser,
                     authError = authError,
-                    cloudSyncStatus = syncStatusText,
+                    cloudSyncStatus = cloudSyncStatus,
                     onGoogleSignIn = onGoogleSignIn,
                     onGoogleSignOut = onGoogleSignOut
                 )
