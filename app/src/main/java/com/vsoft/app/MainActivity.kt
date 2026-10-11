@@ -10,9 +10,6 @@ import android.graphics.Typeface
 import android.content.Intent
 import android.provider.MediaStore
 import android.content.Context
-import android.app.Activity
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.common.api.ApiException
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
@@ -84,10 +81,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalContext
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -322,11 +315,6 @@ fun uiText(key: String): String {
             "شماره تماس" -> "Phone number"
             "شغل / نقش" -> "Job / role"
             "یادداشت" -> "Note"
-            "حساب و همگام‌سازی" -> "Account & sync"
-            "با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم." -> "Sign in with Google to securely connect your Vsoft data to your account."
-            "ورود با Google" -> "Sign in with Google"
-            "حساب Google" -> "Google account"
-            "خروج از حساب" -> "Sign out"
             "انتخاب" -> "Select"
             "ذخیره" -> "Save"
             "لغو" -> "Cancel"
@@ -401,11 +389,6 @@ fun uiText(key: String): String {
             "شماره تماس" -> "رقم الهاتف"
             "شغل / نقش" -> "المهنة / الدور"
             "یادداشت" -> "ملاحظة"
-            "حساب و همگام‌سازی" -> "الحساب والمزامنة"
-            "با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم." -> "سجّل الدخول باستخدام Google لربط بيانات Vsoft بحسابك بأمان."
-            "ورود با Google" -> "تسجيل الدخول باستخدام Google"
-            "حساب Google" -> "حساب Google"
-            "خروج از حساب" -> "تسجيل الخروج"
             "انتخاب" -> "اختيار"
             "ذخیره" -> "حفظ"
             "لغو" -> "إلغاء"
@@ -996,8 +979,6 @@ fun VsoftApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var syncStatusText by remember { mutableStateOf("برای همگام‌سازی، با شماره تلفن یا حساب Google وارد شوید") }
-
     var language by remember { mutableStateOf("fa") }
     var currency by remember { mutableStateOf("IRT") }
     var theme by remember { mutableStateOf("system") }
@@ -1093,89 +1074,6 @@ fun VsoftApp() {
     }
 
     var pendingRestore by remember { mutableStateOf<VsoftBackup?>(null) }
-
-    val firebaseAuth = remember { FirebaseAuth.getInstance() }
-    var firebaseUser by remember { mutableStateOf<FirebaseUser?>(firebaseAuth.currentUser) }
-    var authError by remember { mutableStateOf<String?>(null) }
-
-    val googleClient = remember(context) {
-        createGoogleSignInClient(context, context.getString(R.string.default_web_client_id))
-    }
-
-    val googleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        scope.launch {
-            authError = null
-            val intent = result.data
-            val signInTask = GoogleSignIn.getSignedInAccountFromIntent(intent)
-
-            runCatching {
-                val account = signInTask.getResult(ApiException::class.java)
-                val idToken = account.idToken ?: error("Google did not return an ID token")
-                firebaseSignInWithGoogleIdToken(idToken)
-            }.onFailure { error ->
-                val apiError = error as? ApiException
-                val statusCode = apiError?.statusCode
-                val statusMessage = apiError?.status?.statusMessage
-                authError = buildString {
-                    append("Google sign-in failed")
-                    if (statusCode != null) append(" (code $statusCode)")
-                    if (!statusMessage.isNullOrBlank()) append(": $statusMessage")
-                    else if (!error.message.isNullOrBlank()) append(": " + error.message)
-                    if (result.resultCode != Activity.RESULT_OK) {
-                        append(" [resultCode=" + result.resultCode + "]")
-                    }
-                }
-            }
-        }
-    }
-
-    DisposableEffect(firebaseAuth) {
-        val listener = FirebaseAuth.AuthStateListener { auth -> firebaseUser = auth.currentUser }
-        firebaseAuth.addAuthStateListener(listener)
-        onDispose { firebaseAuth.removeAuthStateListener(listener) }
-    }
-
-    DisposableEffect(firebaseUser?.uid, loaded) {
-        val user = firebaseUser
-        if (!loaded || user == null) {
-            syncStatusText = if (user == null) "برای همگام‌سازی، در هر دو گوشی با یک شماره تأییدشده یا حساب Google وارد شوید" else "در حال آماده‌سازی اطلاعات…"
-            onDispose { }
-        } else {
-            val sync = VsoftCloudSync(
-                context = context,
-                userId = user.uid,
-                onStatus = { status -> syncStatusText = status },
-                onRemoteApplied = { payload ->
-                    scope.launch {
-                        transactions = decodeTransactions(payload["transactions"] ?: "[]")
-                        workDays = decodeWork(payload["work_days"] ?: "[]")
-                        cards = decodeCards(payload["cards"] ?: "[]", transactions)
-                        people = decodePeople(payload["people"] ?: "[]")
-                        workplaces = decodeWorkplaces(payload["workplaces"] ?: "[]")
-                        workPurchases = decodeWorkPurchases(payload["work_purchases"] ?: "[]")
-                        language = payload["language"] ?: "fa"
-                        currency = payload["currency"] ?: "IRT"
-                        theme = payload["theme"] ?: "system"
-                        glass = payload["glass"]?.toBoolean() ?: false
-                        font = payload["font"] ?: "sans"
-                        if (cards.isEmpty()) {
-                            cards = mutableListOf(
-                                BankCard(1L, "بانک ملی", "بانک ملی", "", "", 0L),
-                                BankCard(2L, "بانک مسکن", "بانک مسکن", "", "", 0L),
-                                BankCard(3L, "بلو بانک", "بلو بانک", "", "", 0L),
-                                BankCard(4L, "رد بانک", "رد بانک", "", "", 0L),
-                                BankCard(5L, "بانک مهر", "بانک مهر", "", "", 0L)
-                            )
-                        }
-                    }
-                }
-            )
-            sync.start()
-            onDispose { sync.stop() }
-        }
-    }
 
     val backupLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -1423,19 +1321,7 @@ fun VsoftApp() {
                     scope.launch { context.dataStore.edit { prefs -> prefs[FONT_KEY] = it } }
                 },
                 onBackup = { backupLauncher.launch("vsoft-backup.json") },
-                onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
-                firebaseUser = firebaseUser,
-                authError = authError,
-                cloudSyncStatus = syncStatusText,
-                onGoogleSignIn = {
-                    authError = null
-                    googleLauncher.launch(googleClient.signInIntent)
-                },
-                onGoogleSignOut = {
-                    authError = null
-                    runCatching { signOutFromGoogle(context) }
-                        .onFailure { authError = it.message ?: "Sign-out failed" }
-                }
+                onRestore = { restoreLauncher.launch(arrayOf("application/json")) }
             )
         }
         }
@@ -1472,12 +1358,7 @@ fun MainScreen(
     onGlassChange: (Boolean) -> Unit,
     onFontChange: (String) -> Unit,
     onBackup: () -> Unit,
-    onRestore: () -> Unit,
-    firebaseUser: FirebaseUser?,
-    authError: String?,
-    cloudSyncStatus: String,
-    onGoogleSignIn: () -> Unit,
-    onGoogleSignOut: () -> Unit
+    onRestore: () -> Unit
 ) {
 
     var selectedPage by rememberSaveable { mutableStateOf(0) }
@@ -1661,12 +1542,7 @@ fun MainScreen(
                     glass, onGlassChange,
                     font, onFontChange,
                     onBackup = onBackup,
-                    onRestore = onRestore,
-                    firebaseUser = firebaseUser,
-                    authError = authError,
-                    cloudSyncStatus = cloudSyncStatus,
-                    onGoogleSignIn = onGoogleSignIn,
-                    onGoogleSignOut = onGoogleSignOut
+                    onRestore = onRestore
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
@@ -4296,9 +4172,7 @@ fun SettingsPage(
     strings: AppStrings, language: String, theme: String, currency: String,
     onLanguageChange: (String) -> Unit, onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit, glass: Boolean, onGlassChange: (Boolean) -> Unit,
-    font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
-    firebaseUser: FirebaseUser?, authError: String?, cloudSyncStatus: String,
-    onGoogleSignIn: () -> Unit, onGoogleSignOut: () -> Unit
+    font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit
 ) {
     val context = LocalContext.current
     var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
@@ -4451,142 +4325,6 @@ fun SettingsPage(
                     selected = font,
                     onSelected = onFontChange
                 )
-            }
-        }
-        item {
-            SettingsSection(uiText("حساب و همگام‌سازی"), Icons.Default.AccountCircle) {
-                Text(
-                    "ورود با شماره تلفن برای همگام‌سازی دو گوشی",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-                OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = { phoneNumber = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("شماره تلفن با کد کشور") },
-                    placeholder = { Text("+989121234567") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-                )
-                if (phoneVerificationId == null) {
-                    Button(
-                        enabled = !phoneAuthBusy && phoneNumber.isNotBlank(),
-                        onClick = {
-                            val activity = context as? Activity
-                            if (activity == null) {
-                                phoneAuthStatus = "این عملیات فقط داخل برنامه قابل انجام است."
-                            } else {
-                                var normalizedPhone = normalizeDigits(phoneNumber).filter { it.isDigit() || it == '+' }
-                                if (normalizedPhone.startsWith("00")) normalizedPhone = "+" + normalizedPhone.drop(2)
-                                else if (normalizedPhone.startsWith("0")) normalizedPhone = "+98" + normalizedPhone.drop(1)
-                                else if (normalizedPhone.startsWith("98")) normalizedPhone = "+$normalizedPhone"
-                                if (!normalizedPhone.startsWith("+") || normalizedPhone.length !in 9..16) {
-                                    phoneAuthStatus = "شماره را با کد کشور وارد کن؛ برای ایران مثل +989121234567"
-                                } else {
-                                    phoneAuthBusy = true
-                                    phoneAuthStatus = "در حال ارسال کد تأیید…"
-                                    val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                                        override fun onVerificationCompleted(credential: com.google.firebase.auth.PhoneAuthCredential) {
-                                            completePhoneCredential(credential)
-                                        }
-                                        override fun onVerificationFailed(error: com.google.firebase.FirebaseException) {
-                                            phoneAuthBusy = false
-                                            phoneAuthStatus = error.localizedMessage ?: "ارسال کد ناموفق بود؛ تنظیمات ورود با شماره در Firebase را بررسی کن."
-                                        }
-                                        override fun onCodeSent(
-                                            verificationId: String,
-                                            token: PhoneAuthProvider.ForceResendingToken
-                                        ) {
-                                            phoneVerificationId = verificationId
-                                            phoneAuthBusy = false
-                                            phoneAuthStatus = "کد پیامکی ارسال شد."
-                                        }
-                                    }
-                                    val options = PhoneAuthOptions.newBuilder(phoneAuth)
-                                        .setPhoneNumber(normalizedPhone)
-                                        .setTimeout(60L, TimeUnit.SECONDS)
-                                        .setActivity(activity)
-                                        .setCallbacks(callbacks)
-                                        .build()
-                                    PhoneAuthProvider.verifyPhoneNumber(options)
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().pressScale()
-                    ) {
-                        if (phoneAuthBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        else Icon(Icons.Default.Sms, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("ارسال کد تأیید")
-                    }
-                } else {
-                    OutlinedTextField(
-                        value = smsCode,
-                        onValueChange = { smsCode = normalizeDigits(it).filter(Char::isDigit).take(6) },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("کد پیامکی") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
-                    )
-                    Button(
-                        enabled = !phoneAuthBusy && smsCode.length >= 6,
-                        onClick = {
-                            val id = phoneVerificationId
-                            if (id != null) {
-                                phoneAuthBusy = true
-                                val credential = PhoneAuthProvider.getCredential(id, smsCode)
-                                completePhoneCredential(credential)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().pressScale()
-                    ) {
-                        Text(if (phoneAuthBusy) "در حال بررسی…" else "تأیید و ورود")
-                    }
-                    TextButton(onClick = {
-                        phoneVerificationId = null
-                        smsCode = ""
-                        phoneAuthStatus = ""
-                    }) { Text("تغییر شماره") }
-                }
-                if (phoneAuthStatus.isNotBlank()) {
-                    Text(
-                        phoneAuthStatus,
-                        color = if (phoneAuthStatus.contains("ناموفق") || phoneAuthStatus.contains("نشد") || phoneAuthStatus.contains("خطا"))
-                            MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        fontSize = 12.sp
-                    )
-                }
-                Divider()
-                if (firebaseUser == null) {
-                    Text(uiText("با ورود به حساب Google، آماده اتصال امن اطلاعات Vsoft به حساب شما می‌شویم."),
-                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = onGoogleSignIn, modifier = Modifier.fillMaxWidth().pressScale()) {
-                        Icon(Icons.Default.AccountCircle, null); Spacer(Modifier.width(8.dp)); Text(uiText("ورود با Google"))
-                    }
-                } else {
-                    ListItem(
-                        headlineContent = { Text(firebaseUser.displayName ?: uiText("حساب Google"), fontWeight = FontWeight.Bold) },
-                        supportingContent = { Text(firebaseUser.email ?: "") },
-                        leadingContent = { Icon(Icons.Default.AccountCircle, null) }
-                    )
-                    OutlinedButton(onClick = onGoogleSignOut, modifier = Modifier.fillMaxWidth().pressScale()) {
-                        Icon(Icons.Default.Logout, null); Spacer(Modifier.width(8.dp)); Text(uiText("خروج از حساب"))
-                    }
-                }
-                Text(
-                    cloudSyncStatus,
-                    color = if (cloudSyncStatus.contains("خطا") || cloudSyncStatus.contains("ناموفق") || cloudSyncStatus.contains("نشد"))
-                        MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                    fontSize = 12.sp
-                )
-                Text(
-                    "برای همگام‌سازی، روی هر دو گوشی با همان شماره تأییدشده یا همان حساب Google وارد شوید. اتصال اینترنت لازم است.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (!authError.isNullOrBlank()) Text(authError, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
             }
         }
         item {
