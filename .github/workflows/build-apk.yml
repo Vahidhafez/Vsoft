@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'redesign/**'
+      - 'feature/**'
 
 jobs:
   build:
