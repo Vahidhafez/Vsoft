@@ -996,6 +996,8 @@ fun VsoftApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    var cloudSyncStatus by remember { mutableStateOf("برای همگام‌سازی، با شماره تلفن یا حساب Google وارد شوید") }
+
     var language by remember { mutableStateOf("fa") }
     var currency by remember { mutableStateOf("IRT") }
     var theme by remember { mutableStateOf("system") }
@@ -1095,7 +1097,6 @@ fun VsoftApp() {
     val firebaseAuth = remember { FirebaseAuth.getInstance() }
     var firebaseUser by remember { mutableStateOf<FirebaseUser?>(firebaseAuth.currentUser) }
     var authError by remember { mutableStateOf<String?>(null) }
-    var cloudSyncStatus by remember { mutableStateOf("برای همگام‌سازی، با شماره تلفن یا حساب Google وارد شوید") }
 
     val googleClient = remember(context) {
         createGoogleSignInClient(context, context.getString(R.string.default_web_client_id))
