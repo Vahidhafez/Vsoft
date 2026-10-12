@@ -85,6 +85,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -96,6 +98,7 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.io.File
 import java.math.BigInteger
 
 val android.content.Context.dataStore by preferencesDataStore("vsoft_data")
@@ -111,6 +114,7 @@ val CURRENCY_KEY = stringPreferencesKey("currency")
 val THEME_KEY = stringPreferencesKey("theme")
 val GLASS_KEY = stringPreferencesKey("glass")
 val FONT_KEY = stringPreferencesKey("font")
+val BACKUP_RETENTION_KEY = stringPreferencesKey("backup_retention")
 
 // ---------------- MODELS ----------------
 
@@ -986,6 +990,8 @@ fun VsoftApp() {
     var theme by remember { mutableStateOf("system") }
     var glass by remember { mutableStateOf(false) }
     var font by remember { mutableStateOf("sans") }
+    var backupRetention by remember { mutableIntStateOf(3) }
+    var showRestoreConfirmation by remember { mutableStateOf(false) }
 
     var transactions by remember {
         mutableStateOf(mutableListOf<Transaction>())
@@ -1032,6 +1038,7 @@ fun VsoftApp() {
         theme = preferences[THEME_KEY] ?: "system"
         glass = false
         font = preferences[FONT_KEY] ?: "sans"
+        backupRetention = preferences[BACKUP_RETENTION_KEY]?.toIntOrNull()?.takeIf { it == 3 || it == 5 || it == 10 } ?: 3
 
         transactions =
             decodeTransactions(preferences[TRANSACTIONS_KEY] ?: "[]")
@@ -1099,26 +1106,15 @@ fun VsoftApp() {
         if (uri != null) {
             runCatching {
                 val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                if (text != null) pendingRestore = decodeBackup(text)
+                if (text != null) {
+                    val decoded = decodeBackup(text)
+                    if (decoded != null) {
+                        pendingRestore = decoded
+                        showRestoreConfirmation = true
+                    }
+                }
             }
         }
-    }
-
-    LaunchedEffect(pendingRestore) {
-        val data = pendingRestore ?: return@LaunchedEffect
-        restoreBackup(context, data)
-        transactions = data.transactions.toMutableList()
-        workDays = data.workDays.toMutableList()
-        cards = data.cards.toMutableList()
-        people = data.people.toMutableList()
-        workplaces = data.workplaces.toMutableList()
-        workPurchases = data.workPurchases.toMutableList()
-        language = data.language
-        currency = data.currency
-        theme = data.theme
-        glass = data.glass
-        font = data.font
-        pendingRestore = null
     }
 
     val appStrings = strings(language)
@@ -1324,12 +1320,71 @@ fun VsoftApp() {
                 },
                 onBackup = { backupLauncher.launch("vsoft-backup.json") },
                 onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
+                backupRetention = backupRetention,
+                onBackupRetentionChange = { value ->
+                    backupRetention = value
+                    pruneStoredVsoftBackups(context, value)
+                    scope.launch { context.dataStore.edit { prefs -> prefs[BACKUP_RETENTION_KEY] = value.toString() } }
+                },
+                backupSnapshot = VsoftBackup(
+                    transactions, workDays, cards, people, workplaces, workPurchases,
+                    language, currency, theme, glass, font
+                ),
+                onStoredBackupRestore = { data ->
+                    scope.launch {
+                        restoreBackup(context, data)
+                        transactions = data.transactions.toMutableList()
+                        workDays = data.workDays.toMutableList()
+                        cards = data.cards.toMutableList()
+                        people = data.people.toMutableList()
+                        workplaces = data.workplaces.toMutableList()
+                        workPurchases = data.workPurchases.toMutableList()
+                        language = data.language
+                        currency = data.currency
+                        theme = data.theme
+                        glass = data.glass
+                        font = data.font
+                    }
+                }
             )
+
+            if (showRestoreConfirmation && pendingRestore != null) {
+                AlertDialog(
+                    onDismissRequest = { showRestoreConfirmation = false; pendingRestore = null },
+                    title = { Text("تأیید بازیابی پشتیبان") },
+                    text = { Text("با بازیابی این نسخه، اطلاعات فعلی برنامه با اطلاعات پشتیبان جایگزین می‌شود. قبل از ادامه مطمئن شو که نسخه مناسبی انتخاب کرده‌ای.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val data = pendingRestore
+                            if (data != null) {
+                                scope.launch {
+                                    restoreBackup(context, data)
+                                    transactions = data.transactions.toMutableList()
+                                    workDays = data.workDays.toMutableList()
+                                    cards = data.cards.toMutableList()
+                                    people = data.people.toMutableList()
+                                    workplaces = data.workplaces.toMutableList()
+                                    workPurchases = data.workPurchases.toMutableList()
+                                    language = data.language
+                                    currency = data.currency
+                                    theme = data.theme
+                                    glass = data.glass
+                                    font = data.font
+                                }
+                            }
+                            pendingRestore = null
+                            showRestoreConfirmation = false
+                        }) { Text("تأیید و بازیابی") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingRestore = null; showRestoreConfirmation = false }) { Text("لغو") }
+                    }
+                )
+            }
         }
         }
         }
     }
-}
 
 // ---------------- MAIN SCREEN ----------------
 
@@ -1361,6 +1416,10 @@ fun MainScreen(
     onFontChange: (String) -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
+    backupRetention: Int,
+    onBackupRetentionChange: (Int) -> Unit,
+    backupSnapshot: VsoftBackup,
+    onStoredBackupRestore: (VsoftBackup) -> Unit
 ) {
 
     var selectedPage by rememberSaveable { mutableStateOf(0) }
@@ -1547,7 +1606,11 @@ fun MainScreen(
                     glass, onGlassChange,
                     font, onFontChange,
                     onBackup = onBackup,
-                    onRestore = onRestore
+                    onRestore = onRestore,
+                    backupRetention = backupRetention,
+                    onBackupRetentionChange = onBackupRetentionChange,
+                    backupSnapshot = backupSnapshot,
+                    onStoredBackupRestore = onStoredBackupRestore
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
@@ -4178,8 +4241,14 @@ fun SettingsPage(
     onLanguageChange: (String) -> Unit, onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit, glass: Boolean, onGlassChange: (Boolean) -> Unit,
     font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
+    backupRetention: Int, onBackupRetentionChange: (Int) -> Unit,
+    backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var storedBackups by remember { mutableStateOf(listStoredVsoftBackups(context)) }
+    var selectedBackup by remember { mutableStateOf<File?>(null) }
+    var backupMessage by remember { mutableStateOf<String?>(null) }
     var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -4312,19 +4381,118 @@ fun SettingsPage(
             SettingsSection(uiText("پشتیبان‌گیری و بازیابی"), Icons.Default.Backup) {
                 ListItem(
                     headlineContent = { Text(uiText("پشتیبان کامل اطلاعات")) },
-                    supportingContent = { Text(uiText("تراکنش‌ها، کارها، خریدهای کار، کارت‌ها و تنظیمات")) },
+                    supportingContent = { Text(uiText("نسخه‌های خودکار رمزگذاری‌شده، نسخه دستی، فهرست نسخه‌ها و بازیابی با تأیید")) },
                     leadingContent = { Icon(Icons.Default.Security, null) }
                 )
+                Text("حداکثر نسخه‌های نگهداری‌شده", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(3, 5, 10).forEach { limit ->
+                        FilterChip(
+                            selected = backupRetention == limit,
+                            onClick = {
+                                onBackupRetentionChange(limit)
+                                storedBackups = listStoredVsoftBackups(context)
+                            },
+                            label = { Text("$limit نسخه") }
+                        )
+                    }
+                }
+                Text(
+                    "نسخه خودکار هر ۲۴ ساعت ساخته می‌شود. بکاپ‌های رمزگذاری‌شده در Documents/Vsoft/Backups و در پوشه‌های Automatic و Manual ذخیره می‌شوند.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(
+                    onClick = {
+                        backupMessage = null
+                        scope.launch {
+                            runCatching {
+                                withContext(Dispatchers.IO) {
+                                    createStoredVsoftBackup(context, backupSnapshot, automatic = false)
+                                }
+                            }.onSuccess {
+                                storedBackups = listStoredVsoftBackups(context)
+                                backupMessage = "نسخه دستی با موفقیت ساخته شد."
+                            }.onFailure {
+                                backupMessage = "ساخت نسخه پشتیبان ناموفق بود."
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().pressScale()
+                ) {
+                    Icon(Icons.Default.AddToDrive, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("ایجاد نسخه پشتیبان دستی")
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = onBackup, modifier = Modifier.weight(1f).pressScale()) {
-                        Icon(Icons.Default.Upload, null); Spacer(Modifier.width(6.dp)); Text(uiText("ایجاد پشتیبان"))
+                    OutlinedButton(onClick = onBackup, modifier = Modifier.weight(1f).pressScale()) {
+                        Icon(Icons.Default.FileDownload, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("خروجی فایل")
                     }
                     OutlinedButton(onClick = onRestore, modifier = Modifier.weight(1f).pressScale()) {
-                        Icon(Icons.Default.Download, null); Spacer(Modifier.width(6.dp)); Text(uiText("بازیابی"))
+                        Icon(Icons.Default.FileUpload, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("واردکردن فایل")
+                    }
+                }
+                if (!backupMessage.isNullOrBlank()) {
+                    Text(backupMessage!!, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("نسخه‌های موجود (${storedBackups.size})", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { storedBackups = listStoredVsoftBackups(context) }) {
+                        Icon(Icons.Default.Refresh, "تازه‌سازی فهرست")
+                    }
+                }
+                if (storedBackups.isEmpty()) {
+                    Text("هنوز نسخه پشتیبانی ذخیره نشده است.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    storedBackups.forEach { file ->
+                        val automatic = file.name.contains("-auto-") || file.name.startsWith("vsoft-auto-backup-")
+                        val date = SimpleDateFormat("yyyy/MM/dd  HH:mm", Locale.getDefault()).format(Date(file.lastModified()))
+                        ListItem(
+                            headlineContent = { Text(date, fontWeight = FontWeight.SemiBold) },
+                            supportingContent = {
+                                Text((if (automatic) "خودکار" else "دستی") + " • " + String.format(Locale.getDefault(), "%.1f KB", file.length() / 1024.0))
+                            },
+                            leadingContent = { Icon(if (automatic) Icons.Default.Schedule else Icons.Default.Save, null) },
+                            trailingContent = {
+                                IconButton(onClick = { selectedBackup = file }) {
+                                    Icon(Icons.Default.Restore, "بازیابی این نسخه")
+                                }
+                            }
+                        )
+                        HorizontalDivider()
                     }
                 }
             }
         }
+    }
+    if (selectedBackup != null) {
+        AlertDialog(
+            onDismissRequest = { selectedBackup = null },
+            title = { Text("بازیابی نسخه پشتیبان؟") },
+            text = { Text("با تأیید، اطلاعات فعلی با نسخه انتخاب‌شده جایگزین می‌شود. برای جلوگیری از ازدست‌رفتن اطلاعات جدید، ابتدا یک نسخه دستی بساز.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val file = selectedBackup
+                    selectedBackup = null
+                    if (file != null) {
+                        scope.launch {
+                            val data = withContext(Dispatchers.IO) { readStoredVsoftBackup(file) }
+                            if (data != null) {
+                                onStoredBackupRestore(data)
+                                backupMessage = "بازیابی نسخه انتخاب‌شده آغاز شد."
+                            } else {
+                                backupMessage = "این نسخه خراب است یا قابل بازیابی نیست."
+                            }
+                        }
+                    }
+                }) { Text("تأیید و جایگزینی") }
+            },
+            dismissButton = { TextButton(onClick = { selectedBackup = null }) { Text("لغو") } }
+        )
     }
 }
 
