@@ -493,7 +493,12 @@ fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays
                 it.amount > 0L
         }
         .sumOf { if (it.type == "income") it.amount else -it.amount }
-    val workIncome = workDays.filter { it.card == card.name }.sumOf { it.income }
+    // Work entries represent income, so invalid zero/negative values must not
+    // silently reduce the card balance. Expenses belong in financial transactions.
+    val workIncome = workDays
+        .asSequence()
+        .filter { it.card == card.name && it.income > 0L }
+        .sumOf { it.income }
     return card.openingBalance + movement + workIncome
 }
 
