@@ -162,7 +162,9 @@ data class Person(
     val name: String,
     val phone: String,
     val note: String,
-    val job: String = ""
+    val job: String = "",
+    val amountTheyOweMe: Long = 0L,
+    val amountIOwe: Long = 0L
 )
 
 data class WorkPurchase(
@@ -787,6 +789,8 @@ fun encodePeople(list: List<Person>): String {
                 put("phone", it.phone)
                 put("note", it.note)
                 put("job", it.job)
+                put("amountTheyOweMe", it.amountTheyOweMe)
+                put("amountIOwe", it.amountIOwe)
             }
         )
     }
@@ -809,7 +813,9 @@ fun decodePeople(value: String): MutableList<Person> {
                     o.getString("name"),
                     o.getString("phone"),
                     o.getString("note"),
-                    o.optString("job", "")
+                    o.optString("job", ""),
+                    o.optLong("amountTheyOweMe", 0L),
+                    o.optLong("amountIOwe", 0L)
                 )
             )
         }
@@ -4917,6 +4923,8 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
     var phone by remember(person.id) { mutableStateOf(person.phone) }
     var job by remember(person.id) { mutableStateOf(person.job) }
     var note by remember(person.id) { mutableStateOf(person.note) }
+    var amountTheyOweMe by remember(person.id) { mutableStateOf(formatNumberInput(person.amountTheyOweMe.toString())) }
+    var amountIOwe by remember(person.id) { mutableStateOf(formatNumberInput(person.amountIOwe.toString())) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -5011,6 +5019,28 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                Text(uiText("حساب‌وکتاب با این شخص"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                OutlinedTextField(
+                    value = amountTheyOweMe,
+                    onValueChange = { amountTheyOweMe = formatNumberInput(it) },
+                    label = { Text(uiText("این شخص به من بدهکار است (تومان)")) },
+                    leadingIcon = { Icon(Icons.Default.TrendingUp, null, tint = Color(0xFF16845B)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(),
+                    singleLine = true, shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = amountIOwe,
+                    onValueChange = { amountIOwe = formatNumberInput(it) },
+                    label = { Text(uiText("من به این شخص بدهکارم (تومان)")) },
+                    leadingIcon = { Icon(Icons.Default.TrendingDown, null, tint = Color(0xFFD97732)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(),
+                    singleLine = true, shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -5028,7 +5058,9 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
                                     name = name.trim(),
                                     phone = phone.trim(),
                                     job = job.trim(),
-                                    note = note.trim()
+                                    note = note.trim(),
+                                    amountTheyOweMe = normalizeAmountInput(amountTheyOweMe).toLongOrNull() ?: 0L,
+                                    amountIOwe = normalizeAmountInput(amountIOwe).toLongOrNull() ?: 0L
                                 )
                             )
                         },
@@ -5541,6 +5573,29 @@ private fun PersonDetailsDialog(
                 if (person.phone.isNotBlank()) VsoftDetailRow(Icons.Default.Phone, uiText("شماره تماس"), person.phone)
                 if (person.job.isNotBlank()) VsoftDetailRow(Icons.Default.Badge, uiText("شغل / نقش"), person.job)
                 if (person.note.isNotBlank()) VsoftDetailRow(Icons.Default.Notes, uiText("یادداشت"), person.note)
+                Text(uiText("وضعیت حساب با این شخص"), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Card(
+                        Modifier.weight(1f), shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF16845B).copy(alpha = .10f))
+                    ) {
+                        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(uiText("طلب من"), fontSize = 12.sp, color = Color(0xFF16845B), fontWeight = FontWeight.SemiBold)
+                            Text(money(person.amountTheyOweMe), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF16845B))
+                            Text(uiText("او به من بدهکار است"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Card(
+                        Modifier.weight(1f), shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFD97732).copy(alpha = .10f))
+                    ) {
+                        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(uiText("بدهی من"), fontSize = 12.sp, color = Color(0xFFD97732), fontWeight = FontWeight.SemiBold)
+                            Text(money(person.amountIOwe), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD97732))
+                            Text(uiText("من به او بدهکارم"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     OutlinedButton(
                         onClick = onDismiss,
@@ -5659,6 +5714,7 @@ fun PersonItem(
 @Composable
 fun AddPersonDialog(onDismiss:()->Unit,onSave:(Person)->Unit){
  var name by remember{mutableStateOf("")};var phone by remember{mutableStateOf("")};var job by remember{mutableStateOf("")};var note by remember{mutableStateOf("")}
+ var amountTheyOweMe by remember{mutableStateOf("")};var amountIOwe by remember{mutableStateOf("")}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(11.dp)){
    VsoftFormHeader(
@@ -5672,7 +5728,10 @@ fun AddPersonDialog(onDismiss:()->Unit,onSave:(Person)->Unit){
    OutlinedTextField(phone,{phone=it},label={Text(uiText("شماره تماس"))},leadingIcon={Icon(Icons.Default.Phone,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(job,{job=it},label={Text(uiText("شغل / نقش"))},leadingIcon={Icon(Icons.Default.Badge,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Employer / Electrician" else "مثلاً کارفرما / برق‌کش")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(note,{note=it},label={Text(uiText("یادداشت"))},leadingIcon={Icon(Icons.Default.Notes,null)},minLines=2,maxLines=3,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={onSave(Person(System.currentTimeMillis(),name.trim(),phone.trim(),note.trim(),job.trim()))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
+   Text(uiText("حساب‌وکتاب با این شخص"),fontWeight=FontWeight.Bold,fontSize=14.sp)
+   OutlinedTextField(amountTheyOweMe,{amountTheyOweMe=formatNumberInput(it)},label={Text(uiText("این شخص به من بدهکار است (تومان)"))},leadingIcon={Icon(Icons.Default.TrendingUp,null,tint=Color(0xFF16845B))},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),visualTransformation=GroupedNumberVisualTransformation(),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(amountIOwe,{amountIOwe=formatNumberInput(it)},label={Text(uiText("من به این شخص بدهکارم (تومان)"))},leadingIcon={Icon(Icons.Default.TrendingDown,null,tint=Color(0xFFD97732))},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),visualTransformation=GroupedNumberVisualTransformation(),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={onSave(Person(System.currentTimeMillis(),name.trim(),phone.trim(),note.trim(),job.trim(),normalizeAmountInput(amountTheyOweMe).toLongOrNull() ?: 0L,normalizeAmountInput(amountIOwe).toLongOrNull() ?: 0L))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
   }
  }}
 }
