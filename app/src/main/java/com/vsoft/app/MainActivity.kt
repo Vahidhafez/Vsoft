@@ -4885,12 +4885,20 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
             }
             if (search.isNotBlank()) {
                 item {
-                    Text(
-                        uiText("نمایش ${filteredWorkplaces.size} محل کار از ${workplaces.size} محل کار"),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredWorkplaces.size} محل کار از ${workplaces.size} محل کار"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
                 }
             }
             if (filteredWorkplaces.isEmpty()) {
@@ -5067,12 +5075,20 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
             }
             if (search.isNotBlank()) {
                 item {
-                    Text(
-                        uiText("نمایش ${filteredPeople.size} نفر از ${people.size} نفر"),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredPeople.size} نفر از ${people.size} نفر"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
                 }
             }
             if (filteredPeople.isEmpty()) {
