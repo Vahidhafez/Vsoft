@@ -3144,8 +3144,8 @@ fun WorkPage(
     var edit by remember { mutableStateOf<WorkDay?>(null) }
     var search by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
-    val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
-    val totalIncome = workDays.sumOf { it.income }
+    val totalHours = remember(workDays) { workDays.sumOf { calculateHours(it.start, it.end) } }
+    val totalIncome = remember(workDays) { workDays.sumOf { it.income } }
     val sortedWorkDays = remember(workDays) {
         workDays.sortedWith(
             compareByDescending<WorkDay> { it.startDate.ifBlank { it.date } }
