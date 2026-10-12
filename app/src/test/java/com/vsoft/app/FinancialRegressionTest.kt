@@ -54,6 +54,17 @@ class FinancialRegressionTest {
     }
 
     @Test
+    fun nonPositiveTransactionAmountsCannotIncreaseOrDecreaseBalance() {
+        val bankCard = card(250_000L)
+        val transactions = listOf(
+            transaction("expense", -80_000L),
+            transaction("income", 0L),
+            transaction("expense", 30_000L)
+        )
+        assertEquals(220_000L, cardCurrentBalance(bankCard, transactions, emptyList()))
+    }
+
+    @Test
     fun workIncomeIsIncludedOnlyForItsSelectedCard() {
         val bankCard = card(100_000L)
         val workDays = listOf(
