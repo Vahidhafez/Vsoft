@@ -3204,12 +3204,20 @@ fun WorkPage(
 
             if (search.isNotBlank()) {
                 item(key = "work_search_count") {
-                    Text(
-                        uiText("نمایش ${filteredWorkDays.size} روز کاری از ${workDays.size} روز"),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredWorkDays.size} روز کاری از ${workDays.size} روز"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
                 }
             }
             item(key = "work_purchases_entry") {
@@ -4725,12 +4733,20 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
             }
             if (search.isNotBlank()) {
                 item {
-                    Text(
-                        uiText("نمایش ${filteredCards.size} کارت از ${cards.size} کارت"),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredCards.size} کارت از ${cards.size} کارت"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
                 }
             }
             if (filteredCards.isEmpty()) {
