@@ -3717,14 +3717,20 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
     if (showReceiptBuilder) ReceiptBuilderDialog(transactions, workDays, cards) { showReceiptBuilder = false }
     var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "") }
     val selected = cards.firstOrNull { it.name == selectedCardName }
-    val cardTransactions = transactions.filter { it.card == selectedCardName }
-    val cardWork = workDays.filter { it.card == selectedCardName }
-    val income = cardTransactions.filter { it.type == "income" }.sumOf { it.amount }
-    val expense = cardTransactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val cardTransactions = remember(transactions, selectedCardName) {
+        transactions.filter { it.card == selectedCardName }
+    }
+    val cardWork = remember(workDays, selectedCardName) {
+        workDays.filter { it.card == selectedCardName }
+    }
+    val income = remember(cardTransactions) { cardTransactions.filter { it.type == "income" }.sumOf { it.amount } }
+    val expense = remember(cardTransactions) { cardTransactions.filter { it.type == "expense" }.sumOf { it.amount } }
     val opening = selected?.openingBalance ?: 0L
-    val workIncome = cardWork.sumOf { it.income }
-    val current = selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
-    val hours = cardWork.sumOf { calculateHours(it.start, it.end) }
+    val workIncome = remember(cardWork) { cardWork.sumOf { it.income } }
+    val current = remember(selected, transactions, workDays) {
+        selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
+    }
+    val hours = remember(cardWork) { cardWork.sumOf { calculateHours(it.start, it.end) } }
 
     val now = today().split("/").mapNotNull { it.toIntOrNull() }
     val nowYear = now.getOrNull(0) ?: 1405
