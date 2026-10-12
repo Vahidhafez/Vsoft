@@ -1372,6 +1372,8 @@ fun VsoftApp() {
                 },
                 onBackup = { backupLauncher.launch("vsoft-backup.json") },
                 onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
+                onPortableExport = { password -> portablePassword = password; portableExportLauncher.launch("vsoft-portable-backup.vspb") },
+                onPortableImport = { password -> portablePassword = password; portableImportLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
                 backupRetention = backupRetention,
                 onBackupRetentionChange = { value ->
                     backupRetention = value
@@ -1470,6 +1472,8 @@ fun MainScreen(
     onFontChange: (String) -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
+    onPortableExport: (String) -> Unit,
+    onPortableImport: (String) -> Unit,
     backupRetention: Int,
     onBackupRetentionChange: (Int) -> Unit,
     backupSnapshot: VsoftBackup,
@@ -1665,8 +1669,8 @@ fun MainScreen(
                     onBackupRetentionChange = onBackupRetentionChange,
                     backupSnapshot = backupSnapshot,
                     onStoredBackupRestore = onStoredBackupRestore,
-                    onPortableExport = { password -> portablePassword = password; portableExportLauncher.launch("vsoft-portable-backup.vspb") },
-                    onPortableImport = { password -> portablePassword = password; portableImportLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
+                    onPortableExport = onPortableExport,
+                    onPortableImport = onPortableImport
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
