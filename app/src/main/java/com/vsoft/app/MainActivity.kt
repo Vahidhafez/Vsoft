@@ -1573,11 +1573,11 @@ fun MainScreen(
             pageStateHolder.SaveableStateProvider(page) {
             when (page) {
 
-                0 -> DashboardPage(
-                    strings,
-                    transactions,
-                    workDays,
-                    cards,
+                0 -> VsoftFinalDashboardPage(
+                    strings = strings,
+                    transactions = transactions,
+                    workDays = workDays,
+                    cards = cards,
                     onNavigate = { destination -> selectedPage = destination }
                 )
 
