@@ -65,6 +65,16 @@ class FinancialRegressionTest {
     }
 
     @Test
+    fun nonPositiveWorkIncomeCannotReduceCardBalance() {
+        val bankCard = card(250_000L)
+        val workDays = listOf(
+            WorkDay(1L, "کارگاه", "1405/07/20", "08:00", "12:00", -80_000L, "", "", card = "کارت اصلی"),
+            WorkDay(2L, "پروژه", "1405/07/20", "13:00", "15:00", 0L, "", "", card = "کارت اصلی")
+        )
+        assertEquals(250_000L, cardCurrentBalance(bankCard, emptyList(), workDays))
+    }
+
+    @Test
     fun workIncomeIsIncludedOnlyForItsSelectedCard() {
         val bankCard = card(100_000L)
         val workDays = listOf(
