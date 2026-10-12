@@ -2443,6 +2443,10 @@ fun TransactionCard(
                         Text("• " + transaction.card, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
+                    if (transaction.person.isNotBlank()) {
+                        Text("• " + transaction.person, fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
                 }
             }
             Spacer(Modifier.width(8.dp))
@@ -2878,12 +2882,20 @@ fun WorkPurchasesPage(
             }
             if (search.isNotBlank()) {
                 item(key = "work_purchases_search_count") {
-                    Text(
-                        uiText("نمایش ${filteredPurchases.size} خرید از ${purchases.size} خرید"),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredPurchases.size} خرید از ${purchases.size} خرید"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
                 }
             }
             if (purchases.isEmpty()) {
