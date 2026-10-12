@@ -4676,13 +4676,20 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
     var editing by remember { mutableStateOf<BankCard?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     var search by remember { mutableStateOf("") }
-    val filteredCards = cards.filter {
-        val q = normalizeVsoftSearch(search)
-        q.isBlank() || normalizeVsoftSearch(it.bank).contains(q) ||
-            normalizeVsoftSearch(it.name).contains(q) || it.cardNumber.contains(q)
+    val normalizedCardSearch = normalizeVsoftSearch(search)
+    val filteredCards = remember(cards, normalizedCardSearch) {
+        if (normalizedCardSearch.isBlank()) cards else cards.filter { card ->
+            normalizeVsoftSearch(card.bank).contains(normalizedCardSearch) ||
+                normalizeVsoftSearch(card.name).contains(normalizedCardSearch) ||
+                normalizeVsoftSearch(card.cardNumber).contains(normalizedCardSearch)
+        }
     }
-    val totalBalance = cards.sumOf { cardCurrentBalance(it, transactions, workDays) }
-    val positiveCount = cards.count { cardCurrentBalance(it, transactions, workDays) > 0L }
+    val totalBalance = remember(cards, transactions, workDays) {
+        cards.sumOf { cardCurrentBalance(it, transactions, workDays) }
+    }
+    val positiveCount = remember(cards, transactions, workDays) {
+        cards.count { cardCurrentBalance(it, transactions, workDays) > 0L }
+    }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
