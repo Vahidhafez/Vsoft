@@ -2165,22 +2165,24 @@ fun FinancePage(
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("all") }
     val normalizedSearch = normalizeVsoftSearch(search)
-    val list = transactions.filter {
-        (filter == "all" || it.type == filter) &&
-        (normalizedSearch.isBlank() ||
-            normalizeVsoftSearch(it.description).contains(normalizedSearch) ||
-            normalizeVsoftSearch(it.category).contains(normalizedSearch) ||
-            normalizeVsoftSearch(it.person).contains(normalizedSearch) ||
-            normalizeVsoftSearch(it.card).contains(normalizedSearch) ||
-            normalizeVsoftSearch(it.date).contains(normalizedSearch))
-    }.sortedWith(
-        compareByDescending<Transaction> { it.date }
-            .thenByDescending { it.id }
-    )
+    val list = remember(transactions, filter, normalizedSearch) {
+        transactions.filter {
+            (filter == "all" || it.type == filter) &&
+            (normalizedSearch.isBlank() ||
+                normalizeVsoftSearch(it.description).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.category).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.person).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.card).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.date).contains(normalizedSearch))
+        }.sortedWith(
+            compareByDescending<Transaction> { it.date }
+                .thenByDescending { it.id }
+        )
+    }
     // Preserve newest-first ordering, then render each calendar date as its own section.
-    val transactionGroups = list.groupBy { it.date }
-    val incomeTotal = transactions.filter { it.type == "income" }.sumOf { it.amount }
-    val expenseTotal = transactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val transactionGroups = remember(list) { list.groupBy { it.date } }
+    val incomeTotal = remember(transactions) { transactions.filter { it.type == "income" }.sumOf { it.amount } }
+    val expenseTotal = remember(transactions) { transactions.filter { it.type == "expense" }.sumOf { it.amount } }
     val netTotal = incomeTotal - expenseTotal
 
     val listState = rememberLazyListState()
