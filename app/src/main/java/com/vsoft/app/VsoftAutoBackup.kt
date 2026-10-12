@@ -239,7 +239,8 @@ class VsoftAutoBackupWorker(
             p[CURRENCY_KEY] ?: "IRT",
             p[THEME_KEY] ?: "system",
             p[GLASS_KEY]?.toBoolean() ?: false,
-            p[FONT_KEY] ?: "sans"
+            p[FONT_KEY] ?: "sans",
+            decodeConstructionTasks(p[CONSTRUCTION_TASKS_KEY] ?: "[]")
         )
         createStoredVsoftBackup(applicationContext, backup, automatic = true)
         Result.success()

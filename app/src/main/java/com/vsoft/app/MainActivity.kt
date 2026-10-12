@@ -109,6 +109,7 @@ val CARDS_KEY = stringPreferencesKey("cards")
 val PEOPLE_KEY = stringPreferencesKey("people")
 val WORKPLACES_KEY = stringPreferencesKey("workplaces")
 val WORK_PURCHASES_KEY = stringPreferencesKey("work_purchases")
+val CONSTRUCTION_TASKS_KEY = stringPreferencesKey("construction_tasks")
 val LANGUAGE_KEY = stringPreferencesKey("language")
 val CURRENCY_KEY = stringPreferencesKey("currency")
 val THEME_KEY = stringPreferencesKey("theme")
@@ -895,7 +896,8 @@ data class VsoftBackup(
     val currency: String,
     val theme: String,
     val glass: Boolean,
-    val font: String
+    val font: String,
+    val constructionTasks: List<ConstructionTask> = emptyList()
 )
 
 fun encodeBackup(data: VsoftBackup): String {
@@ -907,6 +909,7 @@ fun encodeBackup(data: VsoftBackup): String {
         put("people", JSONArray(encodePeople(data.people)))
         put("workplaces", JSONArray(encodeWorkplaces(data.workplaces)))
          put("workPurchases", JSONArray(encodeWorkPurchases(data.workPurchases)))
+        put("constructionTasks", JSONArray(encodeConstructionTasks(data.constructionTasks)))
         put("language", data.language)
         put("currency", data.currency)
         put("theme", data.theme)
@@ -933,7 +936,8 @@ fun decodeBackup(value: String): VsoftBackup? {
             o.optString("currency", "IRT"),
             o.optString("theme", "system"),
             o.optBoolean("glass", false),
-            o.optString("font", "sans")
+            o.optString("font", "sans"),
+            decodeConstructionTasks(o.optJSONArray("constructionTasks")?.toString() ?: "[]")
         )
     } catch (_: Exception) {
         null
@@ -948,6 +952,7 @@ suspend fun restoreBackup(context: Context, data: VsoftBackup) {
         p[PEOPLE_KEY] = encodePeople(data.people)
         p[WORKPLACES_KEY] = encodeWorkplaces(data.workplaces)
         p[WORK_PURCHASES_KEY] = encodeWorkPurchases(data.workPurchases)
+        p[CONSTRUCTION_TASKS_KEY] = encodeConstructionTasks(data.constructionTasks)
         p[LANGUAGE_KEY] = data.language
         p[CURRENCY_KEY] = data.currency
         p[THEME_KEY] = data.theme
@@ -1016,6 +1021,10 @@ fun VsoftApp() {
         mutableStateOf(mutableListOf<WorkPurchase>())
     }
 
+    var constructionTasks by remember {
+        mutableStateOf(mutableListOf<ConstructionTask>())
+    }
+
     var loaded by remember {
         mutableStateOf(false)
     }
@@ -1062,6 +1071,8 @@ fun VsoftApp() {
         workPurchases =
             decodeWorkPurchases(preferences[WORK_PURCHASES_KEY] ?: "[]")
 
+        constructionTasks = decodeConstructionTasks(preferences[CONSTRUCTION_TASKS_KEY] ?: "[]")
+
         if (cards.isEmpty()) {
             cards = mutableListOf(
                 BankCard(1L, "بانک ملی", "بانک ملی", "", "", 0L),
@@ -1089,7 +1100,7 @@ fun VsoftApp() {
         if (uri != null) {
             val snapshot = VsoftBackup(
                 transactions, workDays, cards, people, workplaces, workPurchases,
-                language, currency, theme, glass, font
+                language, currency, theme, glass, font, constructionTasks
             )
             runCatching {
                 context.contentResolver.openOutputStream(uri)?.use {
@@ -1231,6 +1242,14 @@ fun VsoftApp() {
                 people = people,
                 workplaces = workplaces,
                 workPurchases = workPurchases,
+                constructionTasks = constructionTasks,
+
+                onConstructionTasksChange = {
+                    constructionTasks = it
+                    scope.launch {
+                        context.dataStore.edit { prefs -> prefs[CONSTRUCTION_TASKS_KEY] = encodeConstructionTasks(it) }
+                    }
+                },
 
                 onTransactionsChange = {
                     transactions = it
@@ -1327,7 +1346,7 @@ fun VsoftApp() {
                 },
                 backupSnapshot = VsoftBackup(
                     transactions, workDays, cards, people, workplaces, workPurchases,
-                    language, currency, theme, glass, font
+                    language, currency, theme, glass, font, constructionTasks
                 ),
                 onStoredBackupRestore = { data ->
                     scope.launch {
@@ -1338,6 +1357,7 @@ fun VsoftApp() {
                         people = data.people.toMutableList()
                         workplaces = data.workplaces.toMutableList()
                         workPurchases = data.workPurchases.toMutableList()
+                        constructionTasks = data.constructionTasks.toMutableList()
                         language = data.language
                         currency = data.currency
                         theme = data.theme
@@ -1364,6 +1384,7 @@ fun VsoftApp() {
                                     people = data.people.toMutableList()
                                     workplaces = data.workplaces.toMutableList()
                                     workPurchases = data.workPurchases.toMutableList()
+                                    constructionTasks = data.constructionTasks.toMutableList()
                                     language = data.language
                                     currency = data.currency
                                     theme = data.theme
@@ -1410,6 +1431,8 @@ fun MainScreen(
     onWorkplacesChange: (MutableList<Workplace>) -> Unit,
     workPurchases: List<WorkPurchase>,
     onWorkPurchasesChange: (MutableList<WorkPurchase>) -> Unit,
+    constructionTasks: List<ConstructionTask>,
+    onConstructionTasksChange: (MutableList<ConstructionTask>) -> Unit,
     onLanguageChange: (String) -> Unit,
     onCurrencyChange: (String) -> Unit,
     onThemeChange: (String) -> Unit,
@@ -1424,6 +1447,7 @@ fun MainScreen(
 ) {
 
     var selectedPage by rememberSaveable { mutableStateOf(0) }
+    var selectedWorkplaceId by rememberSaveable { mutableStateOf<Long?>(null) }
     val pageStateHolder = rememberSaveableStateHolder()
 
     val pages = listOf(
@@ -1437,7 +1461,8 @@ fun MainScreen(
         strings.people,
         if (language == "en") "Tools" else if (language == "ar") "الأدوات" else "ابزارها",
         "پیامک بانکی",
-        if (language == "en") "Work purchases" else if (language == "ar") "مشتريات العمل" else "خریدهای کار"
+        if (language == "en") "Work purchases" else if (language == "ar") "مشتريات العمل" else "خریدهای کار",
+        if (language == "en") "Project details" else if (language == "ar") "تفاصيل المشروع" else "جزئیات پروژه"
     )
 
     Scaffold(
@@ -1464,7 +1489,7 @@ fun MainScreen(
                             Text(title, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                         }
                     }
-                    if (selectedPage == 10) {
+                    if (selectedPage == 10 || selectedPage == 11) {
                         IconButton(
                             onClick = { selectedPage = 2 },
                             modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)
@@ -1495,7 +1520,7 @@ fun MainScreen(
                 ) {
                     RedesignNavItem(strings.dashboard, Icons.Default.Home, selectedPage == 0, Modifier.weight(1f)) { selectedPage = 0 }
                     RedesignNavItem(strings.finance, Icons.Default.AccountBalanceWallet, selectedPage == 1, Modifier.weight(1f)) { selectedPage = 1 }
-                    RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2 || selectedPage == 10, Modifier.weight(1f)) { selectedPage = 2 }
+                    RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2 || selectedPage == 10 || selectedPage == 11, Modifier.weight(1f)) { selectedPage = 2 }
                     RedesignNavItem(strings.reports, Icons.Default.Insights, selectedPage == 3, Modifier.weight(1f)) { selectedPage = 3 }
                     RedesignNavItem(if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر", Icons.Default.GridView, selectedPage in 5..9, Modifier.weight(1f)) { selectedPage = 8 }
                 }
@@ -1595,8 +1620,10 @@ fun MainScreen(
                     people,
                     workplaces,
                     cards,
+                    constructionTasks,
                     onWorkChange,
-                    onWorkPurchases = { selectedPage = 10 }
+                    onWorkPurchases = { selectedPage = 10 },
+                    onOpenWorkplace = { place -> selectedWorkplaceId = place.id; selectedPage = 11 }
                 )
 
                 3 -> ReportsPage(strings, transactions, workDays, cards)
@@ -1633,6 +1660,19 @@ fun MainScreen(
                     workplaces = workplaces,
                     onNavigate = { destination -> selectedPage = destination }
                 )
+                11 -> selectedWorkplaceId?.let { id ->
+                    workplaces.firstOrNull { it.id == id }?.let { place ->
+                        ConstructionTasksPage(
+                            workplace = place,
+                            tasks = constructionTasks.filter { it.workplaceId == place.id },
+                            people = people,
+                            onTasksChange = { changed ->
+                                val otherTasks = constructionTasks.filterNot { it.workplaceId == place.id }
+                                onConstructionTasksChange((otherTasks + changed).toMutableList())
+                            }
+                        )
+                    }
+                }
                 10 -> WorkPurchasesPage(
                     purchases = workPurchases,
                     cards = cards,
@@ -3035,8 +3075,10 @@ fun WorkPage(
     people: List<Person>,
     workplaces: List<Workplace>,
     cards: List<BankCard>,
+    constructionTasks: List<ConstructionTask>,
     onWorkChange: (MutableList<WorkDay>) -> Unit,
-    onWorkPurchases: () -> Unit
+    onWorkPurchases: () -> Unit,
+    onOpenWorkplace: (Workplace) -> Unit
 ) {
     var show by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<WorkDay?>(null) }
@@ -3060,6 +3102,28 @@ fun WorkPage(
             contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            item(key = "workplaces_top") {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (LocalVsoftLanguage.current == "en") "Workplaces" else "مکان‌های کاری", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, modifier = Modifier.weight(1f))
+                        Text("${workplaces.size}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    }
+                    if (workplaces.isEmpty()) {
+                        Text(if (LocalVsoftLanguage.current == "en") "Add a workplace from More to track construction tasks." else "برای پیگیری کارهای ساختمانی، ابتدا از بخش بیشتر یک مکان کاری اضافه کن.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    } else {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(vertical = 2.dp)) {
+                            items(workplaces, key = { it.id }) { place ->
+                                Surface(onClick = { onOpenWorkplace(place) }, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = .09f), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = .18f))) {
+                                    Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        Icon(Icons.Default.Apartment, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                        Text(place.name, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             item(key = "work_header") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Card(
@@ -3557,15 +3621,16 @@ fun AddWorkDialog(
 fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: List<WorkDay>, cards: List<BankCard>) {
     var showReceiptBuilder by remember { mutableStateOf(false) }
     if (showReceiptBuilder) ReceiptBuilderDialog(transactions, workDays, cards) { showReceiptBuilder = false }
-    var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "") }
+    var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "__ALL_CARDS__") }
+    val allCardsSelected = selectedCardName == "__ALL_CARDS__"
     val selected = cards.firstOrNull { it.name == selectedCardName }
-    val cardTransactions = transactions.filter { it.card == selectedCardName }
-    val cardWork = workDays.filter { it.card == selectedCardName }
+    val cardTransactions = if (allCardsSelected) transactions else transactions.filter { it.card == selectedCardName }
+    val cardWork = if (allCardsSelected) workDays else workDays.filter { it.card == selectedCardName }
     val income = cardTransactions.filter { it.type == "income" }.sumOf { it.amount }
     val expense = cardTransactions.filter { it.type == "expense" }.sumOf { it.amount }
-    val opening = selected?.openingBalance ?: 0L
+    val opening = if (allCardsSelected) cards.sumOf { it.openingBalance } else selected?.openingBalance ?: 0L
     val workIncome = cardWork.sumOf { it.income }
-    val current = selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
+    val current = if (allCardsSelected) cards.sumOf { cardCurrentBalance(it, transactions, workDays) } else selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
     val hours = cardWork.sumOf { calculateHours(it.start, it.end) }
 
     val now = today().split("/").mapNotNull { it.toIntOrNull() }
@@ -3577,8 +3642,8 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
             var m = nowMonth - back
             while (m < 1) { m += 12; y-- }
             val prefix = "%04d/%02d/".format(Locale.US, y, m)
-            val tx = transactions.filter { it.card == selectedCardName && it.date.startsWith(prefix) }
-            val wd = workDays.filter { it.card == selectedCardName && it.date.startsWith(prefix) }
+            val tx = transactions.filter { (allCardsSelected || it.card == selectedCardName) && it.date.startsWith(prefix) }
+            val wd = workDays.filter { (allCardsSelected || it.card == selectedCardName) && it.date.startsWith(prefix) }
             Triple(
                 "$y/$m",
                 tx.filter { it.type == "income" }.sumOf { it.amount } + wd.sumOf { it.income },
@@ -3636,7 +3701,7 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                         Column(Modifier.weight(1f)) {
                             Text(uiText("انتخاب کارت"), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                             Text(
-                                if (selected != null) selected.bank + " • " + selected.name else uiText("هنوز کارت بانکی ثبت نشده"),
+                                if (allCardsSelected) (if (LocalVsoftLanguage.current == "en") "All bank cards" else "همه کارت‌ها") else if (selected != null) selected.bank + " • " + selected.name else uiText("هنوز کارت بانکی ثبت نشده"),
                                 fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1
                             )
                         }
@@ -3655,6 +3720,21 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                         }
                     } else {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            item(key = "all_cards_report_filter") {
+                                Surface(
+                                    onClick = { selectedCardName = "__ALL_CARDS__" },
+                                    modifier = Modifier.width(150.dp).height(132.dp),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = if (allCardsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .7f),
+                                    border = BorderStroke(1.5.dp, if (allCardsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+                                ) {
+                                    Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.Start) {
+                                        Icon(Icons.Default.AccountBalanceWallet, null, tint = if (allCardsSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
+                                        Text(if (LocalVsoftLanguage.current == "en") "All cards" else "همه کارت‌ها", color = if (allCardsSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                        Text(if (LocalVsoftLanguage.current == "en") "Combined report" else "گزارش تجمیعی", color = if (allCardsSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = .8f) else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                                    }
+                                }
+                            }
                             items(cards, key = { it.id }) { card ->
                                 val cardColors = bankCardColors(card.bank)
                                 val isSelected = card.name == selectedCardName
@@ -3713,7 +3793,7 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                 }
             }
         }
-        if (selected == null) {
+        if (selected == null && !allCardsSelected) {
             item { EmptyState(uiText("هنوز کارت بانکی ثبت نشده"), Icons.Default.CreditCard) }
         } else {
             item {
