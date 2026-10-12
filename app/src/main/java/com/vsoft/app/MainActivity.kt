@@ -4767,9 +4767,10 @@ fun SettingsPage(
                     enabled = portablePasswordInput.length >= 10,
                     onClick = {
                         val password = portablePasswordInput
+                        val mode = portableDialogMode
                         portableDialogMode = null
                         portablePasswordInput = ""
-                        if (portableDialogMode == "export") onPortableExport(password) else onPortableImport(password)
+                        if (mode == "export") onPortableExport(password) else onPortableImport(password)
                     }
                 ) { Text("ادامه") }
             },
