@@ -3140,6 +3140,16 @@ fun WorkPage(
                 )
             }
 
+            if (search.isNotBlank()) {
+                item(key = "work_search_count") {
+                    Text(
+                        uiText("نمایش ${filteredWorkDays.size} روز کاری از ${workDays.size} روز"),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             item(key = "work_purchases_entry") {
                 OutlinedButton(
                     onClick = onWorkPurchases,
@@ -4651,6 +4661,16 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                     }
                 )
             }
+            if (search.isNotBlank()) {
+                item {
+                    Text(
+                        uiText("نمایش ${filteredCards.size} کارت از ${cards.size} کارت"),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             if (filteredCards.isEmpty()) {
                 item {
                     Card(
@@ -4676,7 +4696,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 if (cards.isEmpty()) uiText("هنوز کارت بانکی ثبت نشده")
-                                else uiText("تراکنشی با این فیلتر پیدا نشد"),
+                                else uiText("کارتی با این مشخصات پیدا نشد"),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
@@ -4772,6 +4792,16 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                         }
                     }
                 )
+            }
+            if (search.isNotBlank()) {
+                item {
+                    Text(
+                        uiText("نمایش ${filteredWorkplaces.size} محل کار از ${workplaces.size} محل کار"),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             if (filteredWorkplaces.isEmpty()) {
                 item {
@@ -4944,6 +4974,16 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                         }
                     }
                 )
+            }
+            if (search.isNotBlank()) {
+                item {
+                    Text(
+                        uiText("نمایش ${filteredPeople.size} نفر از ${people.size} نفر"),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             if (filteredPeople.isEmpty()) {
                 item {
