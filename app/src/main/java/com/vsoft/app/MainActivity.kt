@@ -4824,6 +4824,7 @@ fun EditWorkplaceDialog(place: Workplace, onDismiss: () -> Unit, onSave: (Workpl
 fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Person?>(null) }
+    var viewing by remember { mutableStateOf<Person?>(null) }
     var search by remember { mutableStateOf("") }
     val filteredPeople = people.filter {
         val q = normalizeVsoftSearch(search)
@@ -4871,11 +4872,13 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     VsoftSwipeToDelete(onDelete = {
                         onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
                     }) {
-                        PersonItem(person,
+                        PersonItem(
+                            person = person,
                             onDelete = {
                                 onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
                             },
-                            onEdit = { editing = person }
+                            onEdit = { editing = person },
+                            onOpen = { viewing = person }
                         )
                     }
                 }
@@ -4895,6 +4898,16 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
             })
             editing = null
         }
+    }
+    viewing?.let { person ->
+        PersonDetailsDialog(
+            person = person,
+            onDismiss = { viewing = null },
+            onEdit = {
+                viewing = null
+                editing = person
+            }
+        )
     }
 }
 
@@ -5575,14 +5588,16 @@ private fun VsoftDetailRow(
 fun PersonItem(
     person: Person,
     onDelete: () -> Unit,
-    onEdit: () -> Unit = {}
+    onEdit: () -> Unit = {},
+    onOpen: () -> Unit = {}
 ) {
     Card(
         Modifier
             .fillMaxWidth()
             .vsoftGlass(RoundedCornerShape(24.dp))
             .animateContentSize()
-            .pressScale(),
+            .pressScale()
+            .clickable(onClick = onOpen),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
