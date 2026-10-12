@@ -162,7 +162,9 @@ data class Person(
     val name: String,
     val phone: String,
     val note: String,
-    val job: String = ""
+    val job: String = "",
+    val amountTheyOweMe: Long = 0L,
+    val amountIOwe: Long = 0L
 )
 
 data class WorkPurchase(
@@ -481,10 +483,22 @@ fun money(value: Long): String {
 fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays: List<WorkDay>): Long {
     // موجودی اولیه کارت فقط همان مبلغی است که کاربر دستی تعیین کرده است.
     // پیامک بانکی هرگز آن را تغییر نمی‌دهد؛ تراکنش تأییدشده در محاسبه موجودی فعلی لحاظ می‌شود.
+    // Only recognized financial movements may affect the balance. Unknown legacy
+    // or malformed transaction types must never silently become expenses.
     val movement = transactions
-        .filter { it.card == card.name }
+        .asSequence()
+        .filter {
+            it.card == card.name &&
+                (it.type == "income" || it.type == "expense") &&
+                it.amount > 0L
+        }
         .sumOf { if (it.type == "income") it.amount else -it.amount }
-    val workIncome = workDays.filter { it.card == card.name }.sumOf { it.income }
+    // Work entries represent income, so invalid zero/negative values must not
+    // silently reduce the card balance. Expenses belong in financial transactions.
+    val workIncome = workDays
+        .asSequence()
+        .filter { it.card == card.name && it.income > 0L }
+        .sumOf { it.income }
     return card.openingBalance + movement + workIncome
 }
 
@@ -787,6 +801,8 @@ fun encodePeople(list: List<Person>): String {
                 put("phone", it.phone)
                 put("note", it.note)
                 put("job", it.job)
+                put("amountTheyOweMe", it.amountTheyOweMe)
+                put("amountIOwe", it.amountIOwe)
             }
         )
     }
@@ -809,7 +825,9 @@ fun decodePeople(value: String): MutableList<Person> {
                     o.getString("name"),
                     o.getString("phone"),
                     o.getString("note"),
-                    o.optString("job", "")
+                    o.optString("job", ""),
+                    o.optLong("amountTheyOweMe", 0L),
+                    o.optLong("amountIOwe", 0L)
                 )
             )
         }
@@ -991,6 +1009,8 @@ fun VsoftApp() {
     var font by remember { mutableStateOf("sans") }
     var backupRetention by remember { mutableIntStateOf(3) }
     var showRestoreConfirmation by remember { mutableStateOf(false) }
+    var portablePassword by remember { mutableStateOf("") }
+    var portableBackupStatus by remember { mutableStateOf<String?>(null) }
 
     var transactions by remember {
         mutableStateOf(mutableListOf<Transaction>())
@@ -1112,6 +1132,62 @@ fun VsoftApp() {
                         showRestoreConfirmation = true
                     }
                 }
+            }
+        }
+    }
+
+    val portableExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        val password = portablePassword
+        portablePassword = ""
+        if (uri == null) {
+            portableBackupStatus = "خروجی رمزدار لغو شد."
+        } else if (password.isEmpty()) {
+            portableBackupStatus = "رمز پشتیبان تعیین نشده است."
+        } else {
+            val passwordChars = password.toCharArray()
+            val result = runCatching {
+                val snapshot = VsoftBackup(
+                    transactions, workDays, cards, people, workplaces, workPurchases,
+                    language, currency, theme, glass, font
+                )
+                val bytes = encodePortableVsoftBackup(snapshot, passwordChars)
+                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                    ?: error("امکان نوشتن فایل پشتیبان وجود نداشت.")
+            }
+            passwordChars.fill(0.toChar())
+            portableBackupStatus = result.fold(
+                { "فایل پشتیبان رمزدار با موفقیت ذخیره شد." },
+                { "ذخیره پشتیبان ناموفق بود: ${it.message ?: "خطای ناشناخته"}" }
+            )
+        }
+    }
+
+    val portableImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val password = portablePassword
+        portablePassword = ""
+        if (uri == null) {
+            portableBackupStatus = "ورود پشتیبان رمزدار لغو شد."
+        } else if (password.isEmpty()) {
+            portableBackupStatus = "رمز پشتیبان تعیین نشده است."
+        } else {
+            val passwordChars = password.toCharArray()
+            val result = runCatching {
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: error("امکان خواندن فایل پشتیبان وجود نداشت.")
+                decodePortableVsoftBackup(bytes, passwordChars)
+                    ?: error("رمز اشتباه است یا فایل پشتیبان آسیب دیده است.")
+            }
+            passwordChars.fill(0.toChar())
+            result.onSuccess {
+                pendingRestore = it
+                showRestoreConfirmation = true
+                portableBackupStatus = "فایل بررسی شد؛ برای جایگزینی اطلاعات، تأیید بازیابی را انجام دهید."
+            }.onFailure {
+                portableBackupStatus = "بازیابی فایل ناموفق بود: ${it.message ?: "رمز اشتباه یا فایل نامعتبر"}"
             }
         }
     }
@@ -1319,6 +1395,9 @@ fun VsoftApp() {
                 },
                 onBackup = { backupLauncher.launch("vsoft-backup.json") },
                 onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
+                onPortableExport = { password -> portableBackupStatus = null; portablePassword = password; portableExportLauncher.launch("vsoft-portable-backup.vspb") },
+                onPortableImport = { password -> portableBackupStatus = null; portablePassword = password; portableImportLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
+                portableBackupStatus = portableBackupStatus,
                 backupRetention = backupRetention,
                 onBackupRetentionChange = { value ->
                     backupRetention = value
@@ -1417,6 +1496,9 @@ fun MainScreen(
     onFontChange: (String) -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
+    onPortableExport: (String) -> Unit,
+    onPortableImport: (String) -> Unit,
+    portableBackupStatus: String?,
     backupRetention: Int,
     onBackupRetentionChange: (Int) -> Unit,
     backupSnapshot: VsoftBackup,
@@ -1573,11 +1655,11 @@ fun MainScreen(
             pageStateHolder.SaveableStateProvider(page) {
             when (page) {
 
-                0 -> DashboardPage(
-                    strings,
-                    transactions,
-                    workDays,
-                    cards,
+                0 -> VsoftFinalDashboardPage(
+                    strings = strings,
+                    transactions = transactions,
+                    workDays = workDays,
+                    cards = cards,
                     onNavigate = { destination -> selectedPage = destination }
                 )
 
@@ -1611,7 +1693,10 @@ fun MainScreen(
                     backupRetention = backupRetention,
                     onBackupRetentionChange = onBackupRetentionChange,
                     backupSnapshot = backupSnapshot,
-                    onStoredBackupRestore = onStoredBackupRestore
+                    onStoredBackupRestore = onStoredBackupRestore,
+                    onPortableExport = onPortableExport,
+                    onPortableImport = onPortableImport,
+                    portableBackupStatus = portableBackupStatus
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
@@ -2155,25 +2240,32 @@ fun FinancePage(
     var show by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<Transaction?>(null) }
     var receiptTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var detailsTransaction by remember { mutableStateOf<Transaction?>(null) }
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("all") }
+    var selectedBank by rememberSaveable { mutableStateOf("all") }
+    val bankFilters = remember(cards) { cards.map { it.bank.trim() }.filter { it.isNotBlank() }.distinct() }
     val normalizedSearch = normalizeVsoftSearch(search)
-    val list = transactions.filter {
-        (filter == "all" || it.type == filter) &&
-        (normalizedSearch.isBlank() ||
-            normalizeVsoftSearch(it.description).contains(normalizedSearch) ||
-            normalizeVsoftSearch(it.category).contains(normalizedSearch) ||
-            normalizeVsoftSearch(it.person).contains(normalizedSearch) ||
-            normalizeVsoftSearch(it.card).contains(normalizedSearch) ||
-            normalizeVsoftSearch(it.date).contains(normalizedSearch))
-    }.sortedWith(
-        compareByDescending<Transaction> { it.date }
-            .thenByDescending { it.id }
-    )
+    val list = remember(transactions, cards, filter, selectedBank, normalizedSearch) {
+        transactions.filter {
+            (filter == "all" || it.type == filter) &&
+            (selectedBank == "all" || cards.any { card -> card.name == it.card && card.bank.trim() == selectedBank }) &&
+            (normalizedSearch.isBlank() ||
+                normalizeVsoftSearch(it.description).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.category).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.person).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.card).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.date).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.amount.toString()).contains(normalizedSearch))
+        }.sortedWith(
+            compareByDescending<Transaction> { it.date }
+                .thenByDescending { it.id }
+        )
+    }
     // Preserve newest-first ordering, then render each calendar date as its own section.
-    val transactionGroups = list.groupBy { it.date }
-    val incomeTotal = transactions.filter { it.type == "income" }.sumOf { it.amount }
-    val expenseTotal = transactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val transactionGroups = remember(list) { list.groupBy { it.date } }
+    val incomeTotal = remember(transactions) { transactions.filter { it.type == "income" }.sumOf { it.amount } }
+    val expenseTotal = remember(transactions) { transactions.filter { it.type == "expense" }.sumOf { it.amount } }
     val netTotal = incomeTotal - expenseTotal
 
     val listState = rememberLazyListState()
@@ -2253,13 +2345,69 @@ fun FinancePage(
                         FilterChip(filter == "income", { filter = "income" }, label = { Text(strings.income) })
                         FilterChip(filter == "expense", { filter = "expense" }, label = { Text(strings.expense) })
                     }
+
+                    Text(
+                        if (LocalVsoftLanguage.current == "en") "Receipts by bank" else "رسیدها بر اساس بانک",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 2.dp)
+                    ) {
+                        item(key = "bank_filter_all") {
+                            FilterChip(
+                                selected = selectedBank == "all",
+                                onClick = { selectedBank = "all" },
+                                label = { Text(if (LocalVsoftLanguage.current == "en") "All banks" else "همه بانک‌ها") },
+                                leadingIcon = if (selectedBank == "all") ({
+                                    Icon(Icons.Default.AccountBalance, null, modifier = Modifier.size(16.dp))
+                                }) else null
+                            )
+                        }
+                        items(bankFilters, key = { it }) { bankName ->
+                            FilterChip(
+                                selected = selectedBank == bankName,
+                                onClick = { selectedBank = bankName },
+                                label = { Text(bankName) },
+                                leadingIcon = if (selectedBank == bankName) ({
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                                }) else null
+                            )
+                        }
+                    }
+
+                    if (search.isNotBlank() || filter != "all" || selectedBank != "all") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (LocalVsoftLanguage.current == "en")
+                                    "Showing ${list.size} of ${transactions.size} transactions"
+                                else "نمایش ${list.size} از ${transactions.size} تراکنش",
+                                modifier = Modifier.weight(1f),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(onClick = { search = ""; filter = "all"; selectedBank = "all" }) {
+                                Text(if (LocalVsoftLanguage.current == "en") "Clear filters" else "پاک کردن فیلترها")
+                            }
+                        }
+                    }
                 }
             }
 
             if (list.isEmpty()) {
                 item(key = "finance_empty") {
                     Box(Modifier.fillMaxWidth().padding(top = 24.dp), contentAlignment = Alignment.Center) {
-                        EmptyState(uiText("تراکنشی با این فیلتر پیدا نشد"), Icons.Default.SearchOff)
+                        EmptyState(
+                            if (search.isNotBlank() || filter != "all" || selectedBank != "all")
+                                uiText("تراکنشی با این فیلتر پیدا نشد")
+                            else uiText("هنوز تراکنشی ثبت نشده است"),
+                            if (search.isNotBlank() || filter != "all") Icons.Default.SearchOff else Icons.Default.ReceiptLong
+                        )
                     }
                 }
             } else {
@@ -2318,7 +2466,8 @@ fun FinancePage(
                                         onTransactionsChange(x)
                                     },
                                     onEdit = { edit = t; show = true },
-                                    onReceipt = { receiptTransaction = t }
+                                    onReceipt = { receiptTransaction = t },
+                                    onDetails = { detailsTransaction = t }
                                 )
                             }
                         }
@@ -2351,6 +2500,21 @@ fun FinancePage(
     }
     // The receipt icon stores the selected transaction; render its dialog here so taps
     // actually open the receipt instead of silently doing nothing.
+    detailsTransaction?.let { selected ->
+        TransactionDetailsDialog(
+            transaction = selected,
+            onDismiss = { detailsTransaction = null },
+            onEdit = {
+                detailsTransaction = null
+                edit = selected
+                show = true
+            },
+            onReceipt = {
+                detailsTransaction = null
+                receiptTransaction = selected
+            }
+        )
+    }
     receiptTransaction?.let { selected ->
         TransactionReceiptDialog(selected) { receiptTransaction = null }
     }
@@ -2363,6 +2527,7 @@ fun TransactionCard(
     onDelete: () -> Unit,
     onEdit: () -> Unit = {},
     onReceipt: () -> Unit = {},
+    onDetails: () -> Unit = {},
     showActions: Boolean = true
 ) {
     val isIncome = transaction.type == "income"
@@ -2374,7 +2539,9 @@ fun TransactionCard(
         label = "transaction_icon_scale"
     )
     Card(
-        Modifier.fillMaxWidth().animateContentSize().pressScale(0.992f),
+        Modifier.fillMaxWidth()
+            .then(if (showActions) Modifier.clickable(onClick = onDetails) else Modifier)
+            .animateContentSize().pressScale(0.992f),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, accent.copy(alpha = .15f)),
@@ -2411,6 +2578,10 @@ fun TransactionCard(
                     }
                     if (transaction.card.isNotBlank()) {
                         Text("• " + transaction.card, fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
+                    if (transaction.person.isNotBlank()) {
+                        Text("• " + transaction.person, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }
@@ -2784,7 +2955,18 @@ fun WorkPurchasesPage(
 ) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<WorkPurchase?>(null) }
-    val total = purchases.sumOf { it.amount }
+    var search by remember { mutableStateOf("") }
+    val normalizedSearch = normalizeVsoftSearch(search)
+    val filteredPurchases = remember(purchases, normalizedSearch) {
+        if (normalizedSearch.isBlank()) purchases.sortedByDescending { it.id }
+        else purchases.filter { purchase ->
+            listOf(
+                purchase.title, purchase.category, purchase.workplace, purchase.date,
+                purchase.note, purchase.card, purchase.amount.toString()
+            ).any { normalizeVsoftSearch(it).contains(normalizedSearch) }
+        }.sortedByDescending { it.id }
+    }
+    val total = remember(purchases) { purchases.sumOf { it.amount } }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -2820,10 +3002,47 @@ fun WorkPurchasesPage(
                     }
                 }
             }
+            item(key = "work_purchases_search") {
+                OutlinedTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    label = { Text(uiText("جستجوی خریدهای کار")) },
+                    placeholder = { Text(uiText("عنوان، دسته‌بندی، محل کار، تاریخ یا کارت")) },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = if (search.isNotBlank()) ({
+                        IconButton(onClick = { search = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = uiText("پاک کردن جست‌وجو"))
+                        }
+                    }) else null
+                )
+            }
+            if (search.isNotBlank()) {
+                item(key = "work_purchases_search_count") {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredPurchases.size} خرید از ${purchases.size} خرید"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
+                }
+            }
             if (purchases.isEmpty()) {
                 item { EmptyState("هنوز خرید کاری ثبت نشده", Icons.Default.ShoppingCart) }
+            } else if (filteredPurchases.isEmpty()) {
+                item { EmptyState(uiText("خریدی با این مشخصات پیدا نشد"), Icons.Default.SearchOff) }
             } else {
-                itemsIndexed(purchases.sortedByDescending { it.id }, key = { _, it -> it.id }) { index, purchase ->
+                itemsIndexed(filteredPurchases, key = { _, it -> it.id }) { index, purchase ->
                     VsoftEntrance(index.coerceAtMost(7)) {
                         VsoftSwipeToDelete(
                             onDelete = {
@@ -3040,17 +3259,25 @@ fun WorkPage(
 ) {
     var show by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<WorkDay?>(null) }
+    var search by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
-    val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
-    val totalIncome = workDays.sumOf { it.income }
+    val totalHours = remember(workDays) { workDays.sumOf { calculateHours(it.start, it.end) } }
+    val totalIncome = remember(workDays) { workDays.sumOf { it.income } }
     val sortedWorkDays = remember(workDays) {
         workDays.sortedWith(
             compareByDescending<WorkDay> { it.startDate.ifBlank { it.date } }
                 .thenByDescending { it.id }
         )
     }
-    val workGroups = remember(sortedWorkDays) {
-        sortedWorkDays.groupBy { it.startDate.ifBlank { it.date } }
+    val normalizedSearch = normalizeVsoftSearch(search)
+    val filteredWorkDays = remember(sortedWorkDays, normalizedSearch) {
+        if (normalizedSearch.isBlank()) sortedWorkDays else sortedWorkDays.filter { day ->
+            listOf(day.place, day.person, day.description, day.date, day.startDate, day.endDate, day.start, day.end)
+                .any { normalizeVsoftSearch(it).contains(normalizedSearch) }
+        }
+    }
+    val workGroups = remember(filteredWorkDays) {
+        filteredWorkDays.groupBy { it.startDate.ifBlank { it.date } }
     }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -3108,6 +3335,42 @@ fun WorkPage(
                 }
             }
 
+            item(key = "work_search") {
+                OutlinedTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    label = { Text(uiText("جست‌وجوی روزهای کاری")) },
+                    placeholder = { Text(uiText("محل کار، شخص، تاریخ یا توضیحات")) },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = if (search.isNotBlank()) ({
+                        IconButton(onClick = { search = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = uiText("پاک کردن جست‌وجو"))
+                        }
+                    }) else null
+                )
+            }
+
+            if (search.isNotBlank()) {
+                item(key = "work_search_count") {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredWorkDays.size} روز کاری از ${workDays.size} روز"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
+                }
+            }
             item(key = "work_purchases_entry") {
                 OutlinedButton(
                     onClick = onWorkPurchases,
@@ -3126,6 +3389,15 @@ fun WorkPage(
                         contentAlignment = Alignment.Center
                     ) {
                         EmptyState("هنوز روز کاری ثبت نشده", Icons.Default.WorkHistory)
+                    }
+                }
+            } else if (filteredWorkDays.isEmpty()) {
+                item(key = "work_search_empty") {
+                    Box(
+                        Modifier.fillMaxWidth().padding(top = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyState(uiText("روز کاری مطابق جست‌وجو پیدا نشد"), Icons.Default.SearchOff)
                     }
                 }
             } else {
@@ -3559,14 +3831,20 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
     if (showReceiptBuilder) ReceiptBuilderDialog(transactions, workDays, cards) { showReceiptBuilder = false }
     var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "") }
     val selected = cards.firstOrNull { it.name == selectedCardName }
-    val cardTransactions = transactions.filter { it.card == selectedCardName }
-    val cardWork = workDays.filter { it.card == selectedCardName }
-    val income = cardTransactions.filter { it.type == "income" }.sumOf { it.amount }
-    val expense = cardTransactions.filter { it.type == "expense" }.sumOf { it.amount }
+    val cardTransactions = remember(transactions, selectedCardName) {
+        transactions.filter { it.card == selectedCardName }
+    }
+    val cardWork = remember(workDays, selectedCardName) {
+        workDays.filter { it.card == selectedCardName }
+    }
+    val income = remember(cardTransactions) { cardTransactions.filter { it.type == "income" && it.amount > 0L }.sumOf { it.amount } }
+    val expense = remember(cardTransactions) { cardTransactions.filter { it.type == "expense" && it.amount > 0L }.sumOf { it.amount } }
     val opening = selected?.openingBalance ?: 0L
-    val workIncome = cardWork.sumOf { it.income }
-    val current = selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
-    val hours = cardWork.sumOf { calculateHours(it.start, it.end) }
+    val workIncome = remember(cardWork) { cardWork.filter { it.income > 0L }.sumOf { it.income } }
+    val current = remember(selected, transactions, workDays) {
+        selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
+    }
+    val hours = remember(cardWork) { cardWork.sumOf { calculateHours(it.start, it.end) } }
 
     val now = today().split("/").mapNotNull { it.toIntOrNull() }
     val nowYear = now.getOrNull(0) ?: 1405
@@ -3581,8 +3859,8 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
             val wd = workDays.filter { it.card == selectedCardName && it.date.startsWith(prefix) }
             Triple(
                 "$y/$m",
-                tx.filter { it.type == "income" }.sumOf { it.amount } + wd.sumOf { it.income },
-                tx.filter { it.type == "expense" }.sumOf { it.amount }
+                tx.filter { it.type == "income" && it.amount > 0L }.sumOf { it.amount } + wd.filter { it.income > 0L }.sumOf { it.income },
+                tx.filter { it.type == "expense" && it.amount > 0L }.sumOf { it.amount }
             )
         }.reversed()
     }
@@ -3739,18 +4017,26 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                             ReportStatTile(uiText("موجودی اولیه"), money(opening), Icons.Default.CreditCard, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                             ReportStatTile(uiText("ساعت کاری"), String.format(Locale.US, "%.1f", hours), Icons.Default.AccessTime, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
                         }
+                        Spacer(Modifier.height(9.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            ReportStatTile(uiText("تعداد تراکنش"), cardTransactions.size.toString(), Icons.Default.ReceiptLong, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
+                            val expenseCount = cardTransactions.count { it.type == "expense" }
+                            val averageExpense = if (expenseCount > 0) expense / expenseCount else 0L
+                            ReportStatTile(uiText("میانگین هزینه"), money(averageExpense), Icons.Default.Calculate, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+                        }
                     }
                 }
             }
             item { VsoftReportMonthlyChart(monthly) }
             item {
-                val categories = cardTransactions
+                val allCategories = cardTransactions
                     .filter { it.type == "expense" && it.category.isNotBlank() }
                     .groupingBy { it.category.trim() }
                     .fold(0L) { acc, t -> acc + t.amount }
                     .entries
                     .sortedByDescending { it.value }
-                    .take(5)
+                val categories = allCategories.take(5)
+                val totalCategorizedExpense = allCategories.sumOf { it.value }.coerceAtLeast(1L)
 
                 Card(
                     Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
@@ -3769,9 +4055,13 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                             val max = categories.maxOf { it.value }.coerceAtLeast(1L)
                             categories.forEach { entry ->
                                 val fraction = (entry.value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+                                val sharePercent = (entry.value.toDouble() / totalCategorizedExpense.toDouble() * 100.0).toInt()
                                 Column(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Text(entry.key, Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                                        Text("$sharePercent٪", fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary)
+                                        Spacer(Modifier.width(8.dp))
                                         Text(money(entry.value), fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
@@ -4243,13 +4533,17 @@ fun SettingsPage(
     onThemeChange: (String) -> Unit, glass: Boolean, onGlassChange: (Boolean) -> Unit,
     font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
     backupRetention: Int, onBackupRetentionChange: (Int) -> Unit,
-    backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit
+    backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit,
+    onPortableExport: (String) -> Unit, onPortableImport: (String) -> Unit,
+    portableBackupStatus: String?
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var storedBackups by remember { mutableStateOf(listStoredVsoftBackups(context)) }
     var selectedBackup by remember { mutableStateOf<File?>(null) }
     var backupMessage by remember { mutableStateOf<String?>(null) }
+    var portableDialogMode by remember { mutableStateOf<String?>(null) }
+    var portablePasswordInput by remember { mutableStateOf("") }
     var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -4437,8 +4731,24 @@ fun SettingsPage(
                         Text("واردکردن فایل")
                     }
                 }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = { portableDialogMode = "export"; portablePasswordInput = "" }, modifier = Modifier.weight(1f).pressScale()) {
+                        Icon(Icons.Default.Security, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("خروجی رمزدار")
+                    }
+                    OutlinedButton(onClick = { portableDialogMode = "import"; portablePasswordInput = "" }, modifier = Modifier.weight(1f).pressScale()) {
+                        Icon(Icons.Default.LockOpen, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("ورود رمزدار")
+                    }
+                }
+                Text("این فایل با رمز انتخابی شما روی دستگاه‌های دیگر و پس از نصب مجدد قابل بازیابی است. رمز را فراموش نکنید؛ امکان بازیابی آن وجود ندارد.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (!backupMessage.isNullOrBlank()) {
                     Text(backupMessage!!, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                }
+                if (!portableBackupStatus.isNullOrBlank()) {
+                    Text(portableBackupStatus, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("نسخه‌های موجود (${storedBackups.size})", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -4469,6 +4779,39 @@ fun SettingsPage(
                 }
             }
         }
+    }
+    if (portableDialogMode != null) {
+        AlertDialog(
+            onDismissRequest = { portableDialogMode = null; portablePasswordInput = "" },
+            title = { Text(if (portableDialogMode == "export") "ساخت بکاپ رمزدار" else "بازیابی بکاپ رمزدار") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (portableDialogMode == "export") "یک رمز حداقل ۱۰ کاراکتری انتخاب کن و آن را در جای امن نگه دار." else "رمزی را وارد کن که هنگام ساخت این فایل استفاده شده است.")
+                    OutlinedTextField(
+                        value = portablePasswordInput,
+                        onValueChange = { portablePasswordInput = it },
+                        label = { Text("رمز بکاپ") },
+                        singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = portablePasswordInput.length >= 10,
+                    onClick = {
+                        val password = portablePasswordInput
+                        val mode = portableDialogMode
+                        portableDialogMode = null
+                        portablePasswordInput = ""
+                        if (mode == "export") onPortableExport(password) else onPortableImport(password)
+                    }
+                ) { Text("ادامه") }
+            },
+            dismissButton = {
+                TextButton(onClick = { portableDialogMode = null; portablePasswordInput = "" }) { Text("لغو") }
+            }
+        )
     }
     if (selectedBackup != null) {
         AlertDialog(
@@ -4509,15 +4852,23 @@ fun FontOption(title: String, value: String, current: String, onChange: (String)
 fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: List<WorkDay>, onCardsChange: (MutableList<BankCard>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<BankCard?>(null) }
+    var pendingCardDelete by remember { mutableStateOf<BankCard?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     var search by remember { mutableStateOf("") }
-    val filteredCards = cards.filter {
-        val q = normalizeVsoftSearch(search)
-        q.isBlank() || normalizeVsoftSearch(it.bank).contains(q) ||
-            normalizeVsoftSearch(it.name).contains(q) || it.cardNumber.contains(q)
+    val normalizedCardSearch = normalizeVsoftSearch(search)
+    val filteredCards = remember(cards, normalizedCardSearch) {
+        if (normalizedCardSearch.isBlank()) cards else cards.filter { card ->
+            normalizeVsoftSearch(card.bank).contains(normalizedCardSearch) ||
+                normalizeVsoftSearch(card.name).contains(normalizedCardSearch) ||
+                normalizeVsoftSearch(card.cardNumber).contains(normalizedCardSearch)
+        }
     }
-    val totalBalance = cards.sumOf { cardCurrentBalance(it, transactions, workDays) }
-    val positiveCount = cards.count { cardCurrentBalance(it, transactions, workDays) > 0L }
+    val totalBalance = remember(cards, transactions, workDays) {
+        cards.sumOf { cardCurrentBalance(it, transactions, workDays) }
+    }
+    val positiveCount = remember(cards, transactions, workDays) {
+        cards.count { cardCurrentBalance(it, transactions, workDays) > 0L }
+    }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -4598,6 +4949,24 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                     }
                 )
             }
+            if (search.isNotBlank()) {
+                item {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredCards.size} کارت از ${cards.size} کارت"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
+                }
+            }
             if (filteredCards.isEmpty()) {
                 item {
                     Card(
@@ -4623,7 +4992,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 if (cards.isEmpty()) uiText("هنوز کارت بانکی ثبت نشده")
-                                else uiText("تراکنشی با این فیلتر پیدا نشد"),
+                                else uiText("کارتی با این مشخصات پیدا نشد"),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
@@ -4652,11 +5021,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                             card,
                             cardCurrentBalance(card, transactions, workDays),
                             onEdit = { editing = card },
-                            onDelete = {
-                                onCardsChange(cards.toMutableList().also { list ->
-                                    list.removeAll { it.id == card.id }
-                                })
-                            }
+                            onDelete = { pendingCardDelete = card }
                         )
                     }
                 }
@@ -4682,6 +5047,24 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
         })
         editing = null
     })
+    pendingCardDelete?.let { cardToDelete ->
+        AlertDialog(
+            onDismissRequest = { pendingCardDelete = null },
+            title = { Text(uiText("حذف کارت بانکی؟")) },
+            text = { Text(uiText("کارت «" + cardToDelete.name + "» حذف شود؟ این کار قابل بازگشت نیست.")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onCardsChange(cards.toMutableList().also { list ->
+                        list.removeAll { it.id == cardToDelete.id }
+                    })
+                    pendingCardDelete = null
+                }) { Text(uiText("حذف")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCardDelete = null }) { Text(uiText("انصراف")) }
+            }
+        )
+    }
 }
 
 @Composable
@@ -4689,9 +5072,11 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Workplace?>(null) }
     var search by remember { mutableStateOf("") }
-    val filteredWorkplaces = workplaces.filter {
-        val q = normalizeVsoftSearch(search)
-        q.isBlank() || normalizeVsoftSearch(it.name).contains(q)
+    val normalizedWorkplaceSearch = normalizeVsoftSearch(search)
+    val filteredWorkplaces = remember(workplaces, normalizedWorkplaceSearch) {
+        if (normalizedWorkplaceSearch.isBlank()) workplaces else workplaces.filter {
+            normalizeVsoftSearch(it.name).contains(normalizedWorkplaceSearch)
+        }
     }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -4719,6 +5104,24 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                         }
                     }
                 )
+            }
+            if (search.isNotBlank()) {
+                item {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredWorkplaces.size} محل کار از ${workplaces.size} محل کار"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
+                }
             }
             if (filteredWorkplaces.isEmpty()) {
                 item {
@@ -4824,11 +5227,14 @@ fun EditWorkplaceDialog(place: Workplace, onDismiss: () -> Unit, onSave: (Workpl
 fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Person?>(null) }
+    var viewing by remember { mutableStateOf<Person?>(null) }
     var search by remember { mutableStateOf("") }
-    val filteredPeople = people.filter {
-        val q = normalizeVsoftSearch(search)
-        q.isBlank() || normalizeVsoftSearch(it.name).contains(q) ||
-            normalizeVsoftSearch(it.phone).contains(q) || normalizeVsoftSearch(it.job).contains(q)
+    val normalizedPeopleSearch = normalizeVsoftSearch(search)
+    val filteredPeople = remember(people, normalizedPeopleSearch) {
+        if (normalizedPeopleSearch.isBlank()) people else people.filter { person ->
+            listOf(person.name, person.phone, person.job, person.amountTheyOweMe.toString(), person.amountIOwe.toString())
+                .any { normalizeVsoftSearch(it).contains(normalizedPeopleSearch) }
+        }
     }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -4840,6 +5246,40 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     icon = Icons.Default.PeopleAlt,
                     accent = Color(0xFF7357D8)
                 )
+            }
+            item {
+                val totalReceivable = people.sumOf { it.amountTheyOweMe }
+                val totalPayable = people.sumOf { it.amountIOwe }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Card(
+                        Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF16845B).copy(alpha = .09f))
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.TrendingUp, null, tint = Color(0xFF16845B), modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text(uiText("مجموع طلب"), fontSize = 12.sp, color = Color(0xFF16845B), fontWeight = FontWeight.SemiBold)
+                            }
+                            Text(money(totalReceivable), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF16845B), maxLines = 1)
+                        }
+                    }
+                    Card(
+                        Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFD97732).copy(alpha = .09f))
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.TrendingDown, null, tint = Color(0xFFD97732), modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text(uiText("مجموع بدهی"), fontSize = 12.sp, color = Color(0xFFD97732), fontWeight = FontWeight.SemiBold)
+                            }
+                            Text(money(totalPayable), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD97732), maxLines = 1)
+                        }
+                    }
+                }
             }
             item {
                 OutlinedTextField(
@@ -4857,6 +5297,24 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     }
                 )
             }
+            if (search.isNotBlank()) {
+                item {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            uiText("نمایش ${filteredPeople.size} نفر از ${people.size} نفر"),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { search = "" }) {
+                            Text(uiText("پاک کردن جست‌وجو"))
+                        }
+                    }
+                }
+            }
             if (filteredPeople.isEmpty()) {
                 item {
                     EmptyState(
@@ -4871,11 +5329,13 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     VsoftSwipeToDelete(onDelete = {
                         onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
                     }) {
-                        PersonItem(person,
+                        PersonItem(
+                            person = person,
                             onDelete = {
                                 onPeopleChange(people.toMutableList().also { list -> list.removeAll { p -> p.id == person.id } })
                             },
-                            onEdit = { editing = person }
+                            onEdit = { editing = person },
+                            onOpen = { viewing = person }
                         )
                     }
                 }
@@ -4896,6 +5356,16 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
             editing = null
         }
     }
+    viewing?.let { person ->
+        PersonDetailsDialog(
+            person = person,
+            onDismiss = { viewing = null },
+            onEdit = {
+                viewing = null
+                editing = person
+            }
+        )
+    }
 }
 
 @Composable
@@ -4904,6 +5374,8 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
     var phone by remember(person.id) { mutableStateOf(person.phone) }
     var job by remember(person.id) { mutableStateOf(person.job) }
     var note by remember(person.id) { mutableStateOf(person.note) }
+    var amountTheyOweMe by remember(person.id) { mutableStateOf(formatNumberInput(person.amountTheyOweMe.toString())) }
+    var amountIOwe by remember(person.id) { mutableStateOf(formatNumberInput(person.amountIOwe.toString())) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -4998,6 +5470,28 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                Text(uiText("حساب‌وکتاب با این شخص"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                OutlinedTextField(
+                    value = amountTheyOweMe,
+                    onValueChange = { amountTheyOweMe = formatNumberInput(it) },
+                    label = { Text(uiText("این شخص به من بدهکار است (تومان)")) },
+                    leadingIcon = { Icon(Icons.Default.TrendingUp, null, tint = Color(0xFF16845B)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(),
+                    singleLine = true, shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = amountIOwe,
+                    onValueChange = { amountIOwe = formatNumberInput(it) },
+                    label = { Text(uiText("من به این شخص بدهکارم (تومان)")) },
+                    leadingIcon = { Icon(Icons.Default.TrendingDown, null, tint = Color(0xFFD97732)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    visualTransformation = GroupedNumberVisualTransformation(),
+                    singleLine = true, shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -5015,7 +5509,9 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
                                     name = name.trim(),
                                     phone = phone.trim(),
                                     job = job.trim(),
-                                    note = note.trim()
+                                    note = note.trim(),
+                                    amountTheyOweMe = normalizeAmountInput(amountTheyOweMe).toLongOrNull() ?: 0L,
+                                    amountIOwe = normalizeAmountInput(amountIOwe).toLongOrNull() ?: 0L
                                 )
                             )
                         },
@@ -5397,17 +5893,217 @@ fun AddWorkplaceDialog(onDismiss:()->Unit,onSave:(Workplace)->Unit){
 // ---------------- PEOPLE ----------------
 
 @Composable
+private fun TransactionDetailsDialog(
+    transaction: Transaction,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit,
+    onReceipt: () -> Unit
+) {
+    val isIncome = transaction.type == "income"
+    val accent = if (isIncome) Color(0xFF0C9A81) else Color(0xFFD66A5E)
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            shadowElevation = 18.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(22.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                VsoftFormHeader(
+                    title = uiText("جزئیات تراکنش"),
+                    subtitle = transaction.category,
+                    icon = Icons.Default.ReceiptLong,
+                    accent = accent,
+                    onDismiss = onDismiss
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = .09f)),
+                    border = BorderStroke(1.dp, accent.copy(alpha = .18f))
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(if (isIncome) uiText("درآمد") else uiText("هزینه"), color = accent, fontSize = 12.sp)
+                        Text(
+                            (if (isIncome) "+" else "−") + money(transaction.amount),
+                            color = accent,
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+                VsoftDetailRow(Icons.Default.CalendarToday, uiText("تاریخ"), transaction.date)
+                VsoftDetailRow(Icons.Default.AccountBalanceWallet, uiText("کارت بانکی"), transaction.card.ifBlank { uiText("بدون کارت مشخص") })
+                if (transaction.description.isNotBlank()) {
+                    VsoftDetailRow(Icons.Default.Notes, uiText("توضیحات"), transaction.description)
+                }
+                if (transaction.person.isNotBlank()) {
+                    VsoftDetailRow(Icons.Default.PersonOutline, uiText("شخص مرتبط"), transaction.person)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    OutlinedButton(
+                        onClick = onReceipt,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Icon(Icons.Default.ReceiptLong, null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("رسید"))
+                    }
+                    Button(
+                        onClick = onEdit,
+                        modifier = Modifier.weight(1f).pressScale(),
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("ویرایش"))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PersonDetailsDialog(
+    person: Person,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            shadowElevation = 18.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(22.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                VsoftFormHeader(
+                    title = uiText("پرونده شخص"),
+                    subtitle = uiText("اطلاعات تماس و یادداشت‌ها"),
+                    icon = Icons.Default.PeopleAlt,
+                    accent = Color(0xFF7357D8),
+                    onDismiss = onDismiss
+                )
+                Box(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(
+                            Modifier.size(76.dp).clip(CircleShape)
+                                .background(Color(0xFF7357D8).copy(alpha = .12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                person.name.trim().firstOrNull()?.toString() ?: "؟",
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF7357D8)
+                            )
+                        }
+                        Text(person.name, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                        if (person.job.isNotBlank()) {
+                            Text(person.job, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (person.phone.isNotBlank()) VsoftDetailRow(Icons.Default.Phone, uiText("شماره تماس"), person.phone)
+                if (person.job.isNotBlank()) VsoftDetailRow(Icons.Default.Badge, uiText("شغل / نقش"), person.job)
+                if (person.note.isNotBlank()) VsoftDetailRow(Icons.Default.Notes, uiText("یادداشت"), person.note)
+                Text(uiText("وضعیت حساب با این شخص"), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Card(
+                        Modifier.weight(1f), shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF16845B).copy(alpha = .10f))
+                    ) {
+                        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(uiText("طلب من"), fontSize = 12.sp, color = Color(0xFF16845B), fontWeight = FontWeight.SemiBold)
+                            Text(money(person.amountTheyOweMe), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF16845B))
+                            Text(uiText("او به من بدهکار است"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Card(
+                        Modifier.weight(1f), shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFD97732).copy(alpha = .10f))
+                    ) {
+                        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(uiText("بدهی من"), fontSize = 12.sp, color = Color(0xFFD97732), fontWeight = FontWeight.SemiBold)
+                            Text(money(person.amountIOwe), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD97732))
+                            Text(uiText("من به او بدهکارم"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(15.dp)
+                    ) { Text(uiText("بستن")) }
+                    Button(
+                        onClick = onEdit,
+                        modifier = Modifier.weight(1f).pressScale(),
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("ویرایش"))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VsoftDetailRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .38f))
+            .padding(horizontal = 13.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
 fun PersonItem(
     person: Person,
     onDelete: () -> Unit,
-    onEdit: () -> Unit = {}
+    onEdit: () -> Unit = {},
+    onOpen: () -> Unit = {}
 ) {
     Card(
         Modifier
             .fillMaxWidth()
             .vsoftGlass(RoundedCornerShape(24.dp))
             .animateContentSize()
-            .pressScale(),
+            .pressScale()
+            .clickable(onClick = onOpen),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
@@ -5448,6 +6144,24 @@ fun PersonItem(
                         Text(person.phone, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                if (person.amountTheyOweMe > 0L || person.amountIOwe > 0L) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (person.amountTheyOweMe > 0L) {
+                            Text(
+                                uiText("طلب") + ": " + money(person.amountTheyOweMe),
+                                fontSize = 11.sp, color = Color(0xFF16845B), fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                        if (person.amountIOwe > 0L) {
+                            Text(
+                                uiText("بدهی") + ": " + money(person.amountIOwe),
+                                fontSize = 11.sp, color = Color(0xFFD97732), fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
                 if (person.note.isNotBlank()) {
                     Text(
                         person.note,
@@ -5469,6 +6183,7 @@ fun PersonItem(
 @Composable
 fun AddPersonDialog(onDismiss:()->Unit,onSave:(Person)->Unit){
  var name by remember{mutableStateOf("")};var phone by remember{mutableStateOf("")};var job by remember{mutableStateOf("")};var note by remember{mutableStateOf("")}
+ var amountTheyOweMe by remember{mutableStateOf("")};var amountIOwe by remember{mutableStateOf("")}
  Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(11.dp)){
    VsoftFormHeader(
@@ -5482,7 +6197,10 @@ fun AddPersonDialog(onDismiss:()->Unit,onSave:(Person)->Unit){
    OutlinedTextField(phone,{phone=it},label={Text(uiText("شماره تماس"))},leadingIcon={Icon(Icons.Default.Phone,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Phone),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(job,{job=it},label={Text(uiText("شغل / نقش"))},leadingIcon={Icon(Icons.Default.Badge,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Employer / Electrician" else "مثلاً کارفرما / برق‌کش")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(note,{note=it},label={Text(uiText("یادداشت"))},leadingIcon={Icon(Icons.Default.Notes,null)},minLines=2,maxLines=3,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={onSave(Person(System.currentTimeMillis(),name.trim(),phone.trim(),note.trim(),job.trim()))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
+   Text(uiText("حساب‌وکتاب با این شخص"),fontWeight=FontWeight.Bold,fontSize=14.sp)
+   OutlinedTextField(amountTheyOweMe,{amountTheyOweMe=formatNumberInput(it)},label={Text(uiText("این شخص به من بدهکار است (تومان)"))},leadingIcon={Icon(Icons.Default.TrendingUp,null,tint=Color(0xFF16845B))},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),visualTransformation=GroupedNumberVisualTransformation(),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   OutlinedTextField(amountIOwe,{amountIOwe=formatNumberInput(it)},label={Text(uiText("من به این شخص بدهکارم (تومان)"))},leadingIcon={Icon(Icons.Default.TrendingDown,null,tint=Color(0xFFD97732))},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),visualTransformation=GroupedNumberVisualTransformation(),singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){OutlinedButton(onDismiss,Modifier.weight(1f),shape=RoundedCornerShape(16.dp)){Text(uiText("لغو"))};Button(onClick={onSave(Person(System.currentTimeMillis(),name.trim(),phone.trim(),note.trim(),job.trim(),normalizeAmountInput(amountTheyOweMe).toLongOrNull() ?: 0L,normalizeAmountInput(amountIOwe).toLongOrNull() ?: 0L))},enabled=name.isNotBlank(),modifier=Modifier.weight(1f).pressScale(),shape=RoundedCornerShape(16.dp)){Icon(Icons.Default.Check,null,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(uiText("ذخیره"))}}
   }
  }}
 }
