@@ -483,8 +483,11 @@ fun money(value: Long): String {
 fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays: List<WorkDay>): Long {
     // موجودی اولیه کارت فقط همان مبلغی است که کاربر دستی تعیین کرده است.
     // پیامک بانکی هرگز آن را تغییر نمی‌دهد؛ تراکنش تأییدشده در محاسبه موجودی فعلی لحاظ می‌شود.
+    // Only recognized financial movements may affect the balance. Unknown legacy
+    // or malformed transaction types must never silently become expenses.
     val movement = transactions
-        .filter { it.card == card.name }
+        .asSequence()
+        .filter { it.card == card.name && (it.type == "income" || it.type == "expense") }
         .sumOf { if (it.type == "income") it.amount else -it.amount }
     val workIncome = workDays.filter { it.card == card.name }.sumOf { it.income }
     return card.openingBalance + movement + workIncome
