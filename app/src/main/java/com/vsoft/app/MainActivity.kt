@@ -2164,10 +2164,13 @@ fun FinancePage(
     var detailsTransaction by remember { mutableStateOf<Transaction?>(null) }
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("all") }
+    var selectedBank by rememberSaveable { mutableStateOf("all") }
+    val bankFilters = remember(cards) { cards.map { it.bank.trim() }.filter { it.isNotBlank() }.distinct() }
     val normalizedSearch = normalizeVsoftSearch(search)
-    val list = remember(transactions, filter, normalizedSearch) {
+    val list = remember(transactions, cards, filter, selectedBank, normalizedSearch) {
         transactions.filter {
             (filter == "all" || it.type == filter) &&
+            (selectedBank == "all" || cards.any { card -> card.name == it.card && card.bank.trim() == selectedBank }) &&
             (normalizedSearch.isBlank() ||
                 normalizeVsoftSearch(it.description).contains(normalizedSearch) ||
                 normalizeVsoftSearch(it.category).contains(normalizedSearch) ||
@@ -2264,7 +2267,39 @@ fun FinancePage(
                         FilterChip(filter == "expense", { filter = "expense" }, label = { Text(strings.expense) })
                     }
 
-                    if (search.isNotBlank() || filter != "all") {
+                    Text(
+                        if (LocalVsoftLanguage.current == "en") "Receipts by bank" else "رسیدها بر اساس بانک",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 2.dp)
+                    ) {
+                        item(key = "bank_filter_all") {
+                            FilterChip(
+                                selected = selectedBank == "all",
+                                onClick = { selectedBank = "all" },
+                                label = { Text(if (LocalVsoftLanguage.current == "en") "All banks" else "همه بانک‌ها") },
+                                leadingIcon = if (selectedBank == "all") ({
+                                    Icon(Icons.Default.AccountBalance, null, modifier = Modifier.size(16.dp))
+                                }) else null
+                            )
+                        }
+                        items(bankFilters, key = { it }) { bankName ->
+                            FilterChip(
+                                selected = selectedBank == bankName,
+                                onClick = { selectedBank = bankName },
+                                label = { Text(bankName) },
+                                leadingIcon = if (selectedBank == bankName) ({
+                                    Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
+                                }) else null
+                            )
+                        }
+                    }
+
+                    if (search.isNotBlank() || filter != "all" || selectedBank != "all") {
                         Row(
                             Modifier.fillMaxWidth().padding(top = 1.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -2277,7 +2312,7 @@ fun FinancePage(
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            TextButton(onClick = { search = ""; filter = "all" }) {
+                            TextButton(onClick = { search = ""; filter = "all"; selectedBank = "all" }) {
                                 Text(if (LocalVsoftLanguage.current == "en") "Clear filters" else "پاک کردن فیلترها")
                             }
                         }
@@ -2289,7 +2324,7 @@ fun FinancePage(
                 item(key = "finance_empty") {
                     Box(Modifier.fillMaxWidth().padding(top = 24.dp), contentAlignment = Alignment.Center) {
                         EmptyState(
-                            if (search.isNotBlank() || filter != "all")
+                            if (search.isNotBlank() || filter != "all" || selectedBank != "all")
                                 uiText("تراکنشی با این فیلتر پیدا نشد")
                             else uiText("هنوز تراکنشی ثبت نشده است"),
                             if (search.isNotBlank() || filter != "all") Icons.Default.SearchOff else Icons.Default.ReceiptLong
