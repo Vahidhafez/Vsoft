@@ -1620,6 +1620,7 @@ fun MainScreen(
                     people,
                     workplaces,
                     cards,
+                    constructionTasks,
                     onWorkChange,
                     onWorkPurchases = { selectedPage = 10 },
                     onOpenWorkplace = { place -> selectedWorkplaceId = place.id; selectedPage = 11 }
@@ -3074,6 +3075,7 @@ fun WorkPage(
     people: List<Person>,
     workplaces: List<Workplace>,
     cards: List<BankCard>,
+    constructionTasks: List<ConstructionTask>,
     onWorkChange: (MutableList<WorkDay>) -> Unit,
     onWorkPurchases: () -> Unit,
     onOpenWorkplace: (Workplace) -> Unit
@@ -3619,15 +3621,16 @@ fun AddWorkDialog(
 fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: List<WorkDay>, cards: List<BankCard>) {
     var showReceiptBuilder by remember { mutableStateOf(false) }
     if (showReceiptBuilder) ReceiptBuilderDialog(transactions, workDays, cards) { showReceiptBuilder = false }
-    var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "") }
+    var selectedCardName by remember(cards) { mutableStateOf(cards.firstOrNull()?.name ?: "__ALL_CARDS__") }
+    val allCardsSelected = selectedCardName == "__ALL_CARDS__"
     val selected = cards.firstOrNull { it.name == selectedCardName }
-    val cardTransactions = transactions.filter { it.card == selectedCardName }
-    val cardWork = workDays.filter { it.card == selectedCardName }
+    val cardTransactions = if (allCardsSelected) transactions else transactions.filter { it.card == selectedCardName }
+    val cardWork = if (allCardsSelected) workDays else workDays.filter { it.card == selectedCardName }
     val income = cardTransactions.filter { it.type == "income" }.sumOf { it.amount }
     val expense = cardTransactions.filter { it.type == "expense" }.sumOf { it.amount }
-    val opening = selected?.openingBalance ?: 0L
+    val opening = if (allCardsSelected) cards.sumOf { it.openingBalance } else selected?.openingBalance ?: 0L
     val workIncome = cardWork.sumOf { it.income }
-    val current = selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
+    val current = if (allCardsSelected) cards.sumOf { cardCurrentBalance(it, transactions, workDays) } else selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
     val hours = cardWork.sumOf { calculateHours(it.start, it.end) }
 
     val now = today().split("/").mapNotNull { it.toIntOrNull() }
@@ -3639,8 +3642,8 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
             var m = nowMonth - back
             while (m < 1) { m += 12; y-- }
             val prefix = "%04d/%02d/".format(Locale.US, y, m)
-            val tx = transactions.filter { it.card == selectedCardName && it.date.startsWith(prefix) }
-            val wd = workDays.filter { it.card == selectedCardName && it.date.startsWith(prefix) }
+            val tx = transactions.filter { (allCardsSelected || it.card == selectedCardName) && it.date.startsWith(prefix) }
+            val wd = workDays.filter { (allCardsSelected || it.card == selectedCardName) && it.date.startsWith(prefix) }
             Triple(
                 "$y/$m",
                 tx.filter { it.type == "income" }.sumOf { it.amount } + wd.sumOf { it.income },
@@ -3698,7 +3701,7 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                         Column(Modifier.weight(1f)) {
                             Text(uiText("انتخاب کارت"), fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
                             Text(
-                                if (selected != null) selected.bank + " • " + selected.name else uiText("هنوز کارت بانکی ثبت نشده"),
+                                if (allCardsSelected) (if (LocalVsoftLanguage.current == "en") "All bank cards" else "همه کارت‌ها") else if (selected != null) selected.bank + " • " + selected.name else uiText("هنوز کارت بانکی ثبت نشده"),
                                 fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1
                             )
                         }
@@ -3717,6 +3720,21 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                         }
                     } else {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            item(key = "all_cards_report_filter") {
+                                Surface(
+                                    onClick = { selectedCardName = "__ALL_CARDS__" },
+                                    modifier = Modifier.width(150.dp).height(132.dp),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = if (allCardsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .7f),
+                                    border = BorderStroke(1.5.dp, if (allCardsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = .12f))
+                                ) {
+                                    Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.Start) {
+                                        Icon(Icons.Default.AccountBalanceWallet, null, tint = if (allCardsSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary, modifier = Modifier.size(23.dp))
+                                        Text(if (LocalVsoftLanguage.current == "en") "All cards" else "همه کارت‌ها", color = if (allCardsSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                                        Text(if (LocalVsoftLanguage.current == "en") "Combined report" else "گزارش تجمیعی", color = if (allCardsSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = .8f) else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                                    }
+                                }
+                            }
                             items(cards, key = { it.id }) { card ->
                                 val cardColors = bankCardColors(card.bank)
                                 val isSelected = card.name == selectedCardName
@@ -3775,7 +3793,7 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                 }
             }
         }
-        if (selected == null) {
+        if (selected == null && !allCardsSelected) {
             item { EmptyState(uiText("هنوز کارت بانکی ثبت نشده"), Icons.Default.CreditCard) }
         } else {
             item {
