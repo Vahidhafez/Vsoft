@@ -1009,6 +1009,7 @@ fun VsoftApp() {
     var font by remember { mutableStateOf("sans") }
     var backupRetention by remember { mutableIntStateOf(3) }
     var showRestoreConfirmation by remember { mutableStateOf(false) }
+    var portablePassword by remember { mutableStateOf("") }
 
     var transactions by remember {
         mutableStateOf(mutableListOf<Transaction>())
@@ -1130,6 +1131,40 @@ fun VsoftApp() {
                         showRestoreConfirmation = true
                     }
                 }
+            }
+        }
+    }
+
+    val portableExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        if (uri != null && portablePassword.isNotEmpty()) {
+            val snapshot = VsoftBackup(
+                transactions, workDays, cards, people, workplaces, workPurchases,
+                language, currency, theme, glass, font
+            )
+            runCatching {
+                val bytes = encodePortableVsoftBackup(snapshot, portablePassword.toCharArray())
+                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                    ?: error("Could not write portable backup")
+            }
+            portablePassword = ""
+        }
+    }
+
+    val portableImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null && portablePassword.isNotEmpty()) {
+            val decoded = runCatching {
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: error("Could not read portable backup")
+                decodePortableVsoftBackup(bytes, portablePassword.toCharArray())
+            }.getOrNull()
+            portablePassword = ""
+            if (decoded != null) {
+                pendingRestore = decoded
+                showRestoreConfirmation = true
             }
         }
     }
@@ -1629,7 +1664,9 @@ fun MainScreen(
                     backupRetention = backupRetention,
                     onBackupRetentionChange = onBackupRetentionChange,
                     backupSnapshot = backupSnapshot,
-                    onStoredBackupRestore = onStoredBackupRestore
+                    onStoredBackupRestore = onStoredBackupRestore,
+                    onPortableExport = { password -> portablePassword = password; portableExportLauncher.launch("vsoft-portable-backup.vspb") },
+                    onPortableImport = { password -> portablePassword = password; portableImportLauncher.launch(arrayOf("application/octet-stream", "*/*")) }
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
@@ -4466,13 +4503,16 @@ fun SettingsPage(
     onThemeChange: (String) -> Unit, glass: Boolean, onGlassChange: (Boolean) -> Unit,
     font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
     backupRetention: Int, onBackupRetentionChange: (Int) -> Unit,
-    backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit
+    backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit,
+    onPortableExport: (String) -> Unit, onPortableImport: (String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var storedBackups by remember { mutableStateOf(listStoredVsoftBackups(context)) }
     var selectedBackup by remember { mutableStateOf<File?>(null) }
     var backupMessage by remember { mutableStateOf<String?>(null) }
+    var portableDialogMode by remember { mutableStateOf<String?>(null) }
+    var portablePasswordInput by remember { mutableStateOf("") }
     var smsEnabled by remember { mutableStateOf(SmsStore.isEnabled(context)) }
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -4660,6 +4700,19 @@ fun SettingsPage(
                         Text("واردکردن فایل")
                     }
                 }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = { portableDialogMode = "export"; portablePasswordInput = "" }, modifier = Modifier.weight(1f).pressScale()) {
+                        Icon(Icons.Default.Security, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("خروجی رمزدار")
+                    }
+                    OutlinedButton(onClick = { portableDialogMode = "import"; portablePasswordInput = "" }, modifier = Modifier.weight(1f).pressScale()) {
+                        Icon(Icons.Default.LockOpen, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("ورود رمزدار")
+                    }
+                }
+                Text("این فایل با رمز انتخابی شما روی دستگاه‌های دیگر و پس از نصب مجدد قابل بازیابی است. رمز را فراموش نکنید؛ امکان بازیابی آن وجود ندارد.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (!backupMessage.isNullOrBlank()) {
                     Text(backupMessage!!, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                 }
@@ -4692,6 +4745,38 @@ fun SettingsPage(
                 }
             }
         }
+    }
+    if (portableDialogMode != null) {
+        AlertDialog(
+            onDismissRequest = { portableDialogMode = null; portablePasswordInput = "" },
+            title = { Text(if (portableDialogMode == "export") "ساخت بکاپ رمزدار" else "بازیابی بکاپ رمزدار") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (portableDialogMode == "export") "یک رمز حداقل ۱۰ کاراکتری انتخاب کن و آن را در جای امن نگه دار." else "رمزی را وارد کن که هنگام ساخت این فایل استفاده شده است.")
+                    OutlinedTextField(
+                        value = portablePasswordInput,
+                        onValueChange = { portablePasswordInput = it },
+                        label = { Text("رمز بکاپ") },
+                        singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = portablePasswordInput.length >= 10,
+                    onClick = {
+                        val password = portablePasswordInput
+                        portableDialogMode = null
+                        portablePasswordInput = ""
+                        if (portableDialogMode == "export") onPortableExport(password) else onPortableImport(password)
+                    }
+                ) { Text("ادامه") }
+            },
+            dismissButton = {
+                TextButton(onClick = { portableDialogMode = null; portablePasswordInput = "" }) { Text("لغو") }
+            }
+        )
     }
     if (selectedBackup != null) {
         AlertDialog(
