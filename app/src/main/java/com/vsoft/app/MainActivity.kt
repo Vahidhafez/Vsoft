@@ -2845,8 +2845,10 @@ fun WorkPurchasesPage(
     val filteredPurchases = remember(purchases, normalizedSearch) {
         if (normalizedSearch.isBlank()) purchases.sortedByDescending { it.id }
         else purchases.filter { purchase ->
-            listOf(purchase.title, purchase.category, purchase.workplace, purchase.date, purchase.note, purchase.card)
-                .any { normalizeVsoftSearch(it).contains(normalizedSearch) }
+            listOf(
+                purchase.title, purchase.category, purchase.workplace, purchase.date,
+                purchase.note, purchase.card, purchase.amount.toString()
+            ).any { normalizeVsoftSearch(it).contains(normalizedSearch) }
         }.sortedByDescending { it.id }
     }
     val total = purchases.sumOf { it.amount }
