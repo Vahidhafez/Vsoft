@@ -71,7 +71,13 @@ fun VsoftFinalDashboardPage(
     val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
     val expense = transactions.filter { it.type == "expense" }.sumOf { it.amount }
     val workIncome = workDays.sumOf { it.income }
-    val balance = cards.sumOf { it.openingBalance } + income + workIncome - expense
+    // Use the same per-card balance calculation as the Cards and Reports pages.
+    // If no cards exist yet, retain a useful net summary without changing stored data.
+    val balance = if (cards.isNotEmpty()) {
+        cards.sumOf { cardCurrentBalance(it, transactions, workDays) }
+    } else {
+        income + workIncome - expense
+    }
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
     val currentJalali = today()
     val monthPrefix = currentJalali.substringBeforeLast("/") + "/"
