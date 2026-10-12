@@ -1010,6 +1010,7 @@ fun VsoftApp() {
     var backupRetention by remember { mutableIntStateOf(3) }
     var showRestoreConfirmation by remember { mutableStateOf(false) }
     var portablePassword by remember { mutableStateOf("") }
+    var portableBackupStatus by remember { mutableStateOf<String?>(null) }
 
     var transactions by remember {
         mutableStateOf(mutableListOf<Transaction>())
@@ -1138,33 +1139,55 @@ fun VsoftApp() {
     val portableExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
-        if (uri != null && portablePassword.isNotEmpty()) {
-            val snapshot = VsoftBackup(
-                transactions, workDays, cards, people, workplaces, workPurchases,
-                language, currency, theme, glass, font
-            )
-            runCatching {
-                val bytes = encodePortableVsoftBackup(snapshot, portablePassword.toCharArray())
+        val password = portablePassword
+        portablePassword = ""
+        if (uri == null) {
+            portableBackupStatus = "خروجی رمزدار لغو شد."
+        } else if (password.isEmpty()) {
+            portableBackupStatus = "رمز پشتیبان تعیین نشده است."
+        } else {
+            val passwordChars = password.toCharArray()
+            val result = runCatching {
+                val snapshot = VsoftBackup(
+                    transactions, workDays, cards, people, workplaces, workPurchases,
+                    language, currency, theme, glass, font
+                )
+                val bytes = encodePortableVsoftBackup(snapshot, passwordChars)
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-                    ?: error("Could not write portable backup")
+                    ?: error("امکان نوشتن فایل پشتیبان وجود نداشت.")
             }
-            portablePassword = ""
+            passwordChars.fill('\\u0000')
+            portableBackupStatus = result.fold(
+                { "فایل پشتیبان رمزدار با موفقیت ذخیره شد." },
+                { "ذخیره پشتیبان ناموفق بود: ${it.message ?: "خطای ناشناخته"}" }
+            )
         }
     }
 
     val portableImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
-        if (uri != null && portablePassword.isNotEmpty()) {
-            val decoded = runCatching {
+        val password = portablePassword
+        portablePassword = ""
+        if (uri == null) {
+            portableBackupStatus = "ورود پشتیبان رمزدار لغو شد."
+        } else if (password.isEmpty()) {
+            portableBackupStatus = "رمز پشتیبان تعیین نشده است."
+        } else {
+            val passwordChars = password.toCharArray()
+            val result = runCatching {
                 val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                    ?: error("Could not read portable backup")
-                decodePortableVsoftBackup(bytes, portablePassword.toCharArray())
-            }.getOrNull()
-            portablePassword = ""
-            if (decoded != null) {
-                pendingRestore = decoded
+                    ?: error("امکان خواندن فایل پشتیبان وجود نداشت.")
+                decodePortableVsoftBackup(bytes, passwordChars)
+                    ?: error("رمز اشتباه است یا فایل پشتیبان آسیب دیده است.")
+            }
+            passwordChars.fill('\\u0000')
+            result.onSuccess {
+                pendingRestore = it
                 showRestoreConfirmation = true
+                portableBackupStatus = "فایل بررسی شد؛ برای جایگزینی اطلاعات، تأیید بازیابی را انجام دهید."
+            }.onFailure {
+                portableBackupStatus = "بازیابی فایل ناموفق بود: ${it.message ?: "رمز اشتباه یا فایل نامعتبر"}"
             }
         }
     }
@@ -1372,8 +1395,9 @@ fun VsoftApp() {
                 },
                 onBackup = { backupLauncher.launch("vsoft-backup.json") },
                 onRestore = { restoreLauncher.launch(arrayOf("application/json")) },
-                onPortableExport = { password -> portablePassword = password; portableExportLauncher.launch("vsoft-portable-backup.vspb") },
-                onPortableImport = { password -> portablePassword = password; portableImportLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
+                onPortableExport = { password -> portableBackupStatus = null; portablePassword = password; portableExportLauncher.launch("vsoft-portable-backup.vspb") },
+                onPortableImport = { password -> portableBackupStatus = null; portablePassword = password; portableImportLauncher.launch(arrayOf("application/octet-stream", "*/*")) },
+                portableBackupStatus = portableBackupStatus,
                 backupRetention = backupRetention,
                 onBackupRetentionChange = { value ->
                     backupRetention = value
@@ -1474,6 +1498,7 @@ fun MainScreen(
     onRestore: () -> Unit,
     onPortableExport: (String) -> Unit,
     onPortableImport: (String) -> Unit,
+    portableBackupStatus: String?,
     backupRetention: Int,
     onBackupRetentionChange: (Int) -> Unit,
     backupSnapshot: VsoftBackup,
@@ -1670,7 +1695,8 @@ fun MainScreen(
                     backupSnapshot = backupSnapshot,
                     onStoredBackupRestore = onStoredBackupRestore,
                     onPortableExport = onPortableExport,
-                    onPortableImport = onPortableImport
+                    onPortableImport = onPortableImport,
+                    portableBackupStatus = portableBackupStatus
                 )
                 5 -> CardsPage(cards, transactions, workDays, onCardsChange)
                 6 -> WorkplacesPage(workplaces, onWorkplacesChange)
@@ -4508,7 +4534,8 @@ fun SettingsPage(
     font: String, onFontChange: (String) -> Unit, onBackup: () -> Unit, onRestore: () -> Unit,
     backupRetention: Int, onBackupRetentionChange: (Int) -> Unit,
     backupSnapshot: VsoftBackup, onStoredBackupRestore: (VsoftBackup) -> Unit,
-    onPortableExport: (String) -> Unit, onPortableImport: (String) -> Unit
+    onPortableExport: (String) -> Unit, onPortableImport: (String) -> Unit,
+    portableBackupStatus: String?
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -4719,6 +4746,9 @@ fun SettingsPage(
                 Text("این فایل با رمز انتخابی شما روی دستگاه‌های دیگر و پس از نصب مجدد قابل بازیابی است. رمز را فراموش نکنید؛ امکان بازیابی آن وجود ندارد.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (!backupMessage.isNullOrBlank()) {
                     Text(backupMessage!!, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                }
+                if (!portableBackupStatus.isNullOrBlank()) {
+                    Text(portableBackupStatus, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("نسخه‌های موجود (${storedBackups.size})", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
