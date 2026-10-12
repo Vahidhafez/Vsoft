@@ -4678,6 +4678,7 @@ fun FontOption(title: String, value: String, current: String, onChange: (String)
 fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: List<WorkDay>, onCardsChange: (MutableList<BankCard>) -> Unit) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<BankCard?>(null) }
+    var pendingCardDelete by remember { mutableStateOf<BankCard?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     var search by remember { mutableStateOf("") }
     val normalizedCardSearch = normalizeVsoftSearch(search)
@@ -4846,11 +4847,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                             card,
                             cardCurrentBalance(card, transactions, workDays),
                             onEdit = { editing = card },
-                            onDelete = {
-                                onCardsChange(cards.toMutableList().also { list ->
-                                    list.removeAll { it.id == card.id }
-                                })
-                            }
+                            onDelete = { pendingCardDelete = card }
                         )
                     }
                 }
@@ -4876,6 +4873,24 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
         })
         editing = null
     })
+    pendingCardDelete?.let { cardToDelete ->
+        AlertDialog(
+            onDismissRequest = { pendingCardDelete = null },
+            title = { Text(uiText("حذف کارت بانکی؟")) },
+            text = { Text(uiText("کارت «" + cardToDelete.name + "» حذف شود؟ این کار قابل بازگشت نیست.")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onCardsChange(cards.toMutableList().also { list ->
+                        list.removeAll { it.id == cardToDelete.id }
+                    })
+                    pendingCardDelete = null
+                }) { Text(uiText("حذف")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCardDelete = null }) { Text(uiText("انصراف")) }
+            }
+        )
+    }
 }
 
 @Composable
