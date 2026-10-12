@@ -3840,13 +3840,14 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
             }
             item { VsoftReportMonthlyChart(monthly) }
             item {
-                val categories = cardTransactions
+                val allCategories = cardTransactions
                     .filter { it.type == "expense" && it.category.isNotBlank() }
                     .groupingBy { it.category.trim() }
                     .fold(0L) { acc, t -> acc + t.amount }
                     .entries
                     .sortedByDescending { it.value }
-                    .take(5)
+                val categories = allCategories.take(5)
+                val totalCategorizedExpense = allCategories.sumOf { it.value }.coerceAtLeast(1L)
 
                 Card(
                     Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(24.dp)),
@@ -3863,7 +3864,6 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                         } else {
                             val max = categories.maxOf { it.value }.coerceAtLeast(1L)
-                            val totalCategorizedExpense = categories.sumOf { it.value }.coerceAtLeast(1L)
                             categories.forEach { entry ->
                                 val fraction = (entry.value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
                                 val sharePercent = (entry.value.toDouble() / totalCategorizedExpense.toDouble() * 100.0).toInt()
