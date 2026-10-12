@@ -174,12 +174,40 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
         else -> "expense"
     }
 
-    val factor = if (text.contains("تومان")) 10L else 1L
-    val balance = BALANCE_RE.find(text)?.groupValues?.get(1)?.let { toAmount(it) }
-    val amount = LABELED_RE.find(text)?.groupValues?.get(2)?.let { toAmount(it) }
-        ?: KEYWORD_RE.find(text)?.groupValues?.get(2)?.let { toAmount(it) }
-        ?: UNIT_RE.findAll(text).mapNotNull { toAmount(it.groupValues[1]) }.firstOrNull { it != balance }
-        ?: return null
+    // هر مبلغ واحد خودش را دارد. بعضی پیامک‌ها هم‌زمان «ریال» و «تومان»
+    // می‌نویسند؛ تشخیص واحد از کل متن باعث می‌شد مبلغ ریالی ۱۰ برابر شود.
+    val fallbackFactor = if (text.contains("تومان")) 10L else 1L
+    fun factorAfter(endExclusive: Int): Long {
+        val tail = text.substring(endExclusive.coerceIn(0, text.length))
+        val unit = Regex("""^\s*[+-]?\s*(ریال|تومان|IRR|rial)""", RegexOption.IGNORE_CASE)
+            .find(tail)?.groupValues?.getOrNull(1)
+        return when {
+            unit.equals("تومان", ignoreCase = true) -> 10L
+            !unit.isNullOrBlank() -> 1L
+            else -> fallbackFactor
+        }
+    }
+
+    val balanceMatch = BALANCE_RE.find(text)
+    val balance = balanceMatch?.groupValues?.get(1)?.let { toAmount(it) }
+    val balanceFactor = balanceMatch?.let { factorAfter(it.range.last + 1) } ?: fallbackFactor
+
+    val labeledMatch = LABELED_RE.find(text)
+    val keywordMatch = if (labeledMatch == null) KEYWORD_RE.find(text) else null
+    val unitMatch = if (labeledMatch == null && keywordMatch == null) {
+        UNIT_RE.findAll(text).firstOrNull { toAmount(it.groupValues[1]) != balance }
+    } else null
+    val amountMatch = labeledMatch ?: keywordMatch
+    val amount = when {
+        amountMatch != null -> toAmount(amountMatch.groupValues[2])
+        unitMatch != null -> toAmount(unitMatch.groupValues[1])
+        else -> null
+    } ?: return null
+    val amountFactor = when {
+        amountMatch != null -> factorAfter(amountMatch.range.last + 1)
+        unitMatch != null -> if (unitMatch.value.contains("تومان")) 10L else 1L
+        else -> fallbackFactor
+    }
 
     val last4 = (LAST4_MASKED.find(text) ?: LAST4_FULL.find(text) ?: LAST4_LABEL.find(text))
         ?.groupValues?.get(1) ?: ""
@@ -187,7 +215,7 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
         text.contains("ریال") || text.contains("تومان")
     if (!hasContext) return null
 
-    val amountRial = amount * factor
+    val amountRial = amount * amountFactor
     if (amountRial < 1000L) return null
 
     // Use normalized sender/body plus the SMS timestamp: identical transactions on different days
@@ -200,7 +228,7 @@ fun parseBankSms(sender: String, rawBody: String, time: Long): PendingSms? {
         body = rawBody,
         type = type,
         amountRial = amountRial,
-        balanceRial = if (balance != null) balance * factor else -1L,
+        balanceRial = if (balance != null) balance * balanceFactor else -1L,
         last4 = last4,
         time = time
     )
