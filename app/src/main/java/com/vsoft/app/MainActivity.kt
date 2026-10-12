@@ -2259,13 +2259,37 @@ fun FinancePage(
                         FilterChip(filter == "income", { filter = "income" }, label = { Text(strings.income) })
                         FilterChip(filter == "expense", { filter = "expense" }, label = { Text(strings.expense) })
                     }
+
+                    if (search.isNotBlank() || filter != "all") {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 1.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (LocalVsoftLanguage.current == "en")
+                                    "Showing ${list.size} of ${transactions.size} transactions"
+                                else "نمایش ${list.size} از ${transactions.size} تراکنش",
+                                modifier = Modifier.weight(1f),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(onClick = { search = ""; filter = "all" }) {
+                                Text(if (LocalVsoftLanguage.current == "en") "Clear filters" else "پاک کردن فیلترها")
+                            }
+                        }
+                    }
                 }
             }
 
             if (list.isEmpty()) {
                 item(key = "finance_empty") {
                     Box(Modifier.fillMaxWidth().padding(top = 24.dp), contentAlignment = Alignment.Center) {
-                        EmptyState(uiText("تراکنشی با این فیلتر پیدا نشد"), Icons.Default.SearchOff)
+                        EmptyState(
+                            if (search.isNotBlank() || filter != "all")
+                                uiText("تراکنشی با این فیلتر پیدا نشد")
+                            else uiText("هنوز تراکنشی ثبت نشده است"),
+                            if (search.isNotBlank() || filter != "all") Icons.Default.SearchOff else Icons.Default.ReceiptLong
+                        )
                     }
                 }
             } else {
