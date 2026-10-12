@@ -2173,7 +2173,8 @@ fun FinancePage(
                 normalizeVsoftSearch(it.category).contains(normalizedSearch) ||
                 normalizeVsoftSearch(it.person).contains(normalizedSearch) ||
                 normalizeVsoftSearch(it.card).contains(normalizedSearch) ||
-                normalizeVsoftSearch(it.date).contains(normalizedSearch))
+                normalizeVsoftSearch(it.date).contains(normalizedSearch) ||
+                normalizeVsoftSearch(it.amount.toString()).contains(normalizedSearch))
         }.sortedWith(
             compareByDescending<Transaction> { it.date }
                 .thenByDescending { it.id }
