@@ -1,10 +1,13 @@
 package com.vsoft.app
 
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+@RunWith(RobolectricTestRunner::class)
 class PortableBackupRegressionTest {
     private fun sampleBackup() = VsoftBackup(
         transactions = listOf(
