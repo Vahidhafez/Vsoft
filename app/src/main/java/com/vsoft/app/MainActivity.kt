@@ -1385,6 +1385,8 @@ fun VsoftApp() {
         }
     }
 
+}
+
 // ---------------- MAIN SCREEN ----------------
 
 @OptIn(ExperimentalMaterial3Api::class)
