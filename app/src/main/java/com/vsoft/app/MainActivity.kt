@@ -1489,7 +1489,7 @@ fun MainScreen(
                             Text(title, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                         }
                     }
-                    if (selectedPage == 10) {
+                    if (selectedPage == 10 || selectedPage == 11) {
                         IconButton(
                             onClick = { selectedPage = 2 },
                             modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)
@@ -1520,7 +1520,7 @@ fun MainScreen(
                 ) {
                     RedesignNavItem(strings.dashboard, Icons.Default.Home, selectedPage == 0, Modifier.weight(1f)) { selectedPage = 0 }
                     RedesignNavItem(strings.finance, Icons.Default.AccountBalanceWallet, selectedPage == 1, Modifier.weight(1f)) { selectedPage = 1 }
-                    RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2 || selectedPage == 10, Modifier.weight(1f)) { selectedPage = 2 }
+                    RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2 || selectedPage == 10 || selectedPage == 11, Modifier.weight(1f)) { selectedPage = 2 }
                     RedesignNavItem(strings.reports, Icons.Default.Insights, selectedPage == 3, Modifier.weight(1f)) { selectedPage = 3 }
                     RedesignNavItem(if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر", Icons.Default.GridView, selectedPage in 5..9, Modifier.weight(1f)) { selectedPage = 8 }
                 }
