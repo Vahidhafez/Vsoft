@@ -114,7 +114,6 @@ val CURRENCY_KEY = stringPreferencesKey("currency")
 val THEME_KEY = stringPreferencesKey("theme")
 val GLASS_KEY = stringPreferencesKey("glass")
 val FONT_KEY = stringPreferencesKey("font")
-val BACKUP_RETENTION_KEY = stringPreferencesKey("backup_retention")
 
 // ---------------- MODELS ----------------
 
