@@ -1156,7 +1156,7 @@ fun VsoftApp() {
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                     ?: error("امکان نوشتن فایل پشتیبان وجود نداشت.")
             }
-            passwordChars.fill('\\u0000')
+            passwordChars.fill('\u0000')
             portableBackupStatus = result.fold(
                 { "فایل پشتیبان رمزدار با موفقیت ذخیره شد." },
                 { "ذخیره پشتیبان ناموفق بود: ${it.message ?: "خطای ناشناخته"}" }
@@ -1181,7 +1181,7 @@ fun VsoftApp() {
                 decodePortableVsoftBackup(bytes, passwordChars)
                     ?: error("رمز اشتباه است یا فایل پشتیبان آسیب دیده است.")
             }
-            passwordChars.fill('\\u0000')
+            passwordChars.fill('\u0000')
             result.onSuccess {
                 pendingRestore = it
                 showRestoreConfirmation = true
