@@ -1447,21 +1447,20 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(selectedPage) {
-                    // Do not let the page-level pager steal horizontal gestures from
-                    // swipe-to-delete rows in Finance, Work, cards, workplaces, people,
-                    // or work purchases. These lists own their horizontal swipe gesture.
-                    if (selectedPage in setOf(1, 2, 5, 6, 7, 10)) return@pointerInput
                     var dragDistance = 0f
                     detectHorizontalDragGestures(
                         onHorizontalDrag = { _, dragAmount ->
                             dragDistance += dragAmount
                         },
                         onDragEnd = {
-                            if (kotlin.math.abs(dragDistance) >= 80f) {
+                            // RTL: swipe left to advance, swipe right to go back.
+                            // Density-aware threshold keeps behavior consistent on phones.
+                            val threshold = 72f * density
+                            if (kotlin.math.abs(dragDistance) >= threshold) {
                                 val swipePages = listOf(0, 1, 2, 3, 8, 9, 10)
                                 val currentIndex = swipePages.indexOf(selectedPage)
                                 if (currentIndex >= 0) {
-                                    val goNext = if (language == "en") dragDistance < 0f else dragDistance > 0f
+                                    val goNext = dragDistance < 0f
                                     val nextIndex = if (goNext) {
                                         (currentIndex + 1).coerceAtMost(swipePages.lastIndex)
                                     } else {
