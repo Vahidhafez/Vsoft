@@ -3046,6 +3046,7 @@ fun WorkPage(
 ) {
     var show by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<WorkDay?>(null) }
+    var search by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
     val totalIncome = workDays.sumOf { it.income }
@@ -3055,8 +3056,15 @@ fun WorkPage(
                 .thenByDescending { it.id }
         )
     }
-    val workGroups = remember(sortedWorkDays) {
-        sortedWorkDays.groupBy { it.startDate.ifBlank { it.date } }
+    val normalizedSearch = normalizeVsoftSearch(search)
+    val filteredWorkDays = remember(sortedWorkDays, normalizedSearch) {
+        if (normalizedSearch.isBlank()) sortedWorkDays else sortedWorkDays.filter { day ->
+            listOf(day.place, day.person, day.description, day.date, day.startDate, day.endDate, day.start, day.end)
+                .any { normalizeVsoftSearch(it).contains(normalizedSearch) }
+        }
+    }
+    val workGroups = remember(filteredWorkDays) {
+        filteredWorkDays.groupBy { it.startDate.ifBlank { it.date } }
     }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -3114,6 +3122,24 @@ fun WorkPage(
                 }
             }
 
+            item(key = "work_search") {
+                OutlinedTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    label = { Text(uiText("جست‌وجوی روزهای کاری")) },
+                    placeholder = { Text(uiText("محل کار، شخص، تاریخ یا توضیحات")) },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = if (search.isNotBlank()) ({
+                        IconButton(onClick = { search = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = uiText("پاک کردن جست‌وجو"))
+                        }
+                    }) else null
+                )
+            }
+
             item(key = "work_purchases_entry") {
                 OutlinedButton(
                     onClick = onWorkPurchases,
@@ -3132,6 +3158,15 @@ fun WorkPage(
                         contentAlignment = Alignment.Center
                     ) {
                         EmptyState("هنوز روز کاری ثبت نشده", Icons.Default.WorkHistory)
+                    }
+                }
+            } else if (filteredWorkDays.isEmpty()) {
+                item(key = "work_search_empty") {
+                    Box(
+                        Modifier.fillMaxWidth().padding(top = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyState(uiText("روز کاری مطابق جست‌وجو پیدا نشد"), Icons.Default.SearchOff)
                     }
                 }
             } else {
