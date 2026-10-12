@@ -487,7 +487,11 @@ fun cardCurrentBalance(card: BankCard, transactions: List<Transaction>, workDays
     // or malformed transaction types must never silently become expenses.
     val movement = transactions
         .asSequence()
-        .filter { it.card == card.name && (it.type == "income" || it.type == "expense") }
+        .filter {
+            it.card == card.name &&
+                (it.type == "income" || it.type == "expense") &&
+                it.amount > 0L
+        }
         .sumOf { if (it.type == "income") it.amount else -it.amount }
     val workIncome = workDays.filter { it.card == card.name }.sumOf { it.income }
     return card.openingBalance + movement + workIncome
