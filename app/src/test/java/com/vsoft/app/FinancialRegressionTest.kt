@@ -44,6 +44,16 @@ class FinancialRegressionTest {
     }
 
     @Test
+    fun unknownTransactionTypeDoesNotSilentlyBecomeAnExpense() {
+        val bankCard = card(250_000L)
+        val transactions = listOf(
+            transaction("adjustment", 80_000L),
+            transaction("income", 20_000L)
+        )
+        assertEquals(270_000L, cardCurrentBalance(bankCard, transactions, emptyList()))
+    }
+
+    @Test
     fun workIncomeIsIncludedOnlyForItsSelectedCard() {
         val bankCard = card(100_000L)
         val workDays = listOf(
