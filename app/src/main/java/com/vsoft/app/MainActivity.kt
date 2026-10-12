@@ -2161,6 +2161,7 @@ fun FinancePage(
     var show by remember { mutableStateOf(false) }
     var edit by remember { mutableStateOf<Transaction?>(null) }
     var receiptTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var detailsTransaction by remember { mutableStateOf<Transaction?>(null) }
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("all") }
     val normalizedSearch = normalizeVsoftSearch(search)
@@ -2348,7 +2349,8 @@ fun FinancePage(
                                         onTransactionsChange(x)
                                     },
                                     onEdit = { edit = t; show = true },
-                                    onReceipt = { receiptTransaction = t }
+                                    onReceipt = { receiptTransaction = t },
+                                    onDetails = { detailsTransaction = t }
                                 )
                             }
                         }
@@ -2381,6 +2383,21 @@ fun FinancePage(
     }
     // The receipt icon stores the selected transaction; render its dialog here so taps
     // actually open the receipt instead of silently doing nothing.
+    detailsTransaction?.let { selected ->
+        TransactionDetailsDialog(
+            transaction = selected,
+            onDismiss = { detailsTransaction = null },
+            onEdit = {
+                detailsTransaction = null
+                edit = selected
+                show = true
+            },
+            onReceipt = {
+                detailsTransaction = null
+                receiptTransaction = selected
+            }
+        )
+    }
     receiptTransaction?.let { selected ->
         TransactionReceiptDialog(selected) { receiptTransaction = null }
     }
@@ -2393,6 +2410,7 @@ fun TransactionCard(
     onDelete: () -> Unit,
     onEdit: () -> Unit = {},
     onReceipt: () -> Unit = {},
+    onDetails: () -> Unit = {},
     showActions: Boolean = true
 ) {
     val isIncome = transaction.type == "income"
@@ -2404,7 +2422,9 @@ fun TransactionCard(
         label = "transaction_icon_scale"
     )
     Card(
-        Modifier.fillMaxWidth().animateContentSize().pressScale(0.992f),
+        Modifier.fillMaxWidth()
+            .then(if (showActions) Modifier.clickable(onClick = onDetails) else Modifier)
+            .animateContentSize().pressScale(0.992f),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, accent.copy(alpha = .15f)),
