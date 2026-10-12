@@ -2790,6 +2790,15 @@ fun WorkPurchasesPage(
 ) {
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<WorkPurchase?>(null) }
+    var search by remember { mutableStateOf("") }
+    val normalizedSearch = normalizeVsoftSearch(search)
+    val filteredPurchases = remember(purchases, normalizedSearch) {
+        if (normalizedSearch.isBlank()) purchases.sortedByDescending { it.id }
+        else purchases.filter { purchase ->
+            listOf(purchase.title, purchase.category, purchase.workplace, purchase.date, purchase.note, purchase.card)
+                .any { normalizeVsoftSearch(it).contains(normalizedSearch) }
+        }.sortedByDescending { it.id }
+    }
     val total = purchases.sumOf { it.amount }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -2826,10 +2835,39 @@ fun WorkPurchasesPage(
                     }
                 }
             }
+            item(key = "work_purchases_search") {
+                OutlinedTextField(
+                    value = search,
+                    onValueChange = { search = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    label = { Text(uiText("جستجوی خریدهای کار")) },
+                    placeholder = { Text(uiText("عنوان، دسته‌بندی، محل کار، تاریخ یا کارت")) },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = if (search.isNotBlank()) ({
+                        IconButton(onClick = { search = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = uiText("پاک کردن جست‌وجو"))
+                        }
+                    }) else null
+                )
+            }
+            if (search.isNotBlank()) {
+                item(key = "work_purchases_search_count") {
+                    Text(
+                        uiText("نمایش ${filteredPurchases.size} خرید از ${purchases.size} خرید"),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             if (purchases.isEmpty()) {
                 item { EmptyState("هنوز خرید کاری ثبت نشده", Icons.Default.ShoppingCart) }
+            } else if (filteredPurchases.isEmpty()) {
+                item { EmptyState(uiText("خریدی با این مشخصات پیدا نشد"), Icons.Default.SearchOff) }
             } else {
-                itemsIndexed(purchases.sortedByDescending { it.id }, key = { _, it -> it.id }) { index, purchase ->
+                itemsIndexed(filteredPurchases, key = { _, it -> it.id }) { index, purchase ->
                     VsoftEntrance(index.coerceAtMost(7)) {
                         VsoftSwipeToDelete(
                             onDelete = {
