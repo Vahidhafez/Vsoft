@@ -1447,6 +1447,10 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(selectedPage) {
+                    // Do not let the page-level pager steal horizontal gestures from
+                    // swipe-to-delete rows in Finance, Work, cards, workplaces, people,
+                    // or work purchases. These lists own their horizontal swipe gesture.
+                    if (selectedPage in setOf(1, 2, 5, 6, 7, 10)) return@pointerInput
                     var dragDistance = 0f
                     detectHorizontalDragGestures(
                         onHorizontalDrag = { _, dragAmount ->
