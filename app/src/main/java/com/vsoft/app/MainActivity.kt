@@ -1513,14 +1513,14 @@ fun MainScreen(
                             dragDistance += dragAmount
                         },
                         onDragEnd = {
-                            // RTL: swipe left to advance, swipe right to go back.
+                            // Match swipe direction to reading direction: RTL advances on right-swipe; LTR on left-swipe.
                             // Density-aware threshold keeps behavior consistent on phones.
                             val threshold = 72f * density
                             if (kotlin.math.abs(dragDistance) >= threshold) {
                                 val swipePages = listOf(0, 1, 2, 3, 8, 9, 10)
                                 val currentIndex = swipePages.indexOf(selectedPage)
                                 if (currentIndex >= 0) {
-                                    val goNext = dragDistance < 0f
+                                    val goNext = if (language == "en") dragDistance < 0f else dragDistance > 0f
                                     val nextIndex = if (goNext) {
                                         (currentIndex + 1).coerceAtMost(swipePages.lastIndex)
                                     } else {
