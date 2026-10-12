@@ -5397,6 +5397,181 @@ fun AddWorkplaceDialog(onDismiss:()->Unit,onSave:(Workplace)->Unit){
 // ---------------- PEOPLE ----------------
 
 @Composable
+private fun TransactionDetailsDialog(
+    transaction: Transaction,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit,
+    onReceipt: () -> Unit
+) {
+    val isIncome = transaction.type == "income"
+    val accent = if (isIncome) Color(0xFF0C9A81) else Color(0xFFD66A5E)
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            shadowElevation = 18.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(22.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                VsoftFormHeader(
+                    title = uiText("جزئیات تراکنش"),
+                    subtitle = transaction.category,
+                    icon = Icons.Default.ReceiptLong,
+                    accent = accent,
+                    onDismiss = onDismiss
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = .09f)),
+                    border = BorderStroke(1.dp, accent.copy(alpha = .18f))
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(if (isIncome) uiText("درآمد") else uiText("هزینه"), color = accent, fontSize = 12.sp)
+                        Text(
+                            (if (isIncome) "+" else "−") + money(transaction.amount),
+                            color = accent,
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+                VsoftDetailRow(Icons.Default.CalendarToday, uiText("تاریخ"), transaction.date)
+                VsoftDetailRow(Icons.Default.AccountBalanceWallet, uiText("کارت بانکی"), transaction.card.ifBlank { uiText("بدون کارت مشخص") })
+                if (transaction.description.isNotBlank()) {
+                    VsoftDetailRow(Icons.Default.Notes, uiText("توضیحات"), transaction.description)
+                }
+                if (transaction.person.isNotBlank()) {
+                    VsoftDetailRow(Icons.Default.PersonOutline, uiText("شخص مرتبط"), transaction.person)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    OutlinedButton(
+                        onClick = onReceipt,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Icon(Icons.Default.ReceiptLong, null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("رسید"))
+                    }
+                    Button(
+                        onClick = onEdit,
+                        modifier = Modifier.weight(1f).pressScale(),
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("ویرایش"))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PersonDetailsDialog(
+    person: Person,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            shadowElevation = 18.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(22.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                VsoftFormHeader(
+                    title = uiText("پرونده شخص"),
+                    subtitle = uiText("اطلاعات تماس و یادداشت‌ها"),
+                    icon = Icons.Default.PeopleAlt,
+                    accent = Color(0xFF7357D8),
+                    onDismiss = onDismiss
+                )
+                Box(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(
+                            Modifier.size(76.dp).clip(CircleShape)
+                                .background(Color(0xFF7357D8).copy(alpha = .12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                person.name.trim().firstOrNull()?.toString() ?: "؟",
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF7357D8)
+                            )
+                        }
+                        Text(person.name, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                        if (person.job.isNotBlank()) {
+                            Text(person.job, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (person.phone.isNotBlank()) VsoftDetailRow(Icons.Default.Phone, uiText("شماره تماس"), person.phone)
+                if (person.job.isNotBlank()) VsoftDetailRow(Icons.Default.Badge, uiText("شغل / نقش"), person.job)
+                if (person.note.isNotBlank()) VsoftDetailRow(Icons.Default.Notes, uiText("یادداشت"), person.note)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(15.dp)
+                    ) { Text(uiText("بستن")) }
+                    Button(
+                        onClick = onEdit,
+                        modifier = Modifier.weight(1f).pressScale(),
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(uiText("ویرایش"))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VsoftDetailRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .38f))
+            .padding(horizontal = 13.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
 fun PersonItem(
     person: Person,
     onDelete: () -> Unit,
