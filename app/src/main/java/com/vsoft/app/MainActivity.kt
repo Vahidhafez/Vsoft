@@ -3780,6 +3780,13 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                             ReportStatTile(uiText("موجودی اولیه"), money(opening), Icons.Default.CreditCard, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                             ReportStatTile(uiText("ساعت کاری"), String.format(Locale.US, "%.1f", hours), Icons.Default.AccessTime, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
                         }
+                        Spacer(Modifier.height(9.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            ReportStatTile(uiText("تعداد تراکنش"), cardTransactions.size.toString(), Icons.Default.ReceiptLong, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
+                            val expenseCount = cardTransactions.count { it.type == "expense" }
+                            val averageExpense = if (expenseCount > 0) expense / expenseCount else 0L
+                            ReportStatTile(uiText("میانگین هزینه"), money(averageExpense), Icons.Default.Calculate, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -3808,11 +3815,16 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
                                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                         } else {
                             val max = categories.maxOf { it.value }.coerceAtLeast(1L)
+                            val totalCategorizedExpense = categories.sumOf { it.value }.coerceAtLeast(1L)
                             categories.forEach { entry ->
                                 val fraction = (entry.value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+                                val sharePercent = (entry.value.toDouble() / totalCategorizedExpense.toDouble() * 100.0).toInt()
                                 Column(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Text(entry.key, Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                                        Text("$sharePercent٪", fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary)
+                                        Spacer(Modifier.width(8.dp))
                                         Text(money(entry.value), fontSize = 12.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
