@@ -2851,7 +2851,7 @@ fun WorkPurchasesPage(
             ).any { normalizeVsoftSearch(it).contains(normalizedSearch) }
         }.sortedByDescending { it.id }
     }
-    val total = purchases.sumOf { it.amount }
+    val total = remember(purchases) { purchases.sumOf { it.amount } }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -4883,9 +4883,11 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
     var show by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Workplace?>(null) }
     var search by remember { mutableStateOf("") }
-    val filteredWorkplaces = workplaces.filter {
-        val q = normalizeVsoftSearch(search)
-        q.isBlank() || normalizeVsoftSearch(it.name).contains(q)
+    val normalizedWorkplaceSearch = normalizeVsoftSearch(search)
+    val filteredWorkplaces = remember(workplaces, normalizedWorkplaceSearch) {
+        if (normalizedWorkplaceSearch.isBlank()) workplaces else workplaces.filter {
+            normalizeVsoftSearch(it.name).contains(normalizedWorkplaceSearch)
+        }
     }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -5038,10 +5040,12 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
     var editing by remember { mutableStateOf<Person?>(null) }
     var viewing by remember { mutableStateOf<Person?>(null) }
     var search by remember { mutableStateOf("") }
-    val filteredPeople = people.filter {
-        val q = normalizeVsoftSearch(search)
-        q.isBlank() || normalizeVsoftSearch(it.name).contains(q) ||
-            normalizeVsoftSearch(it.phone).contains(q) || normalizeVsoftSearch(it.job).contains(q)
+    val normalizedPeopleSearch = normalizeVsoftSearch(search)
+    val filteredPeople = remember(people, normalizedPeopleSearch) {
+        if (normalizedPeopleSearch.isBlank()) people else people.filter { person ->
+            listOf(person.name, person.phone, person.job, person.amountTheyOweMe.toString(), person.amountIOwe.toString())
+                .any { normalizeVsoftSearch(it).contains(normalizedPeopleSearch) }
+        }
     }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
