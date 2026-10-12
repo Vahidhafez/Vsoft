@@ -3837,10 +3837,10 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
     val cardWork = remember(workDays, selectedCardName) {
         workDays.filter { it.card == selectedCardName }
     }
-    val income = remember(cardTransactions) { cardTransactions.filter { it.type == "income" }.sumOf { it.amount } }
-    val expense = remember(cardTransactions) { cardTransactions.filter { it.type == "expense" }.sumOf { it.amount } }
+    val income = remember(cardTransactions) { cardTransactions.filter { it.type == "income" && it.amount > 0L }.sumOf { it.amount } }
+    val expense = remember(cardTransactions) { cardTransactions.filter { it.type == "expense" && it.amount > 0L }.sumOf { it.amount } }
     val opening = selected?.openingBalance ?: 0L
-    val workIncome = remember(cardWork) { cardWork.sumOf { it.income } }
+    val workIncome = remember(cardWork) { cardWork.filter { it.income > 0L }.sumOf { it.income } }
     val current = remember(selected, transactions, workDays) {
         selected?.let { cardCurrentBalance(it, transactions, workDays) } ?: 0L
     }
@@ -3859,8 +3859,8 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
             val wd = workDays.filter { it.card == selectedCardName && it.date.startsWith(prefix) }
             Triple(
                 "$y/$m",
-                tx.filter { it.type == "income" }.sumOf { it.amount } + wd.sumOf { it.income },
-                tx.filter { it.type == "expense" }.sumOf { it.amount }
+                tx.filter { it.type == "income" && it.amount > 0L }.sumOf { it.amount } + wd.filter { it.income > 0L }.sumOf { it.income },
+                tx.filter { it.type == "expense" && it.amount > 0L }.sumOf { it.amount }
             )
         }.reversed()
     }
