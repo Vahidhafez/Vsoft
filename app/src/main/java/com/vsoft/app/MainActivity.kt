@@ -4849,6 +4849,40 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                 )
             }
             item {
+                val totalReceivable = people.sumOf { it.amountTheyOweMe }
+                val totalPayable = people.sumOf { it.amountIOwe }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Card(
+                        Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF16845B).copy(alpha = .09f))
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.TrendingUp, null, tint = Color(0xFF16845B), modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text(uiText("مجموع طلب"), fontSize = 12.sp, color = Color(0xFF16845B), fontWeight = FontWeight.SemiBold)
+                            }
+                            Text(money(totalReceivable), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF16845B), maxLines = 1)
+                        }
+                    }
+                    Card(
+                        Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFD97732).copy(alpha = .09f))
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.TrendingDown, null, tint = Color(0xFFD97732), modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text(uiText("مجموع بدهی"), fontSize = 12.sp, color = Color(0xFFD97732), fontWeight = FontWeight.SemiBold)
+                            }
+                            Text(money(totalPayable), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFD97732), maxLines = 1)
+                        }
+                    }
+                }
+            }
+            item {
                 OutlinedTextField(
                     value = search, onValueChange = { search = it },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
@@ -5691,6 +5725,24 @@ fun PersonItem(
                         Icon(Icons.Default.Phone, null, modifier = Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(4.dp))
                         Text(person.phone, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (person.amountTheyOweMe > 0L || person.amountIOwe > 0L) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (person.amountTheyOweMe > 0L) {
+                            Text(
+                                uiText("طلب") + ": " + money(person.amountTheyOweMe),
+                                fontSize = 11.sp, color = Color(0xFF16845B), fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                        if (person.amountIOwe > 0L) {
+                            Text(
+                                uiText("بدهی") + ": " + money(person.amountIOwe),
+                                fontSize = 11.sp, color = Color(0xFFD97732), fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
                 if (person.note.isNotBlank()) {
