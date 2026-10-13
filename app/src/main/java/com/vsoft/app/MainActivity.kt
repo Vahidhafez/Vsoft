@@ -1475,29 +1475,28 @@ fun MainScreen(
             if (selectedPage != 0) {
                 Surface(color = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
                     Row(
-                        Modifier.fillMaxWidth().padding(start = 20.dp, end = 14.dp, top = 10.dp, bottom = 8.dp),
+                        Modifier.fillMaxWidth().height(54.dp).padding(horizontal = 18.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("VSOFT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.primary)
-                            AnimatedContent(
-                                targetState = pages[selectedPage],
-                                transitionSpec = {
-                                    (fadeIn(tween(140)) + slideInHorizontally(tween(170)) { it / 10 }) togetherWith
-                                        (fadeOut(tween(90)) + slideOutHorizontally(tween(110)) { -it / 12 })
-                                },
-                                label = "redesign_page_title"
-                            ) { title ->
-                                Text(title, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
-                            }
+                        Box(
+                            Modifier.size(34.dp).clip(RoundedCornerShape(11.dp))
+                                .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("V", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                        }
+                        Spacer(Modifier.width(9.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text("VSOFT", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.4.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text(if (language == "en") "FINANCE  ·  WORK  ·  REPORTS" else "مدیریت مالی و کار", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if (selectedPage == 10 || selectedPage == 11) {
-                            IconButton(onClick = { selectedPage = 2 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface)) {
-                                Icon(Icons.Default.ArrowForward, contentDescription = "بازگشت به کار", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            IconButton(onClick = { selectedPage = 2 }, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(MaterialTheme.colorScheme.surface)) {
+                                Icon(Icons.Default.ArrowForward, contentDescription = if (language == "en") "Back to work" else "بازگشت به کار", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Spacer(Modifier.width(7.dp))
+                            Spacer(Modifier.width(5.dp))
                         }
-                        IconButton(onClick = { selectedPage = 4 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = .12f))) {
+                        IconButton(onClick = { selectedPage = 4 }, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = .10f))) {
                             Icon(Icons.Default.Settings, contentDescription = strings.settings, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
