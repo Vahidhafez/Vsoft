@@ -1925,7 +1925,7 @@ fun WorkPurchasesPage(
                         title = uiText("خریدهای کار"),
                         subtitle = uiText("ابزار، تجهیزات، قطعات و سایر خریدهای مرتبط با کار"),
                         icon = Icons.Default.ShoppingCart,
-                        accent = Color(0xFFB65B45)
+                        accent = VsoftTheme.colors.accent
                     )
                     Card(
                         Modifier.fillMaxWidth().vsoftGlass(RoundedCornerShape(22.dp)),
@@ -2984,7 +2984,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                         "${cards.size} cards • ${positiveCount} active"
                     else "${cards.size} کارت • ${positiveCount} کارت دارای موجودی",
                     icon = Icons.Default.CreditCard,
-                    accent = Color(0xFF3D71D9)
+                    accent = VsoftTheme.colors.accent
                 )
             }
             item {
@@ -3153,7 +3153,7 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                     title = if (LocalVsoftLanguage.current == "en") "Workplaces" else "محل‌های کار",
                     subtitle = workplaces.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "workplaces" else "محل کار",
                     icon = Icons.Default.Place,
-                    accent = Color(0xFF0B9B83)
+                    accent = VsoftTheme.colors.accent
                 )
             }
             item {
@@ -3290,7 +3290,7 @@ fun PeoplePage(people: List<Person>, onPeopleChange: (MutableList<Person>) -> Un
                     title = if (LocalVsoftLanguage.current == "en") "People" else "افراد",
                     subtitle = people.size.toString() + " " + if (LocalVsoftLanguage.current == "en") "contacts" else "نفر ثبت‌شده",
                     icon = Icons.Default.PeopleAlt,
-                    accent = Color(0xFF7357D8)
+                    accent = VsoftTheme.colors.accent
                 )
             }
             item {
