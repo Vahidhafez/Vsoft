@@ -38,4 +38,45 @@ object VsoftTint { val blue=Color(0xFF007AFF);val green=Color(0xFF34C759);val or
 data class VsoftAction(val label:String,val icon:ImageVector,val destructive:Boolean=false,val onClick:()->Unit)
 @Composable fun VsoftActionSheet(title:String?,actions:List<VsoftAction>,onDismiss:()->Unit){val c=VsoftTheme.colors;VsoftFormSheet(onDismiss=onDismiss,title=title){Column(Modifier.padding(horizontal=16.dp).padding(bottom=16.dp)){Surface(shape=VsoftShapes.card,color=c.fieldBackground,modifier=Modifier.fillMaxWidth()){Column{actions.forEachIndexed{i,a->VsoftGroupedRow(title=a.label,titleColor=if(a.destructive)c.expense else c.label,trailing={Icon(a.icon,null,tint=if(a.destructive)c.expense else c.accent,modifier=Modifier.size(22.dp))},onClick={onDismiss();a.onClick()});if(i<actions.lastIndex)VsoftGroupedDivider()}}}}}
 @Composable private fun VsoftChartBar(fraction:Float,color:Color,alpha:Float){Box(Modifier.width(9.dp).fillMaxHeight(fraction.coerceIn(.02f,1f)).clip(RoundedCornerShape(topStart=3.dp,topEnd=3.dp)).background(color.copy(alpha=alpha)))}
-@Composable fun VsoftMonthlyChart(monthly:List<Triple<String,Long,Long>>,modifier:Modifier=Modifier){val c=VsoftTheme.colors;var selected by remember(monthly){mutableStateOf(monthly.lastOrNull()?.first.orEmpty())};val point=monthly.firstOrNull{it.first==selected}?:monthly.lastOrNull();val max=monthly.flatMap{listOf(it.second,it.third)}.maxOrNull()?.coerceAtLeast(1L)?:1L;VsoftCardSurface(modifier){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text(vsoftT("روند ۶ ماهه","6-month trend","اتجاه 6 أشهر"),style=MaterialTheme.typography.titleSmall,modifier=Modifier.weight(1f));Text(vsoftT("درآمد","Income","الدخل"),color=c.income,style=MaterialTheme.typography.bodySmall);Spacer(Modifier.width(8.dp));Text(vsoftT("هزینه","Expense","المصروف"),color=c.expense,style=MaterialTheme.typography.bodySmall)};Row(Modifier.fillMaxWidth().height(150.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){monthly.forEach{m->val chosen=m.first==point?.first;Column(Modifier.weight(1f).fillMaxHeight().vsoftTap{selected=m.first},horizontalAlignment=Alignment.CenterHorizontally){Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(3.dp,Alignment.CenterHorizontally),verticalAlignment=Alignment.Bottom){VsoftChartBar(if(m.second>0)m.second.toFloat()/max.toFloat() else 0f,c.income,if(chosen)1f else .45f);VsoftChartBar(if(m.third>0)m.third.toFloat()/max.toFloat() else 0f,c.expense,if(chosen)1f else .45f)};Spacer(Modifier.height(6.dp));Text(m.first.substringAfter('/'),style=MaterialTheme.typography.labelSmall,color=if(chosen)c.label else c.labelTertiary,textAlign=TextAlign.Center)}};if(point!=null)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){Column(Modifier.weight(1f)){Text(vsoftT("درآمد","Income","الدخل")+" • "+point.first,style=MaterialTheme.typography.bodySmall,color=c.labelSecondary);VsoftAmountText(point.second,color=c.income,fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text(vsoftT("هزینه","Expense","المصروف")+" • "+point.first,style=MaterialTheme.typography.bodySmall,color=c.labelSecondary);VsoftAmountText(point.third,color=c.expense,fontWeight=FontWeight.SemiBold)}}}}}
+@Composable
+fun VsoftMonthlyChart(monthly: List<Triple<String, Long, Long>>, modifier: Modifier = Modifier) {
+    val c = VsoftTheme.colors
+    var selected by remember(monthly) { mutableStateOf(monthly.lastOrNull()?.first.orEmpty()) }
+    val point = monthly.firstOrNull { it.first == selected } ?: monthly.lastOrNull()
+    val maxValue = monthly.flatMap { listOf(it.second, it.third) }.maxOrNull()?.coerceAtLeast(1L) ?: 1L
+    VsoftCardSurface(modifier) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(vsoftT("روند ۶ ماهه", "6-month trend", "اتجاه 6 أشهر"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Text(vsoftT("درآمد", "Income", "الدخل"), color = c.income, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.width(8.dp))
+                Text(vsoftT("هزینه", "Expense", "المصروف"), color = c.expense, style = MaterialTheme.typography.bodySmall)
+            }
+            Row(Modifier.fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                monthly.forEach { month ->
+                    val chosen = month.first == point?.first
+                    Column(Modifier.weight(1f).fillMaxHeight().vsoftTap { selected = month.first }, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.Bottom) {
+                            VsoftChartBar(if (month.second > 0L) month.second.toFloat() / maxValue.toFloat() else 0f, c.income, if (chosen) 1f else .45f)
+                            VsoftChartBar(if (month.third > 0L) month.third.toFloat() / maxValue.toFloat() else 0f, c.expense, if (chosen) 1f else .45f)
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(month.first.substringAfter('/'), style = MaterialTheme.typography.labelSmall, color = if (chosen) c.label else c.labelTertiary, textAlign = TextAlign.Center)
+                    }
+                }
+            }
+            if (point != null) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(vsoftT("درآمد", "Income", "الدخل") + " • " + point.first, style = MaterialTheme.typography.bodySmall, color = c.labelSecondary)
+                        VsoftAmountText(point.second, color = c.income, fontWeight = FontWeight.SemiBold)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(vsoftT("هزینه", "Expense", "المصروف") + " • " + point.first, style = MaterialTheme.typography.bodySmall, color = c.labelSecondary)
+                        VsoftAmountText(point.third, color = c.expense, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+}
