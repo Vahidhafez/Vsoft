@@ -1048,7 +1048,7 @@ fun VsoftApp() {
         language = preferences[LANGUAGE_KEY] ?: "fa"
         currency = preferences[CURRENCY_KEY] ?: "IRT"
         theme = preferences[THEME_KEY] ?: "system"
-        glass = false
+        glass = preferences[GLASS_KEY] == "true"
         font = preferences[FONT_KEY] ?: "sans"
         backupRetention = preferences[BACKUP_RETENTION_KEY]?.toIntOrNull()?.takeIf { it == 3 || it == 5 || it == 10 } ?: 3
 
