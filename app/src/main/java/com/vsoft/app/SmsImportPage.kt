@@ -226,7 +226,7 @@ private fun SmsPendingCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown, null, tint = accent)
                 Spacer(Modifier.width(8.dp))
-                Text((if (isIncome) "+" else "−") + money(shownAmount), fontWeight = FontWeight.ExtraBold, color = accent, fontSize = 18.sp)
+                Text((if (isIncome) "+" else "−") + money(shownAmount), fontWeight = FontWeight.Bold, color = accent, fontSize = 18.sp)
             }
             if (p.balanceRial >= 0) Text("مانده پیامک: " + money(shownBalance), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(p.body, fontSize = 12.sp, maxLines = 4, color = MaterialTheme.colorScheme.onSurfaceVariant)
