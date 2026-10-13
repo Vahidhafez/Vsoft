@@ -2714,55 +2714,55 @@ fun SettingsPage(
         contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 4.dp, bottom = 34.dp)
     ) {
         item {
+            val c = VsoftTheme.colors
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                shape = VsoftShapes.card,
+                colors = CardDefaults.cardColors(containerColor = c.surface),
+                border = BorderStroke(1.dp, c.separator.copy(alpha = 0.7f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
-                    Modifier.fillMaxWidth()
-                        .background(Brush.linearGradient(listOf(Color(0xFF192B49), Color(0xFF354FC2), Color(0xFF117C83))))
-                        .padding(20.dp),
+                    Modifier.fillMaxWidth().padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text("VSOFT  /  CONTROL CENTER", fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = Color.White.copy(alpha = 0.68f))
-                            Text("تنظیمات برنامه", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("همه‌چیز رو مطابق سلیقه‌ات تنظیم کن", fontSize = 12.sp, color = Color.White.copy(alpha = 0.82f))
+                            Text("VSOFT  /  CONTROL CENTER", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp, color = c.labelTertiary)
+                            Text("تنظیمات برنامه", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = c.label)
+                            Text("همه‌چیز رو مطابق سلیقه‌ات تنظیم کن", fontSize = 12.sp, color = c.labelSecondary)
                         }
                         Box(
-                            Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.14f)),
+                            Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(c.accent.copy(alpha = if (c.isDark) 0.22f else 0.12f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Tune, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                            Icon(Icons.Default.Tune, contentDescription = null, tint = c.accent, modifier = Modifier.size(25.dp))
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Column(
-                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(c.fieldBackground).padding(horizontal = 10.dp, vertical = 11.dp),
                             verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Icon(Icons.Default.Language, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(17.dp))
-                            Text("زبان", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
-                            Text(when (language) { "en" -> "English"; "ar" -> "العربية"; else -> "فارسی" }, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Icon(Icons.Default.Language, null, tint = c.accent, modifier = Modifier.size(17.dp))
+                            Text("زبان", fontSize = 10.sp, color = c.labelSecondary)
+                            Text(when (language) { "en" -> "English"; "ar" -> "العربية"; else -> "فارسی" }, fontSize = 12.sp, color = c.label, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                         Column(
-                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(c.fieldBackground).padding(horizontal = 10.dp, vertical = 11.dp),
                             verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Icon(Icons.Default.Palette, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(17.dp))
-                            Text("پوسته", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
-                            Text(when (theme) { "light" -> "روشن"; "dark" -> "تاریک"; else -> "سیستم" }, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Icon(Icons.Default.Palette, null, tint = c.accent, modifier = Modifier.size(17.dp))
+                            Text("پوسته", fontSize = 10.sp, color = c.labelSecondary)
+                            Text(when (theme) { "light" -> "روشن"; "dark" -> "تاریک"; else -> "سیستم" }, fontSize = 12.sp, color = c.label, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                         Column(
-                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(c.fieldBackground).padding(horizontal = 10.dp, vertical = 11.dp),
                             verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Icon(Icons.Default.Sms, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(17.dp))
-                            Text("پیامک بانکی", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
-                            Text(if (smsEnabled) "فعال" else "غیرفعال", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Icon(Icons.Default.Sms, null, tint = c.accent, modifier = Modifier.size(17.dp))
+                            Text("پیامک بانکی", fontSize = 10.sp, color = c.labelSecondary)
+                            Text(if (smsEnabled) "فعال" else "غیرفعال", fontSize = 12.sp, color = c.label, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                     }
                 }
