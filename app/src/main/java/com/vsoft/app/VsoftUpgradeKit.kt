@@ -69,6 +69,7 @@ fun normalizeVsoftSearch(value: String): String {
 fun VsoftSwipeToDelete(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(22.dp),
     onDelete: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -107,8 +108,8 @@ fun VsoftSwipeToDelete(
     Box(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = progress * 0.92f))
+            .clip(shape)
+            .background(VsoftTheme.colors.expense.copy(alpha = progress))
             .pointerInput(enabled, rtl, threshold, maxOffset) {
                 if (!enabled) return@pointerInput
                 detectHorizontalDragGestures(
@@ -152,7 +153,7 @@ fun VsoftSwipeToDelete(
                 Icon(
                     Icons.Default.DeleteOutline,
                     contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.onErrorContainer
+                    tint = Color.White
                 )
             }
         }
@@ -160,6 +161,7 @@ fun VsoftSwipeToDelete(
             Modifier
                 .fillMaxWidth()
                 .offset { IntOffset(animatedOffset.roundToInt(), 0) }
+                .background(VsoftTheme.colors.surface)
         ) {
             AnimatedVisibility(
                 visible = !deleting,
