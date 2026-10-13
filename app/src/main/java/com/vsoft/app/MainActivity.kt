@@ -1221,11 +1221,11 @@ fun VsoftApp() {
                 labelSmall = t.labelSmall.copy(fontFamily = appFont)
             ) },
             shapes = Shapes(
-                extraSmall = RoundedCornerShape(10.dp),
-                small = RoundedCornerShape(14.dp),
-                medium = RoundedCornerShape(20.dp),
-                large = RoundedCornerShape(28.dp),
-                extraLarge = RoundedCornerShape(32.dp)
+                extraSmall = RoundedCornerShape(8.dp),
+                small = RoundedCornerShape(12.dp),
+                medium = RoundedCornerShape(18.dp),
+                large = RoundedCornerShape(24.dp),
+                extraLarge = RoundedCornerShape(28.dp)
             )
         ) {
             CompositionLocalProvider(
@@ -1951,7 +1951,8 @@ fun DashboardPage(
                     items(cards, key = { it.id }) { card ->
                         MiniBankCard(
                             card = card,
-                            balance = cardCurrentBalance(card, transactions, workDays)
+                            balance = cardCurrentBalance(card, transactions, workDays),
+                            onClick = { onNavigate(5) }
                         )
                     }
                 }
@@ -2132,10 +2133,10 @@ fun DashboardMetric(
 }
 
 @Composable
-fun MiniBankCard(card: BankCard, balance: Long) {
+fun MiniBankCard(card: BankCard, balance: Long, onClick: () -> Unit = {}) {
     val shape = RoundedCornerShape(26.dp)
     val (startColor, endColor) = bankCardColors(card.bank)
-    Card(Modifier.width(270.dp).vsoftGlass(shape), shape = shape,
+    Card(Modifier.width(270.dp).vsoftGlass(shape).clickable(onClick = onClick).pressScale(0.985f), shape = shape,
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
         Box(Modifier.fillMaxWidth().background(
