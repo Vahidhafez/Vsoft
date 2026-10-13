@@ -3627,7 +3627,7 @@ fun ReportsPage(strings: AppStrings, transactions: List<Transaction>, workDays: 
             ) {
                 Row(
                     Modifier.fillMaxWidth().background(
-                        Brush.linearGradient(listOf(Color(0xFF4B327F), Color(0xFF7651B7), Color(0xFFB16DAD)))
+                        Brush.linearGradient(listOf(Color(0xFF172746), Color(0xFF254C79), Color(0xFF147C78)))
                     ).padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -4435,7 +4435,7 @@ fun SettingsPage(
             ) {
                 Column(
                     Modifier.fillMaxWidth()
-                        .background(Brush.linearGradient(listOf(Color(0xFF192B49), Color(0xFF354FC2), Color(0xFF117C83))))
+                        .background(Brush.linearGradient(listOf(Color(0xFF172746), Color(0xFF254C79), Color(0xFF147C78))))
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
