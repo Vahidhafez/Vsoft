@@ -14,6 +14,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -73,8 +75,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -974,6 +978,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         setContent {
             VsoftApp()
@@ -1128,21 +1133,10 @@ fun VsoftApp() {
     }
 
     val appStrings = strings(language)
-    val appFont = when (font) {
-        "serif" -> FontFamily.Serif
-        "mono" -> FontFamily.Monospace
-        "cursive" -> FontFamily.Cursive
-        else -> FontFamily.SansSerif
-    }
-
     if (!loaded) {
-        Box(
-            Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
+        VsoftTheme(darkTheme = darkTheme) {
+            Box(Modifier.fillMaxSize().background(VsoftTheme.colors.background))
         }
-
         return
     }
 
@@ -1158,76 +1152,8 @@ fun VsoftApp() {
         LocalVsoftCurrency provides currency
     ) {
 
-        val colors = if (darkTheme) {
-            darkColorScheme(
-                primary = Color(0xFF9DBBFF),
-                onPrimary = Color(0xFF07111F),
-                secondary = Color(0xFF7EE2C4),
-                onSecondary = Color(0xFF062018),
-                tertiary = Color(0xFFFFC078),
-                onTertiary = Color(0xFF2A1600),
-                background = Color(0xFF070B12),
-                onBackground = Color(0xFFF2F6FC),
-                surface = Color(0xFF111824),
-                onSurface = Color(0xFFF2F6FC),
-                surfaceVariant = Color(0xFF202A38),
-                onSurfaceVariant = Color(0xFFC3CDDB),
-                outline = Color(0xFF66758A)
-            )
-        } else {
-            lightColorScheme(
-                primary = Color(0xFF315EFB),
-                onPrimary = Color.White,
-                secondary = Color(0xFF087F68),
-                onSecondary = Color.White,
-                tertiary = Color(0xFFC96F12),
-                onTertiary = Color.White,
-                background = Color(0xFFF5F7FB),
-                onBackground = Color(0xFF101828),
-                surface = Color.White,
-                onSurface = Color(0xFF101828),
-                surfaceVariant = Color(0xFFEDF1F7),
-                onSurfaceVariant = Color(0xFF596579),
-                outline = Color(0xFF7A8799)
-            )
-        }
-
-        val themedColors = if (glass) {
-            if (darkTheme) colors.copy(
-                background = Color(0xFF070B12),
-                surface = Color(0xCC18212C),
-                surfaceVariant = Color(0x661F2B38)
-            ) else colors.copy(
-                background = Color(0xFFF1F5FC),
-                surface = Color(0xBFFFFFFF),
-                surfaceVariant = Color(0x88FFFFFF)
-            )
-        } else colors
-
-        MaterialTheme(
-            colorScheme = themedColors,
-            typography = Typography().let { t -> t.copy(
-                titleLarge = t.titleLarge.copy(fontFamily = appFont),
-                titleMedium = t.titleMedium.copy(fontFamily = appFont),
-                bodyLarge = t.bodyLarge.copy(fontFamily = appFont),
-                bodyMedium = t.bodyMedium.copy(fontFamily = appFont),
-                bodySmall = t.bodySmall.copy(fontFamily = appFont),
-                labelLarge = t.labelLarge.copy(fontFamily = appFont),
-                labelMedium = t.labelMedium.copy(fontFamily = appFont),
-                labelSmall = t.labelSmall.copy(fontFamily = appFont)
-            ) },
-            shapes = Shapes(
-                extraSmall = RoundedCornerShape(10.dp),
-                small = RoundedCornerShape(14.dp),
-                medium = RoundedCornerShape(20.dp),
-                large = RoundedCornerShape(28.dp),
-                extraLarge = RoundedCornerShape(32.dp)
-            )
-        ) {
-            CompositionLocalProvider(
-                LocalLayoutDirection provides if (language == "en") LayoutDirection.Ltr else LayoutDirection.Rtl
-            ) {
-                CompositionLocalProvider(LocalVsoftGlass provides glass) {
+        VsoftTheme(darkTheme = darkTheme) {
+            CompositionLocalProvider(LocalVsoftGlass provides glass) {
 
             MainScreen(
                 strings = appStrings,
@@ -1403,7 +1329,6 @@ fun VsoftApp() {
             }
         }
         }
-        }
     }
 
 }
@@ -1445,11 +1370,13 @@ fun MainScreen(
     backupSnapshot: VsoftBackup,
     onStoredBackupRestore: (VsoftBackup) -> Unit
 ) {
-
     var selectedPage by rememberSaveable { mutableStateOf(0) }
     var selectedWorkplaceId by rememberSaveable { mutableStateOf<Long?>(null) }
     val pageStateHolder = rememberSaveableStateHolder()
+    val actionSink = remember { VsoftActionSink() }
+    val c = VsoftTheme.colors
 
+    val moreLabel = if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر"
     val pages = listOf(
         strings.dashboard,
         strings.finance,
@@ -1459,235 +1386,149 @@ fun MainScreen(
         "کارت‌ها",
         "محل‌های کار",
         strings.people,
-        if (language == "en") "Tools" else if (language == "ar") "الأدوات" else "ابزارها",
+        moreLabel,
         "پیامک بانکی",
         if (language == "en") "Work purchases" else if (language == "ar") "مشتريات العمل" else "خریدهای کار",
         if (language == "en") "Project details" else if (language == "ar") "تفاصيل المشروع" else "جزئیات پروژه"
     )
+    val tabs = remember(strings, moreLabel) { vsoftTabs(strings, moreLabel) }
+    val isRoot = vsoftIsRootPage(selectedPage)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            Surface(
-                color = MaterialTheme.colorScheme.background,
-                tonalElevation = 0.dp
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 20.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("VSOFT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.primary)
-                        AnimatedContent(
-                            targetState = pages[selectedPage],
-                            transitionSpec = {
-                                (fadeIn(tween(160)) + slideInHorizontally(tween(200)) { it / 8 }) togetherWith
-                                    (fadeOut(tween(100)) + slideOutHorizontally(tween(140)) { -it / 10 })
-                            },
-                            label = "redesign_page_title"
-                        ) { title ->
-                            Text(title, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
-                        }
-                    }
-                    if (selectedPage == 10 || selectedPage == 11) {
-                        IconButton(
-                            onClick = { selectedPage = 2 },
-                            modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)
-                        ) {
-                            Icon(Icons.Default.ArrowForward, contentDescription = "بازگشت به کار", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Spacer(Modifier.width(7.dp))
-                    }
-                    IconButton(onClick = { selectedPage = 4 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = .12f))) {
-                        Icon(Icons.Default.Settings, contentDescription = strings.settings, tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
-        },
-        bottomBar = {
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 9.dp),
-                shape = RoundedCornerShape(27.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .09f)),
-                shadowElevation = 8.dp,
-                tonalElevation = 0.dp
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 5.dp, vertical = 5.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RedesignNavItem(strings.dashboard, Icons.Default.Home, selectedPage == 0, Modifier.weight(1f)) { selectedPage = 0 }
-                    RedesignNavItem(strings.finance, Icons.Default.AccountBalanceWallet, selectedPage == 1, Modifier.weight(1f)) { selectedPage = 1 }
-                    RedesignNavItem(strings.work, Icons.Default.WorkOutline, selectedPage == 2 || selectedPage == 10 || selectedPage == 11, Modifier.weight(1f)) { selectedPage = 2 }
-                    RedesignNavItem(strings.reports, Icons.Default.Insights, selectedPage == 3, Modifier.weight(1f)) { selectedPage = 3 }
-                    RedesignNavItem(if (language == "en") "More" else if (language == "ar") "المزيد" else "بیشتر", Icons.Default.GridView, selectedPage in 5..9, Modifier.weight(1f)) { selectedPage = 8 }
-                }
-            }
-        }
-    ) { padding ->
+    // با تغییر صفحه، عنوان بزرگ دوباره باز شود
+    LaunchedEffect(selectedPage) {
+        scrollBehavior.state.heightOffset = 0f
+        scrollBehavior.state.contentOffset = 0f
+    }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(selectedPage) {
-                    var dragDistance = 0f
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { _, dragAmount ->
-                            dragDistance += dragAmount
-                        },
-                        onDragEnd = {
-                            // Match swipe direction to reading direction: RTL advances on right-swipe; LTR on left-swipe.
-                            // Density-aware threshold keeps behavior consistent on phones.
-                            val threshold = 72f * density
-                            if (kotlin.math.abs(dragDistance) >= threshold) {
-                                val swipePages = listOf(0, 1, 2, 3, 8, 9, 10)
-                                val currentIndex = swipePages.indexOf(selectedPage)
-                                if (currentIndex >= 0) {
-                                    val goNext = if (language == "en") dragDistance < 0f else dragDistance > 0f
-                                    val nextIndex = if (goNext) {
-                                        (currentIndex + 1).coerceAtMost(swipePages.lastIndex)
-                                    } else {
-                                        (currentIndex - 1).coerceAtLeast(0)
-                                    }
-                                    selectedPage = swipePages[nextIndex]
+    // Back سیستم: زیرصفحه → والد، تب غیر از داشبورد → داشبورد، داشبورد → خروج
+    BackHandler(enabled = selectedPage != 0) {
+        selectedPage = vsoftParentPage(selectedPage) ?: 0
+    }
+
+    CompositionLocalProvider(LocalVsoftActionSink provides actionSink) {
+        Scaffold(
+            modifier = if (isRoot) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier,
+            containerColor = c.background,
+            topBar = {
+                VsoftTopBar(
+                    title = pages[selectedPage],
+                    isRoot = isRoot,
+                    backDescription = if (language == "en") "Back" else "بازگشت",
+                    onBack = { selectedPage = vsoftParentPage(selectedPage) ?: 0 },
+                    showSettings = selectedPage in 0..3,
+                    settingsDescription = strings.settings,
+                    onSettings = { selectedPage = 4 },
+                    onAdd = actionSink.onAdd,
+                    addDescription = strings.add,
+                    scrollBehavior = scrollBehavior
+                )
+            },
+            bottomBar = {
+                VsoftTabBar(
+                    tabs = tabs,
+                    selectedIndex = vsoftTabIndexFor(selectedPage),
+                    onSelect = { selectedPage = vsoftPageForTab(it) }
+                )
+            }
+        ) { padding ->
+            AnimatedContent(
+                targetState = selectedPage,
+                modifier = Modifier.padding(padding).fillMaxSize(),
+                transitionSpec = {
+                    val bothRoot = vsoftIsRootPage(initialState) && vsoftIsRootPage(targetState)
+                    if (bothRoot) {
+                        fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+                    } else {
+                        val push = !vsoftIsRootPage(targetState)
+                        val dir = if (language == "en") 1 else -1
+                        val slide = tween<IntOffset>(280, easing = FastOutSlowInEasing)
+                        val transform = if (push) {
+                            (slideInHorizontally(slide) { dir * it } + fadeIn(tween(120))) togetherWith
+                                (slideOutHorizontally(slide) { -dir * it / 4 } + fadeOut(tween(220)))
+                        } else {
+                            (slideInHorizontally(slide) { -dir * it / 4 } + fadeIn(tween(120))) togetherWith
+                                (slideOutHorizontally(slide) { dir * it } + fadeOut(tween(220)))
+                        }
+                        transform.targetContentZIndex = if (push) 1f else -1f
+                        transform
+                    }
+                },
+                label = "page"
+            ) { page ->
+                Box(Modifier.fillMaxSize().background(c.background)) {
+                    pageStateHolder.SaveableStateProvider(page) {
+                        when (page) {
+                            0 -> DashboardPage(
+                                strings, transactions, workDays, cards,
+                                onNavigate = { destination -> selectedPage = destination }
+                            )
+                            1 -> FinancePage(strings, transactions, cards, people, onTransactionsChange)
+                            2 -> WorkPage(
+                                strings, workDays, people, workplaces, cards, constructionTasks, onWorkChange,
+                                onWorkPurchases = { selectedPage = 10 },
+                                onOpenWorkplace = { place -> selectedWorkplaceId = place.id; selectedPage = 11 }
+                            )
+                            3 -> ReportsPage(strings, transactions, workDays, cards)
+                            4 -> SettingsPage(
+                                strings, language, theme, currency,
+                                onLanguageChange, onCurrencyChange, onThemeChange,
+                                glass, onGlassChange,
+                                font, onFontChange,
+                                onBackup = onBackup,
+                                onRestore = onRestore,
+                                backupRetention = backupRetention,
+                                onBackupRetentionChange = onBackupRetentionChange,
+                                backupSnapshot = backupSnapshot,
+                                onStoredBackupRestore = onStoredBackupRestore
+                            )
+                            5 -> CardsPage(cards, transactions, workDays, onCardsChange)
+                            6 -> WorkplacesPage(workplaces, onWorkplacesChange)
+                            7 -> PeoplePage(people, onPeopleChange)
+                            8 -> VsoftToolsPage(
+                                language = language,
+                                transactions = transactions,
+                                workDays = workDays,
+                                cards = cards,
+                                people = people,
+                                workplaces = workplaces,
+                                onNavigate = { destination -> selectedPage = destination }
+                            )
+                            9 -> SmsImportPage(
+                                currency = currency,
+                                cards = cards,
+                                transactions = transactions,
+                                onTransactionsChange = onTransactionsChange,
+                                onCardsChange = onCardsChange
+                            )
+                            10 -> WorkPurchasesPage(
+                                purchases = workPurchases,
+                                cards = cards,
+                                workplaces = workplaces,
+                                onPurchasesChange = onWorkPurchasesChange,
+                                onTransactionsChange = onTransactionsChange,
+                                transactions = transactions
+                            )
+                            11 -> selectedWorkplaceId?.let { id ->
+                                workplaces.firstOrNull { it.id == id }?.let { place ->
+                                    ConstructionTasksPage(
+                                        workplace = place,
+                                        tasks = constructionTasks.filter { it.workplaceId == place.id },
+                                        people = people,
+                                        onTasksChange = { changed ->
+                                            val otherTasks = constructionTasks.filterNot { it.workplaceId == place.id }
+                                            onConstructionTasksChange((otherTasks + changed).toMutableList())
+                                        }
+                                    )
                                 }
                             }
-                            dragDistance = 0f
-                        },
-                        onDragCancel = { dragDistance = 0f }
-                    )
-                }
-        ) {
-        AnimatedContent(
-            targetState = selectedPage,
-            transitionSpec = {
-                // Direction is language-aware: Persian/Arabic pages move in the RTL direction,
-                // while English pages keep the conventional LTR navigation motion.
-                val forward = targetState > initialState
-                val direction = when {
-                    language == "en" && forward -> 1
-                    language == "en" && !forward -> -1
-                    language != "en" && forward -> -1
-                    else -> 1
-                }
-                (slideInHorizontally(
-                    animationSpec = spring(
-                        dampingRatio = 0.9f,
-                        stiffness = 520f
-                    ),
-                    initialOffsetX = { direction * it / 3 }
-                ) + fadeIn(tween(180)) + scaleIn(
-                    animationSpec = spring(dampingRatio = 0.9f, stiffness = 520f),
-                    initialScale = 0.985f
-                )) togetherWith
-                (slideOutHorizontally(
-                    animationSpec = tween(170, easing = FastOutSlowInEasing),
-                    targetOffsetX = { -direction * it / 8 }
-                ) + fadeOut(tween(120)) + scaleOut(
-                    animationSpec = tween(160, easing = FastOutSlowInEasing),
-                    targetScale = 0.99f
-                ))
-            },
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize(),
-            label = "page"
-        ) { page ->
-            pageStateHolder.SaveableStateProvider(page) {
-            when (page) {
-
-                0 -> DashboardPage(
-                    strings,
-                    transactions,
-                    workDays,
-                    cards,
-                    onNavigate = { destination -> selectedPage = destination }
-                )
-
-                1 -> FinancePage(
-                    strings,
-                    transactions,
-                    cards,
-                    people,
-                    onTransactionsChange
-                )
-
-                2 -> WorkPage(
-                    strings,
-                    workDays,
-                    people,
-                    workplaces,
-                    cards,
-                    constructionTasks,
-                    onWorkChange,
-                    onWorkPurchases = { selectedPage = 10 },
-                    onOpenWorkplace = { place -> selectedWorkplaceId = place.id; selectedPage = 11 }
-                )
-
-                3 -> ReportsPage(strings, transactions, workDays, cards)
-
-                4 -> SettingsPage(
-                    strings, language, theme, currency,
-                    onLanguageChange, onCurrencyChange, onThemeChange,
-                    glass, onGlassChange,
-                    font, onFontChange,
-                    onBackup = onBackup,
-                    onRestore = onRestore,
-                    backupRetention = backupRetention,
-                    onBackupRetentionChange = onBackupRetentionChange,
-                    backupSnapshot = backupSnapshot,
-                    onStoredBackupRestore = onStoredBackupRestore
-                )
-                5 -> CardsPage(cards, transactions, workDays, onCardsChange)
-                6 -> WorkplacesPage(workplaces, onWorkplacesChange)
-                7 -> PeoplePage(people, onPeopleChange)
-                9 -> SmsImportPage(
-                    currency = currency,
-                    cards = cards,
-                    transactions = transactions,
-                    onTransactionsChange = onTransactionsChange,
-                    onCardsChange = onCardsChange
-                )
-
-                8 -> VsoftToolsPage(
-                    language = language,
-                    transactions = transactions,
-                    workDays = workDays,
-                    cards = cards,
-                    people = people,
-                    workplaces = workplaces,
-                    onNavigate = { destination -> selectedPage = destination }
-                )
-                11 -> selectedWorkplaceId?.let { id ->
-                    workplaces.firstOrNull { it.id == id }?.let { place ->
-                        ConstructionTasksPage(
-                            workplace = place,
-                            tasks = constructionTasks.filter { it.workplaceId == place.id },
-                            people = people,
-                            onTasksChange = { changed ->
-                                val otherTasks = constructionTasks.filterNot { it.workplaceId == place.id }
-                                onConstructionTasksChange((otherTasks + changed).toMutableList())
-                            }
-                        )
+                        }
                     }
                 }
-                10 -> WorkPurchasesPage(
-                    purchases = workPurchases,
-                    cards = cards,
-                    workplaces = workplaces,
-                    onPurchasesChange = onWorkPurchasesChange,
-                    onTransactionsChange = onTransactionsChange,
-                    transactions = transactions
-                )
             }
-            }
-        }
         }
     }
 }
-
 
 @Composable
 fun RedesignNavItem(
