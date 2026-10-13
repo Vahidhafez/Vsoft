@@ -1845,7 +1845,7 @@ fun DashboardPage(
         }
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().pressScale(0.99f).clickable { onNavigate(3) },
+                modifier = Modifier.fillMaxWidth().clickable { onNavigate(3) },
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
