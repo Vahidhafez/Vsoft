@@ -158,7 +158,7 @@ fun ConstructionTasksPage(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp
                                     )
                                 }
-                                Text("${task.progress}%", color = if (task.progress == 100) Color(0xFF16845B) else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                                Text("${task.progress}%", color = if (task.progress == 100) VsoftTheme.colors.income else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
                                 IconButton(onClick = { editing = task }) { Icon(Icons.Default.Edit, contentDescription = if (LocalVsoftLanguage.current == "en") "Edit task" else "ویرایش فعالیت") }
                             }
                             LinearProgressIndicator(progress = { task.progress / 100f }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(8.dp)))
@@ -172,8 +172,8 @@ fun ConstructionTasksPage(
                             }
                             if (task.notes.isNotBlank()) Text(task.notes, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (task.progress == 100) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF16845B), modifier = Modifier.size(17.dp))
-                                Text(if (LocalVsoftLanguage.current == "en") "Completed" else "تکمیل شده", color = Color(0xFF16845B), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.CheckCircle, null, tint = VsoftTheme.colors.income, modifier = Modifier.size(17.dp))
+                                Text(if (LocalVsoftLanguage.current == "en") "Completed" else "تکمیل شده", color = VsoftTheme.colors.income, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
