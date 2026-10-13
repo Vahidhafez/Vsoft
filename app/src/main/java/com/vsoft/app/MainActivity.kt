@@ -11,6 +11,10 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
+import android.text.TextDirectionHeuristics
 import android.content.Intent
 import android.provider.MediaStore
 import android.content.Context
@@ -2556,24 +2560,149 @@ fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,c
     if(dateOpen==1)JalaliDatePickerDialog(start,{dateOpen=0}){start=it;mode="custom";dateOpen=0}
     if(dateOpen==2)JalaliDatePickerDialog(end,{dateOpen=0}){end=it;mode="custom";dateOpen=0}
 }
-fun receiptTitle(mode:String)=when(mode){"daily"->"گزارش روزانه";"weekly"->"گزارش هفتگی";"monthly"->"گزارش ماهانه";else->"گزارش مالی"}
-fun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:List<WorkDay>,start:String,end:String,title:String){
+ffun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:List<WorkDay>,start:String,end:String,title:String){
     fun receiptMoney(value: Long): String = String.format(Locale.US, "%,d", value).replace(",", "٬")
-    val width=1080;val rows=(transactions.size+workDays.size).coerceAtMost(80);val height=750+rows*92;val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);val canvas=Canvas(bitmap)
-    fun p(color:Int,size:Float,bold:Boolean=false)=Paint(Paint.ANTI_ALIAS_FLAG).apply{this.color=color;textSize=size;typeface=if(bold)Typeface.DEFAULT_BOLD else Typeface.DEFAULT}
-    val bg=p(android.graphics.Color.rgb(245,247,251),1f);canvas.drawRect(0f,0f,width.toFloat(),height.toFloat(),bg)
-    val dark=android.graphics.Color.rgb(28,34,46);val muted=android.graphics.Color.rgb(105,115,130);val primary=android.graphics.Color.rgb(55,91,220);val inc=android.graphics.Color.rgb(27,145,96);val exp=android.graphics.Color.rgb(205,70,75)
-    fun round(r:RectF,color:Int,rad:Float=26f){canvas.drawRoundRect(r,rad,rad,p(color,1f))}
-    round(RectF(45f,40f,1035f,230f),primary,42f);val center=p(android.graphics.Color.WHITE,48f,true).apply{textAlign=Paint.Align.CENTER};canvas.drawText("VSOFT",540f,112f,center);center.textSize=33f;canvas.drawText(title,540f,162f,center);center.textSize=20f;center.typeface=Typeface.DEFAULT;canvas.drawText(start+"  •  "+end,540f,202f,center)
-    val income=transactions.filter{it.type=="income"}.sumOf{it.amount}+workDays.sumOf{it.income};val expense=transactions.filter{it.type=="expense"}.sumOf{it.amount}
-    fun metric(x:Float,label:String,value:String,color:Int){round(RectF(x,260f,x+300f,375f),android.graphics.Color.WHITE,28f);val v=p(color,25f,true).apply{textAlign=Paint.Align.CENTER};canvas.drawText(value,x+150f,316f,v);val l=p(muted,18f).apply{textAlign=Paint.Align.CENTER};canvas.drawText(label,x+150f,352f,l)}
-    metric(45f,"درآمد",receiptMoney(income),inc);metric(390f,"هزینه",receiptMoney(expense),exp);metric(735f,"خالص",receiptMoney(income-expense),primary)
-    var y=415f;val items=(transactions.map{Pair(0,it)}+workDays.map{Pair(1,it)}).take(rows)
-    items.forEach{(kind,obj)->round(RectF(45f,y,1035f,y+74f),android.graphics.Color.WHITE,22f);if(kind==0){val t=obj as Transaction;val color=if(t.type=="income")inc else exp;canvas.drawCircle(86f,y+37f,17f,p(color,1f));canvas.drawText(t.category.ifBlank{"تراکنش"},120f,y+31f,p(dark,21f,true));canvas.drawText(listOf(t.date,t.card,t.person,t.description).filter{it.isNotBlank()}.take(2).joinToString(" • "),120f,y+55f,p(muted,16f));val ap=p(color,21f,true).apply{textAlign=Paint.Align.LEFT};canvas.drawText((if(t.type=="income")"+" else "−")+receiptMoney(t.amount),1000f,y+44f,ap)}else{val w=obj as WorkDay;canvas.drawCircle(86f,y+37f,17f,p(primary,1f));canvas.drawText("کار • "+w.place,120f,y+31f,p(dark,21f,true));canvas.drawText(listOf(w.date,w.start+"–"+w.end,w.description).filter{it.isNotBlank()}.take(2).joinToString(" • "),120f,y+55f,p(muted,16f));val ap=p(inc,21f,true).apply{textAlign=Paint.Align.LEFT};canvas.drawText("+"+receiptMoney(w.income),1000f,y+44f,ap)};y+=92f}
-    val footer=p(muted,22f,true).apply{textAlign=Paint.Align.CENTER};canvas.drawText("VSOFT",540f,height-38f,footer)
-    val values=ContentValues().apply{put(MediaStore.Images.Media.DISPLAY_NAME,"VSOFT_"+title.replace(" ","_")+"_"+System.currentTimeMillis()+".png");put(MediaStore.Images.Media.MIME_TYPE,"image/png");put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/VSOFT")}
-    val uri=context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values)?:return
-    try{context.contentResolver.openOutputStream(uri)?.use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};val send=Intent(Intent.ACTION_SEND).apply{type="image/png";putExtra(Intent.EXTRA_STREAM,uri);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)};context.startActivity(Intent.createChooser(send,"ارسال رسید VSOFT"))}catch(_:Exception){context.contentResolver.delete(uri,null,null)}finally{bitmap.recycle()}
+    val width = 1080
+    val items = (transactions.map { Pair(0, it) } + workDays.map { Pair(1, it) })
+        .sortedBy { pair -> if (pair.second is Transaction) (pair.second as Transaction).date else (pair.second as WorkDay).date }
+        .take(80)
+    val height = 900 + items.size * 118
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val navy = android.graphics.Color.rgb(23, 36, 63)
+    val primary = android.graphics.Color.rgb(49, 86, 190)
+    val ink = android.graphics.Color.rgb(35, 44, 61)
+    val muted = android.graphics.Color.rgb(111, 121, 139)
+    val line = android.graphics.Color.rgb(228, 233, 241)
+    val paper = android.graphics.Color.rgb(245, 247, 251)
+    val white = android.graphics.Color.WHITE
+    val green = android.graphics.Color.rgb(27, 139, 96)
+    val red = android.graphics.Color.rgb(195, 67, 77)
+    val paleBlue = android.graphics.Color.rgb(237, 242, 255)
+    val paleGreen = android.graphics.Color.rgb(233, 247, 240)
+    val paleRed = android.graphics.Color.rgb(253, 238, 239)
+    fun paint(color:Int, size:Float, bold:Boolean=false) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = color
+        textSize = size
+        typeface = if (bold) Typeface.create("sans-serif", Typeface.BOLD) else Typeface.create("sans-serif", Typeface.NORMAL)
+    }
+    fun round(rect:RectF,color:Int,radius:Float=24f) { canvas.drawRoundRect(rect,radius,radius,paint(color,1f)) }
+    fun rule(x1:Float,y:Float,x2:Float,color:Int=line,stroke:Float=2f) {
+        canvas.drawLine(x1,y,x2,y,paint(color,1f).apply { strokeWidth=stroke })
+    }
+    fun text(value:String,x:Float,y:Float,maxWidth:Int,size:Float,color:Int,bold:Boolean=false,
+             alignment:Layout.Alignment=Layout.Alignment.ALIGN_OPPOSITE):Float {
+        if (value.isBlank()) return 0f
+        val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color=color
+            textSize=size
+            typeface=if(bold) Typeface.create("sans-serif",Typeface.BOLD) else Typeface.create("sans-serif",Typeface.NORMAL)
+        }
+        val layout = StaticLayout.Builder.obtain(value,0,value.length,tp,maxWidth)
+            .setAlignment(alignment)
+            .setTextDirection(TextDirectionHeuristics.RTL)
+            .setIncludePad(false)
+            .setLineSpacing(2f,1.08f)
+            .build()
+        canvas.save()
+        canvas.translate(x,y)
+        layout.draw(canvas)
+        canvas.restore()
+        return layout.height.toFloat()
+    }
+    canvas.drawColor(paper)
+    round(RectF(24f,24f,1056f,(height-24).toFloat()),white,34f)
+    round(RectF(24f,24f,1056f,252f),navy,34f)
+    round(RectF(72f,64f,148f,140f),primary,20f)
+    val logo = paint(white,35f,true).apply { textAlign=Paint.Align.CENTER }
+    canvas.drawText("V",110f,113f,logo)
+    text("VSOFT",170f,66f,810,24f,android.graphics.Color.rgb(177,196,235),true)
+    text(title,170f,99f,810,42f,white,true)
+    text("گزارش رسمی تراکنش‌ها و عملکرد مالی",170f,155f,810,23f,android.graphics.Color.rgb(220,227,242))
+    round(RectF(72f,190f,1008f,232f),android.graphics.Color.rgb(37,54,88),14f)
+    text("دوره گزارش:  " + start + "  تا  " + end,92f,199f,876,19f,white,true)
+    var y=278f
+    text("مشخصات سند",72f,y,936,25f,ink,true); y+=42f
+    round(RectF(72f,y,1008f,y+104f),android.graphics.Color.rgb(249,250,253),20f)
+    text("شماره سند",94f,y+15f,390,16f,muted)
+    text("VS-" + System.currentTimeMillis().toString().takeLast(8),94f,y+42f,390,22f,ink,true)
+    text("تاریخ تهیه",540f,y+15f,440,16f,muted)
+    text(today(),540f,y+42f,440,22f,ink,true)
+    y+=132f
+    val income=transactions.filter{it.type=="income"}.sumOf{it.amount}+workDays.sumOf{it.income}
+    val expense=transactions.filter{it.type=="expense"}.sumOf{it.amount}
+    val net=income-expense
+    val metrics=listOf(Triple("مجموع درآمد",income,green),Triple("مجموع هزینه",expense,red),Triple("مانده خالص",net,primary))
+    metrics.forEachIndexed{index,m->
+        val x=72f+index*320f
+        val bg=when(index){0->paleGreen;1->paleRed;else->paleBlue}
+        round(RectF(x,y,x+296f,y+116f),bg,20f)
+        text(m.first,x+16f,y+17f,264,18f,muted,true)
+        text((if(index==2 && net>0) "+" else if(index==2 && net<0) "−" else "")+receiptMoney(kotlin.math.abs(m.second)),x+16f,y+49f,264,26f,m.third,true)
+        text("تومان",x+16f,y+84f,264,15f,muted)
+    }
+    y+=148f
+    text("ریز عملیات",72f,y,936,26f,ink,true); y+=42f
+    round(RectF(72f,y,1008f,y+54f),android.graphics.Color.rgb(241,244,249),14f)
+    text("شرح / دسته‌بندی",94f,y+16f,500,17f,ink,true)
+    text("تاریخ",600f,y+16f,145,17f,ink,true)
+    text("مبلغ (تومان)",765f,y+16f,220,17f,ink,true)
+    y+=62f
+    if(items.isEmpty()){
+        text("برای این بازه موردی ثبت نشده است.",94f,y+18f,890,21f,muted)
+        y+=74f
+    } else items.forEachIndexed { index,pair ->
+        val rowTop=y
+        if(index%2==1) round(RectF(72f,rowTop,1008f,rowTop+104f),android.graphics.Color.rgb(250,251,253),14f)
+        if(pair.first==0){
+            val t=pair.second as Transaction
+            val color=if(t.type=="income")green else red
+            round(RectF(88f,rowTop+25f,98f,rowTop+75f),color,5f)
+            val label=listOf(t.category.ifBlank{"تراکنش"},t.person,t.description,t.card).filter{it.isNotBlank()}.take(2).joinToString(" • ")
+            text(label,116f,rowTop+16f,470,20f,ink,true)
+            text(if(t.type=="income")"دریافت" else "پرداخت",116f,rowTop+48f,470,16f,color)
+            text(t.date,600f,rowTop+34f,145,17f,muted)
+            text((if(t.type=="income")"+" else "−")+receiptMoney(t.amount),765f,rowTop+32f,220,20f,color,true)
+        } else {
+            val w=pair.second as WorkDay
+            round(RectF(88f,rowTop+25f,98f,rowTop+75f),primary,5f)
+            text("کار • "+w.place,116f,rowTop+16f,470,20f,ink,true)
+            text(listOf(w.person,w.description,w.start+"–"+w.end).filter{it.isNotBlank()}.take(2).joinToString(" • "),116f,rowTop+48f,470,16f,muted)
+            text(w.date,600f,rowTop+34f,145,17f,muted)
+            text("+"+receiptMoney(w.income),765f,rowTop+32f,220,20f,green,true)
+        }
+        rule(88f,rowTop+103f,992f,line,1f)
+        y+=118f
+    }
+    y+=16f
+    round(RectF(72f,y,1008f,y+86f),navy,20f)
+    text("جمع‌بندی نهایی",94f,y+13f,360,17f,android.graphics.Color.rgb(193,205,230))
+    text("درآمد − هزینه",94f,y+42f,360,19f,white,true)
+    text((if(net>0)"+" else if(net<0)"−" else "")+receiptMoney(kotlin.math.abs(net))+" تومان",470f,y+27f,510,27f,white,true)
+    y+=112f
+    rule(72f,y,1008f,line,2f)
+    text("این سند به‌صورت خودکار توسط مدیریت مالی VSOFT تهیه شده است.",72f,y+17f,936,17f,muted)
+    text("لطفاً اطلاعات را پیش از ارائه یا تسویه نهایی بررسی کنید.",72f,y+44f,936,15f,muted)
+    val values=ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME,"VSOFT_Invoice_"+System.currentTimeMillis()+".png")
+        put(MediaStore.Images.Media.MIME_TYPE,"image/png")
+        put(MediaStore.Images.Media.RELATIVE_PATH,"Pictures/VSOFT")
+    }
+    val uri=context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values)
+    if(uri==null){bitmap.recycle();return}
+    try {
+        context.contentResolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
+        val send=Intent(Intent.ACTION_SEND).apply {
+            type="image/png"
+            putExtra(Intent.EXTRA_STREAM,uri)
+            putExtra(Intent.EXTRA_SUBJECT,title+" - VSOFT")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(send,"اشتراک فاکتور حرفه‌ای VSOFT"))
+    } catch(_:Exception) {
+        context.contentResolver.delete(uri,null,null)
+    } finally { bitmap.recycle() }
+}t.createChooser(send,"ارسال رسید VSOFT"))}catch(_:Exception){context.contentResolver.delete(uri,null,null)}finally{bitmap.recycle()}
 }
 // ---------------- SETTINGS ----------------
 
