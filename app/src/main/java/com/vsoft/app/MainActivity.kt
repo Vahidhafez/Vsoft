@@ -1865,7 +1865,6 @@ fun AddTransactionDialog(
                 }
             }
         }
-    }
     if (newCategoryOpen) {
         var newName by remember { mutableStateOf("") }
         AlertDialog(
