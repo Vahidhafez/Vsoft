@@ -2652,42 +2652,37 @@ fun VsoftFormHeader(
     accent: Color,
     onDismiss: () -> Unit
 ) {
+    val c = VsoftTheme.colors
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        shape = VsoftShapes.card,
+        colors = CardDefaults.cardColors(containerColor = c.surface),
+        border = BorderStroke(1.dp, c.separator.copy(alpha = 0.7f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
-            Modifier.fillMaxWidth().background(
-                Brush.linearGradient(listOf(accent, Color(0xFF263B70), Color(0xFF173D4C)))
-            ).padding(start = 14.dp, end = 7.dp, top = 13.dp, bottom = 13.dp),
+            Modifier.fillMaxWidth().padding(start = 14.dp, end = 7.dp, top = 13.dp, bottom = 13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                Modifier.size(45.dp).clip(RoundedCornerShape(15.dp))
-                    .background(Color.White.copy(alpha = 0.15f)),
+                Modifier.size(42.dp).clip(RoundedCornerShape(12.dp))
+                    .background(accent.copy(alpha = if (c.isDark) 0.22f else 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(23.dp))
+                Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    "VSOFT  /  ENTRY",
-                    fontSize = 9.sp,
-                    color = Color.White.copy(alpha = 0.72f),
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(subtitle, fontSize = 10.sp, color = Color.White.copy(alpha = 0.82f))
+                Text("VSOFT  /  ENTRY", fontSize = 10.sp, color = c.labelTertiary,
+                    fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = c.label)
+                Text(subtitle, fontSize = 11.sp, color = c.labelSecondary)
             }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f))
+                modifier = Modifier.size(34.dp).clip(CircleShape).background(c.fill)
             ) {
-                Icon(Icons.Default.Close, contentDescription = uiText("بستن"), tint = Color.White, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, contentDescription = uiText("بستن"), tint = c.labelSecondary, modifier = Modifier.size(18.dp))
             }
         }
     }
