@@ -1924,8 +1924,8 @@ fun DashboardPage(
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DashboardMetric("تراکنش‌ها", transactions.size.toString(), Icons.Default.ReceiptLong, Color(0xFF456DE2), Modifier.weight(1f).clickable { onNavigate(1) })
-                DashboardMetric("ساعت کاری", String.format(Locale.US, "%.1f", totalHours), Icons.Default.AccessTime, Color(0xFF0C9A81), Modifier.weight(1f).clickable { onNavigate(2) })
+                DashboardMetric("تراکنش‌ها", transactions.size.toString(), Icons.Default.ReceiptLong, MaterialTheme.colorScheme.primary, Modifier.weight(1f).clickable { onNavigate(1) })
+                DashboardMetric("ساعت کاری", String.format(Locale.US, "%.1f", totalHours), Icons.Default.AccessTime, MaterialTheme.colorScheme.secondary, Modifier.weight(1f).clickable { onNavigate(2) })
             }
         }
 
@@ -1970,9 +1970,9 @@ fun DashboardPage(
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DashboardQuickAction("تراکنش جدید", Icons.Default.AddCard, Color(0xFF456DE2), Modifier.weight(1f)) { onNavigate(1) }
-                DashboardQuickAction("ثبت روز کاری", Icons.Default.WorkHistory, Color(0xFF0C9A81), Modifier.weight(1f)) { onNavigate(2) }
-                DashboardQuickAction("گزارش مالی", Icons.Default.QueryStats, Color(0xFFB16DDB), Modifier.weight(1f)) { onNavigate(3) }
+                DashboardQuickAction("تراکنش جدید", Icons.Default.AddCard, MaterialTheme.colorScheme.primary, Modifier.weight(1f)) { onNavigate(1) }
+                DashboardQuickAction("ثبت روز کاری", Icons.Default.WorkHistory, MaterialTheme.colorScheme.secondary, Modifier.weight(1f)) { onNavigate(2) }
+                DashboardQuickAction("گزارش مالی", Icons.Default.QueryStats, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)) { onNavigate(3) }
             }
         }
 
@@ -1991,16 +1991,16 @@ fun DashboardPage(
                         }
                         Box(
                             Modifier.clip(RoundedCornerShape(13.dp))
-                                .background((if (monthNet >= 0) Color(0xFF0C9A81) else MaterialTheme.colorScheme.error).copy(alpha = .12f))
+                                .background((if (monthNet >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error).copy(alpha = .12f))
                                 .padding(horizontal = 11.dp, vertical = 8.dp)
                         ) {
-                            Text(money(monthNet), color = if (monthNet >= 0) Color(0xFF0C9A81) else MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(money(monthNet), color = if (monthNet >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        DashboardMiniStat("درآمد", money(monthIncome + monthWorkIncome), Icons.Default.TrendingUp, Color(0xFF0C9A81), Modifier.weight(1f))
-                        DashboardMiniStat("هزینه", money(monthExpenses), Icons.Default.TrendingDown, Color(0xFFD66A5E), Modifier.weight(1f))
-                        DashboardMiniStat("روز کاری", monthWorkDays.size.toString(), Icons.Default.EventAvailable, Color(0xFF456DE2), Modifier.weight(1f))
+                        DashboardMiniStat("درآمد", money(monthIncome + monthWorkIncome), Icons.Default.TrendingUp, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+                        DashboardMiniStat("هزینه", money(monthExpenses), Icons.Default.TrendingDown, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+                        DashboardMiniStat("روز کاری", monthWorkDays.size.toString(), Icons.Default.EventAvailable, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                     }
                 }
             }
