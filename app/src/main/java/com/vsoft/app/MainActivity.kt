@@ -2146,6 +2146,7 @@ fun WorkPurchaseDialog(
                     ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(5.dp)); Text("ذخیره") }
                 }
             }
+        }
     }
     if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
 }
