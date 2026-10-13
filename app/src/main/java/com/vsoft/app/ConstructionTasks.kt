@@ -1,6 +1,7 @@
 package com.vsoft.app
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.WorkHistory
@@ -88,6 +90,8 @@ fun ConstructionTasksPage(
 ) {
     var editing by remember(workplace.id) { mutableStateOf<ConstructionTask?>(null) }
     var showAdd by remember(workplace.id) { mutableStateOf(false) }
+    var quickProgressTask by remember(workplace.id) { mutableStateOf<ConstructionTask?>(null) }
+    var quickProgressValue by remember(workplace.id) { mutableFloatStateOf(0f) }
     val progress = if (tasks.isEmpty()) 0 else tasks.map { it.progress }.average().toInt()
     val totalMinutes = tasks.sumOf { it.totalMinutes }
     val totalDays = tasks.sumOf { it.daysWorked }
@@ -104,7 +108,7 @@ fun ConstructionTasksPage(
                     Column(
                         Modifier.fillMaxWidth().background(
                             androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(Color(0xFF125C55), Color(0xFF16877B), Color(0xFF51A69B))
+                                listOf(Color(0xFF17365B), Color(0xFF245B82), Color(0xFF147C78))
                             )
                         ).padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -151,7 +155,7 @@ fun ConstructionTasksPage(
             } else {
                 items(tasks.sortedByDescending { it.id }, key = { it.id }) { task ->
                     Card(
-                        Modifier.fillMaxWidth(),
+                        Modifier.fillMaxWidth().clickable { editing = task },
                         shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f))
@@ -165,10 +169,12 @@ fun ConstructionTasksPage(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp
                                     )
                                 }
-                                Text("${task.progress}%", color = if (task.progress == 100) Color(0xFF16845B) else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp)
+                                Surface(onClick = { quickProgressTask = task; quickProgressValue = task.progress.toFloat() }, shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = .09f)) {
+                                    Text("${task.progress}%", modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), color = if (task.progress == 100) Color(0xFF16845B) else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+                                }
                                 IconButton(onClick = { editing = task }) { Icon(Icons.Default.Edit, contentDescription = if (LocalVsoftLanguage.current == "en") "Edit task" else "ویرایش فعالیت") }
                             }
-                            LinearProgressIndicator(progress = { task.progress / 100f }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(8.dp)))
+                            LinearProgressIndicator(progress = { task.progress / 100f }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(8.dp)).clickable { quickProgressTask = task; quickProgressValue = task.progress.toFloat() })
                             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 LabelValue(Icons.Default.Schedule, "${task.daysWorked} ${if (LocalVsoftLanguage.current == "en") "days" else "روز"}")
                                 LabelValue(Icons.Default.Schedule, String.format(Locale.US, "%.1f", task.totalMinutes / 60.0) + " " + if (LocalVsoftLanguage.current == "en") "hours" else "ساعت")
@@ -199,6 +205,34 @@ fun ConstructionTasksPage(
         onDismiss = { showAdd = false },
         onSave = { task -> onTasksChange((tasks + task).toMutableList()); showAdd = false }
     )
+    quickProgressTask?.let { task ->
+        AlertDialog(
+            onDismissRequest = { quickProgressTask = null },
+            title = { Text(if (LocalVsoftLanguage.current == "en") "Quick progress update" else "تغییر سریع پیشرفت", fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(task.title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        IconButton(onClick = { quickProgressValue = (quickProgressValue - 5f).coerceAtLeast(0f) }) { Icon(Icons.Default.Remove, contentDescription = if (LocalVsoftLanguage.current == "en") "Decrease progress" else "کاهش پیشرفت") }
+                        Text("${quickProgressValue.toInt()}%", modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                        IconButton(onClick = { quickProgressValue = (quickProgressValue + 5f).coerceAtMost(100f) }) { Icon(Icons.Default.Add, contentDescription = if (LocalVsoftLanguage.current == "en") "Increase progress" else "افزایش پیشرفت") }
+                    }
+                    Slider(value = quickProgressValue, onValueChange = { quickProgressValue = it }, valueRange = 0f..100f, steps = 99)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(0, 25, 50, 75, 100).forEach { value -> FilterChip(selected = quickProgressValue.toInt() == value, onClick = { quickProgressValue = value.toFloat() }, label = { Text("$value%") }) }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTasksChange(tasks.map { current -> if (current.id == task.id) current.copy(progress = quickProgressValue.toInt().coerceIn(0, 100)) else current }.toMutableList())
+                    quickProgressTask = null
+                }) { Text(if (LocalVsoftLanguage.current == "en") "Save progress" else "ذخیره پیشرفت") }
+            },
+            dismissButton = { TextButton(onClick = { quickProgressTask = null }) { Text(if (LocalVsoftLanguage.current == "en") "Cancel" else "لغو") } }
+        )
+    }
+
     editing?.let { task ->
         ConstructionTaskDialog(
             workplace = workplace, initial = task, people = people,
