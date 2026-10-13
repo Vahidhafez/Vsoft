@@ -90,28 +90,28 @@ fun VsoftToolsPage(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
+                val c = VsoftTheme.colors
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(26.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                    shape = VsoftShapes.card,
+                    colors = CardDefaults.cardColors(containerColor = c.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, c.separator.copy(alpha = 0.7f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().background(
-                            androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(Color(0xFF172B59), Color(0xFF3659B8), Color(0xFF147E83))
-                            )
-                        ).padding(horizontal = 18.dp, vertical = 17.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 17.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(title, color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                            Text(subtitle, color = Color.White.copy(alpha = .78f), fontSize = 11.sp)
+                            Text(title, color = c.label, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                            Text(subtitle, color = c.labelSecondary, fontSize = 12.sp)
                         }
                         Box(
-                            Modifier.size(46.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .15f)),
+                            Modifier.size(44.dp).clip(RoundedCornerShape(13.dp))
+                                .background(c.accent.copy(alpha = if (c.isDark) 0.22f else 0.11f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.DashboardCustomize, null, tint = Color.White, modifier = Modifier.size(25.dp))
+                            Icon(Icons.Default.DashboardCustomize, null, tint = c.accent, modifier = Modifier.size(24.dp))
                         }
                     }
                 }
