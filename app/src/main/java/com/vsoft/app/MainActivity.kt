@@ -2566,7 +2566,7 @@ ffun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:L
     val items = (transactions.map { Pair(0, it) } + workDays.map { Pair(1, it) })
         .sortedBy { pair -> if (pair.second is Transaction) (pair.second as Transaction).date else (pair.second as WorkDay).date }
         .take(80)
-    val height = 900 + items.size * 118
+    val height = 1000 + items.size * 118
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     val navy = android.graphics.Color.rgb(23, 36, 63)
