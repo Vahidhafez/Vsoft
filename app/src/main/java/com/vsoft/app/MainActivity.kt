@@ -1636,13 +1636,7 @@ fun AddTransactionDialog(
         if (type == "income") MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
         label = "transaction_type_color"
     )
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(30.dp),
-            color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .94f) else MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp, shadowElevation = 20.dp
-        ) {
+    VsoftFormSheet(onDismiss = onDismiss, title = null) {
             Column(
                 Modifier.padding(22.dp).heightIn(max = 680.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(13.dp)
@@ -1893,22 +1887,6 @@ fun AddTransactionDialog(
                         customFinanceCategories = (customFinanceCategories + name).distinct()
                         category = name
                     }
-                    newCategoryOpen = false
-                }) { Text(uiText("افزودن")) }
-            },
-            dismissButton = { TextButton(onClick = { newCategoryOpen = false }) { Text(strings.cancel) } }
-        )
-    }
-    if (newCategoryOpen) {
-        var newName by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { newCategoryOpen = false },
-            title = { Text(uiText("دسته‌بندی جدید")) },
-            text = { OutlinedTextField(newName, { newName = it }, label = { Text(uiText("نام دسته‌بندی")) }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = {
-                TextButton(onClick = {
-                    val name = newName.trim()
-                    if (name.isNotBlank()) { customCategories = (customCategories + name).distinct(); category = name }
                     newCategoryOpen = false
                 }) { Text(uiText("افزودن")) }
             },
@@ -2169,7 +2147,6 @@ fun WorkPurchaseDialog(
                     ) { Icon(Icons.Default.Check, null); Spacer(Modifier.width(5.dp)); Text("ذخیره") }
                 }
             }
-        }
     }
     if (dateOpen) JalaliDatePickerDialog(date, { dateOpen = false }) { date = it; dateOpen = false }
 }
@@ -2213,13 +2190,7 @@ fun AddWorkDialog(
     val duration = calculateHours(start, end)
     val selectedCard = cards.firstOrNull { it.name == card }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(30.dp),
-            color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .94f) else MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp, shadowElevation = 20.dp
-        ) {
+    VsoftFormSheet(onDismiss = onDismiss, title = null) {
             Column(
                 Modifier.padding(22.dp).heightIn(max = 700.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(13.dp)
@@ -2430,7 +2401,6 @@ fun AddWorkDialog(
                     ) { Icon(Icons.Default.CheckCircle, null); Spacer(Modifier.width(7.dp)); Text(strings.save, fontWeight = FontWeight.Bold) }
                 }
             }
-        }
     }
     if (dateOpen) JalaliDatePickerDialog(startDate, { dateOpen = false }) { startDate = it; dateOpen = false }
     if (endDateOpen) JalaliDatePickerDialog(endDate, { endDateOpen = false }) { endDate = it; endDateOpen = false }
