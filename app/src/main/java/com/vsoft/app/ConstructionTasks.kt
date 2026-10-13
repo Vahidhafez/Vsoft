@@ -112,7 +112,7 @@ fun ConstructionTasksPage(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(if (LocalVsoftLanguage.current == "en") "CONSTRUCTION PROJECT" else "پروژه ساختمانی", color = Color.White.copy(alpha = .75f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text(workplace.name, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
+                                Text(workplace.name, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
                                 Text(if (LocalVsoftLanguage.current == "en") "$completeCount of ${tasks.size} tasks completed" else "${tasks.size} فعالیت • $completeCount تکمیل‌شده", color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
                             }
                             Icon(Icons.Default.Apartment, null, tint = Color.White, modifier = Modifier.size(34.dp))
@@ -136,7 +136,7 @@ fun ConstructionTasksPage(
                 }
             }
             item {
-                Text(if (LocalVsoftLanguage.current == "en") "Construction activities" else "فعالیت‌های ساختمانی", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                Text(if (LocalVsoftLanguage.current == "en") "Construction activities" else "فعالیت‌های ساختمانی", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
             if (tasks.isEmpty()) {
                 item {
@@ -159,13 +159,13 @@ fun ConstructionTasksPage(
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text(task.title, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text(task.title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                                     Text(
                                         (if (LocalVsoftLanguage.current == "en") "Floor: " else "طبقه: ") + task.floor.ifBlank { if (LocalVsoftLanguage.current == "en") "Not specified" else "مشخص نشده" },
                                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp
                                     )
                                 }
-                                Text("${task.progress}%", color = if (task.progress == 100) Color(0xFF16845B) else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp)
+                                Text("${task.progress}%", color = if (task.progress == 100) Color(0xFF16845B) else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
                                 IconButton(onClick = { editing = task }) { Icon(Icons.Default.Edit, contentDescription = if (LocalVsoftLanguage.current == "en") "Edit task" else "ویرایش فعالیت") }
                             }
                             LinearProgressIndicator(progress = { task.progress / 100f }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(8.dp)))
@@ -213,7 +213,7 @@ fun ConstructionTasksPage(
 private fun ProjectMetric(title: String, value: String, modifier: Modifier) {
     Column(modifier.clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = .13f)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, color = Color.White.copy(alpha = .75f), fontSize = 10.sp, maxLines = 1)
-        Text(value, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        Text(value, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
@@ -250,7 +250,7 @@ private fun ConstructionTaskDialog(
     var notes by remember(initial?.id) { mutableStateOf(initial?.notes.orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) (if (LocalVsoftLanguage.current == "en") "New construction activity" else "فعالیت ساختمانی جدید") else (if (LocalVsoftLanguage.current == "en") "Edit activity" else "ویرایش فعالیت"), fontWeight = FontWeight.ExtraBold) },
+        title = { Text(if (initial == null) (if (LocalVsoftLanguage.current == "en") "New construction activity" else "فعالیت ساختمانی جدید") else (if (LocalVsoftLanguage.current == "en") "Edit activity" else "ویرایش فعالیت"), fontWeight = FontWeight.Bold) },
         text = {
             Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).then(Modifier), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(title, { title = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(if (LocalVsoftLanguage.current == "en") "Activity name" else "نام فعالیت") })
