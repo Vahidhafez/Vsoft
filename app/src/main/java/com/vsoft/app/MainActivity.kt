@@ -2560,7 +2560,7 @@ fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,c
     if(dateOpen==1)JalaliDatePickerDialog(start,{dateOpen=0}){start=it;mode="custom";dateOpen=0}
     if(dateOpen==2)JalaliDatePickerDialog(end,{dateOpen=0}){end=it;mode="custom";dateOpen=0}
 }
-ffun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:List<WorkDay>,start:String,end:String,title:String){
+fun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:List<WorkDay>,start:String,end:String,title:String){
     fun receiptMoney(value: Long): String = String.format(Locale.US, "%,d", value).replace(",", "٬")
     val width = 1080
     val items = (transactions.map { Pair(0, it) } + workDays.map { Pair(1, it) })
@@ -2702,8 +2702,7 @@ ffun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:L
     } catch(_:Exception) {
         context.contentResolver.delete(uri,null,null)
     } finally { bitmap.recycle() }
-}t.createChooser(send,"ارسال رسید VSOFT"))}catch(_:Exception){context.contentResolver.delete(uri,null,null)}finally{bitmap.recycle()}
-}
+}}
 // ---------------- SETTINGS ----------------
 
 @Composable
