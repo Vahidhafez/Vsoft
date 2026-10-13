@@ -1581,11 +1581,11 @@ fun VsoftEntrance(index: Int, content: @Composable () -> Unit) {
 fun DashboardPage(strings:AppStrings,transactions:List<Transaction>,workDays:List<WorkDay>,cards:List<BankCard>,onNavigate:(Int)->Unit={}){
  val c=VsoftTheme.colors;val inc=transactions.filter{it.type=="income"}.sumOf{it.amount};val exp=transactions.filter{it.type=="expense"}.sumOf{it.amount};val wi=workDays.sumOf{it.income};val balance=cards.sumOf{it.openingBalance}+inc+wi-exp;val prefix=today().substringBeforeLast("/")+"/";val mi=transactions.filter{it.type=="income"&&it.date.startsWith(prefix)}.sumOf{it.amount}+workDays.filter{it.date.startsWith(prefix)}.sumOf{it.income};val me=transactions.filter{it.type=="expense"&&it.date.startsWith(prefix)}.sumOf{it.amount};val recent=transactions.sortedWith(compareByDescending<Transaction>{it.date}.thenByDescending{it.id}).take(5)
  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,end=16.dp,top=4.dp,bottom=24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
- item{VsoftCardSurface{Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){Text(uiText("موجودی کل"),color=c.labelSecondary);VsoftAmountText(balance,style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Bold);HorizontalDivider(thickness=.5.dp,color=c.separator);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){Column(Modifier.weight(1f)){Text(strings.income,color=c.labelSecondary);VsoftAmountText(inc+wi,color=c.income)};Column(Modifier.weight(1f)){Text(strings.expense,color=c.labelSecondary);VsoftAmountText(exp,color=c.expense)}}}}}
+ item{VsoftCardSurface{Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){Text(uiText("موجودی کل"),color=c.labelSecondary);VsoftAmountText(balance,style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Bold);HorizontalDivider(thickness=0.5.dp,color=c.separator);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)){Column(Modifier.weight(1f)){Text(strings.income,color=c.labelSecondary);VsoftAmountText(inc+wi,color=c.income)};Column(Modifier.weight(1f)){Text(strings.expense,color=c.labelSecondary);VsoftAmountText(exp,color=c.expense)}}}}}
  item{VsoftGroupedSection(header=vsoftT("این ماه","This month","هذا الشهر")){VsoftGroupedRow(strings.income,trailing={VsoftAmountText(mi,color=c.income)});VsoftGroupedDivider();VsoftGroupedRow(strings.expense,trailing={VsoftAmountText(me,color=c.expense)});VsoftGroupedDivider();VsoftGroupedRow(vsoftT("خالص","Net","الصافي"),trailing={VsoftAmountText(mi-me,color=if(mi>=me)c.income else c.expense)})}}
  if(cards.isNotEmpty()){item{VsoftSectionHeader(strings.cards,trailing={VsoftHeaderAction(vsoftT("همه","All","الكل")){onNavigate(5)}})};item{LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)){items(cards,key={it.id}){VsoftMiniCard(it,cardCurrentBalance(it,transactions,workDays),Modifier.vsoftTap{onNavigate(5)})}}}}
  item{VsoftGroupedSection(header=uiText("آخرین تراکنش‌ها"),headerTrailing={VsoftHeaderAction(vsoftT("همه","All","الكل")){onNavigate(1)}}){if(recent.isEmpty())VsoftEmptyState(uiText("هنوز تراکنشی ثبت نشده"),Icons.Filled.AccountBalanceWallet,message=uiText("با دکمه + اولین مورد را اضافه کنید"))else recent.forEachIndexed{i,t->VsoftTransactionRow(t,showDate=true,onClick={onNavigate(1)});if(i<recent.lastIndex)VsoftGroupedDivider(startInset=64.dp)}}}
- item{VsoftGroupedSection(header=vsoftT("دسترسی سریع","Shortcuts","اختصارات")){VsoftGroupedRow(strings.finance,value=transactions.size.toString(),icon=Icons.Filled.AccountBalanceWallet,iconTint=VsoftTint.blue,showChevron=true,onClick={onNavigate(1)});VsoftGroupedDivider(startInset=58.dp);VsoftGroupedRow(strings.work,value=String.format(Locale.US,"%.1f",workDays.sumOf{calculateHours(it.start,it.end)})+vsoftT(" ساعت"," h"," ساعة"),icon=Icons.Filled.WorkHistory,iconTint=VsoftTint.green,showChevron=true,onClick={onNavigate(2)});VsoftGroupedDivider(startInset=58.dp);VsoftGroupedRow(strings.reports,icon=Icons.Filled.Insights,iconTint=VsoftTint.purple,showChevron=true,onClick={onNavigate(3)});VsoftGroupedDivider(startInset=58.dp);VsoftGroupedRow(strings.cards,value=cards.size.toString(),icon=Icons.Filled.CreditCard,iconTint=VsoftTint.orange,showChevron=true,onClick={onNavigate(5)})}}
+ item{VsoftGroupedSection(header=vsoftT("دسترسی سریع","Shortcuts","اختصارات")){VsoftGroupedRow(strings.finance,value=transactions.size.toString(),icon=Icons.Filled.AccountBalanceWallet,iconTint=VsoftTint.blue,showChevron=true,onClick={onNavigate(1)});VsoftGroupedDivider(startInset=58.dp);VsoftGroupedRow(strings.work,value=String.format(Locale.US,"%0.1f",workDays.sumOf{calculateHours(it.start,it.end)})+vsoftT(" ساعت"," h"," ساعة"),icon=Icons.Filled.WorkHistory,iconTint=VsoftTint.green,showChevron=true,onClick={onNavigate(2)});VsoftGroupedDivider(startInset=58.dp);VsoftGroupedRow(strings.reports,icon=Icons.Filled.Insights,iconTint=VsoftTint.purple,showChevron=true,onClick={onNavigate(3)});VsoftGroupedDivider(startInset=58.dp);VsoftGroupedRow(strings.cards,value=cards.size.toString(),icon=Icons.Filled.CreditCard,iconTint=VsoftTint.orange,showChevron=true,onClick={onNavigate(5)})}}
  }
 }
 
@@ -1655,7 +1655,7 @@ fun AddTransactionDialog(
                 )
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .62f)).padding(4.dp),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)).padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     FilterChip(
@@ -1678,8 +1678,8 @@ fun AddTransactionDialog(
                 ) { currentType ->
                     Surface(
                         Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-                        color = if (currentType == "income") MaterialTheme.colorScheme.secondary.copy(alpha = .08f)
-                        else MaterialTheme.colorScheme.error.copy(alpha = .08f)
+                        color = if (currentType == "income") MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
+                        else MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
                     ) {
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -1699,8 +1699,8 @@ fun AddTransactionDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(22.dp),
-                    color = typeColor.copy(alpha = .065f),
-                    border = BorderStroke(1.dp, typeColor.copy(alpha = .20f))
+                    color = typeColor.copy(alpha = 0.065f),
+                    border = BorderStroke(1.dp, typeColor.copy(alpha = 0.20f))
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1795,7 +1795,7 @@ fun AddTransactionDialog(
                             Icon(Icons.Default.CreditCard, null, tint = Color.White, modifier = Modifier.size(21.dp)); Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(selectedCard.bank, color = Color.White, fontWeight = FontWeight.Bold)
-                                Text(selectedCard.name, color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                Text(selectedCard.name, color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp)
                             }
                             Text("•••• " + selectedCard.last4.ifBlank { selectedCard.cardNumber.takeLast(4) }, color = Color.White, fontSize = 12.sp)
                         }
@@ -1849,7 +1849,7 @@ fun AddTransactionDialog(
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
-                        onDismiss, Modifier.weight(.78f).height(52.dp), shape = RoundedCornerShape(17.dp)
+                        onDismiss, Modifier.weight(0.78f).height(52.dp), shape = RoundedCornerShape(17.dp)
                     ) { Text(strings.cancel) }
                     Button(
                         onClick = {
@@ -1979,13 +1979,13 @@ fun WorkPurchasesPage(
                                 Modifier.fillMaxWidth().clickable { editing = purchase; show = true },
                                 shape = RoundedCornerShape(22.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.07f))
                             ) {
                                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Box(
                                             Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
-                                                .background(MaterialTheme.colorScheme.error.copy(alpha = .10f)),
+                                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.10f)),
                                             contentAlignment = Alignment.Center
                                         ) { Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.error) }
                                         Spacer(Modifier.width(10.dp))
@@ -2158,7 +2158,7 @@ fun WorkPage(strings:AppStrings,workDays:List<WorkDay>,people:List<Person>,workp
  val c=VsoftTheme.colors;var show by remember{mutableStateOf(false)};var edit by remember{mutableStateOf<WorkDay?>(null)};var actions by remember{mutableStateOf<WorkDay?>(null)};VsoftRegisterAddAction{edit=null;show=true};val hours=workDays.sumOf{calculateHours(it.start,it.end)};val groups=workDays.sortedWith(compareByDescending<WorkDay>{it.startDate.ifBlank{it.date}}.thenByDescending{it.id}).groupBy{it.startDate.ifBlank{it.date}}
  fun delete(w:WorkDay){onWorkChange(workDays.filterNot{it.id==w.id}.toMutableList())}
  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,end=16.dp,top=4.dp,bottom=24.dp)){
- item{VsoftCardSurface{Row(Modifier.padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){Column(Modifier.weight(1f)){Text(uiText("درآمد کاری"),style=MaterialTheme.typography.bodySmall,color=c.labelSecondary);VsoftAmountText(workDays.sumOf{it.income},color=c.income)};Column(Modifier.weight(1f)){Text(uiText("ساعت کاری"),style=MaterialTheme.typography.bodySmall,color=c.labelSecondary);Text(String.format(Locale.US,"%.1f",hours),fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text(vsoftT("روز کاری","Workdays","أيام العمل"),style=MaterialTheme.typography.bodySmall,color=c.labelSecondary);Text(workDays.size.toString(),fontWeight=FontWeight.SemiBold)}}}}
+ item{VsoftCardSurface{Row(Modifier.padding(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){Column(Modifier.weight(1f)){Text(uiText("درآمد کاری"),style=MaterialTheme.typography.bodySmall,color=c.labelSecondary);VsoftAmountText(workDays.sumOf{it.income},color=c.income)};Column(Modifier.weight(1f)){Text(uiText("ساعت کاری"),style=MaterialTheme.typography.bodySmall,color=c.labelSecondary);Text(String.format(Locale.US,"%0.1f",hours),fontWeight=FontWeight.SemiBold)};Column(Modifier.weight(1f)){Text(vsoftT("روز کاری","Workdays","أيام العمل"),style=MaterialTheme.typography.bodySmall,color=c.labelSecondary);Text(workDays.size.toString(),fontWeight=FontWeight.SemiBold)}}}}
  item{VsoftSectionHeader(vsoftT("مکان‌های کاری","Workplaces","أماكن العمل"));if(workplaces.isEmpty())Text(vsoftT("برای پیگیری کارهای ساختمانی، ابتدا از بخش بیشتر یک مکان کاری اضافه کن.","Add a workplace from More to track construction tasks.","أضف مكان عمل من قسم المزيد لتتبع المهام."),style=MaterialTheme.typography.bodySmall,color=c.labelSecondary,modifier=Modifier.padding(horizontal=16.dp))else LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){items(workplaces,key={it.id}){p->VsoftFilterChip(p.name,false,{onOpenWorkplace(p)})}}}
  item{VsoftGroupedSection{VsoftGroupedRow(uiText("خریدهای کار"),icon=Icons.Filled.ShoppingCart,iconTint=VsoftTint.orange,showChevron=true,onClick=onWorkPurchases)}}
  if(workDays.isEmpty())item{VsoftEmptyState(vsoftT("هنوز روز کاری ثبت نشده","No workdays yet","لا توجد أيام عمل"),Icons.Filled.WorkHistory,message=uiText("با دکمه + اولین مورد را اضافه کنید"))}else groups.forEach{(date,entries)->item(key="work_date_$date"){VsoftDateHeader(date,entries.sumOf{it.income})};item(key="work_group_$date"){Surface(shape=VsoftShapes.card,color=c.surface,modifier=Modifier.fillMaxWidth()){Column{entries.forEachIndexed{i,w->key(w.id){VsoftSwipeToDelete(shape=RectangleShape,onDelete={delete(w)}){VsoftWorkRow(w,onClick={actions=w})};if(i<entries.lastIndex)VsoftGroupedDivider(startInset=64.dp)}}}}}}
@@ -2274,21 +2274,21 @@ fun AddWorkDialog(
                         }
                     }
                 }
-                Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = .08f)) {
+                Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)) {
                     Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp)); Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
                             Text("مدت کار", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(String.format(Locale.US, "%.1f ساعت", duration), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(String.format(Locale.US, "%0.1f ساعت", duration), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        Icon(Icons.Default.Timer, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = .7f))
+                        Icon(Icons.Default.Timer, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
                     }
                 }
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(22.dp),
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = .07f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = .22f))
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.07f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.22f))
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2330,7 +2330,7 @@ fun AddWorkDialog(
                             Icon(Icons.Default.CreditCard, null, tint = Color.White, modifier = Modifier.size(21.dp)); Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(selectedCard.bank, color = Color.White, fontWeight = FontWeight.Bold)
-                                Text("واریز درآمد کار", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                                Text("واریز درآمد کار", color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp)
                             }
                             Text("•••• " + selectedCard.last4.ifBlank { selectedCard.cardNumber.takeLast(4) }, color = Color.White, fontSize = 12.sp)
                         }
@@ -2385,7 +2385,7 @@ fun AddWorkDialog(
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
-                        onDismiss, Modifier.weight(.78f).height(52.dp), shape = RoundedCornerShape(17.dp)
+                        onDismiss, Modifier.weight(0.78f).height(52.dp), shape = RoundedCornerShape(17.dp)
                     ) { Text(strings.cancel) }
                     Button(
                         onClick = {
@@ -2415,7 +2415,7 @@ fun ReportsPage(strings:AppStrings,transactions:List<Transaction>,workDays:List<
  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,end=16.dp,top=4.dp,bottom=24.dp)){
  if(cards.isNotEmpty())item{LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){item{VsoftFilterChip(vsoftT("همه کارت‌ها","All cards","كل البطاقات"),all,{cardName="__ALL_CARDS__"})};items(cards,key={it.id}){b->VsoftFilterChip(b.name,b.name==cardName,{cardName=b.name})}}}
  if(selected==null&&!all)item{VsoftEmptyState(uiText("هنوز کارت بانکی ثبت نشده"),Icons.Filled.CreditCard)}else{
- item{VsoftGroupedSection(header=uiText("خلاصه کارت")){VsoftGroupedRow(uiText("موجودی"),trailing={VsoftAmountText(cur,fontWeight=FontWeight.SemiBold)});VsoftGroupedDivider();VsoftGroupedRow(uiText("درآمد"),trailing={VsoftAmountText(inc,color=c.income)});VsoftGroupedDivider();VsoftGroupedRow(uiText("هزینه"),trailing={VsoftAmountText(exp,color=c.expense)});VsoftGroupedDivider();VsoftGroupedRow(uiText("درآمد کاری"),trailing={VsoftAmountText(wi,color=c.income)});VsoftGroupedDivider();VsoftGroupedRow(uiText("موجودی اولیه"),trailing={VsoftAmountText(opening,color=c.labelSecondary)});VsoftGroupedDivider();VsoftGroupedRow(uiText("ساعت کاری"),value=String.format(Locale.US,"%.1f",hrs))}}
+ item{VsoftGroupedSection(header=uiText("خلاصه کارت")){VsoftGroupedRow(uiText("موجودی"),trailing={VsoftAmountText(cur,fontWeight=FontWeight.SemiBold)});VsoftGroupedDivider();VsoftGroupedRow(uiText("درآمد"),trailing={VsoftAmountText(inc,color=c.income)});VsoftGroupedDivider();VsoftGroupedRow(uiText("هزینه"),trailing={VsoftAmountText(exp,color=c.expense)});VsoftGroupedDivider();VsoftGroupedRow(uiText("درآمد کاری"),trailing={VsoftAmountText(wi,color=c.income)});VsoftGroupedDivider();VsoftGroupedRow(uiText("موجودی اولیه"),trailing={VsoftAmountText(opening,color=c.labelSecondary)});VsoftGroupedDivider();VsoftGroupedRow(uiText("ساعت کاری"),value=String.format(Locale.US,"%0.1f",hrs))}}
  item{VsoftMonthlyChart(monthly,Modifier.padding(top=16.dp))}
  item{VsoftGroupedSection(header=uiText("دسته‌بندی هزینه‌ها")){if(cats.isEmpty())VsoftGroupedRow(uiText("هنوز هزینه‌ای با دسته‌بندی ثبت نشده"),titleColor=c.labelSecondary)else{val max=cats.maxOf{it.value}.coerceAtLeast(1L);cats.forEachIndexed{i,e->Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Row(verticalAlignment=Alignment.CenterVertically){Text(e.key,modifier=Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis);VsoftAmountText(e.value,color=c.labelSecondary)};VsoftProgressBar(e.value.toFloat()/max.toFloat(),color=c.expense)};if(i<cats.lastIndex)VsoftGroupedDivider()}}}}
  item{VsoftGroupedSection{VsoftGroupedRow(uiText("ساخت فاکتور و خلاصه"),icon=Icons.Filled.Receipt,iconTint=VsoftTint.purple,showChevron=true,onClick={receipt=true})}}
@@ -2433,7 +2433,7 @@ fun TransactionReceiptDialog(transaction: Transaction, onDismiss: () -> Unit) {
         icon = {
             Box(
                 Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary,
@@ -2453,8 +2453,8 @@ fun TransactionReceiptDialog(transaction: Transaction, onDismiss: () -> Unit) {
                 Surface(
                     Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(22.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f),
-                    border = BorderStroke(1.dp, accent.copy(alpha = .25f))
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, accent.copy(alpha = 0.25f))
                 ) {
                     Column(Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -2547,7 +2547,7 @@ fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,c
             }
             OutlinedButton({dateOpen=1},Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.CalendarMonth,null);Spacer(Modifier.width(7.dp));Text(uiText("از")+" "+start,Modifier.weight(1f),textAlign=TextAlign.Start)}
             OutlinedButton({dateOpen=2},Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp)){Icon(Icons.Default.Event,null);Spacer(Modifier.width(7.dp));Text(uiText("تا")+" "+end,Modifier.weight(1f),textAlign=TextAlign.Start)}
-            Surface(Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.primary.copy(alpha=.08f)){Column(Modifier.padding(13.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+            Surface(Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.primary.copy(alpha=0.08f)){Column(Modifier.padding(13.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
                 Text("${uiText("تعداد تراکنش‌ها")}: ${filtered.size}",fontWeight=FontWeight.SemiBold);Text("${uiText("درآمد")}: ${money(income)}",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Text("${uiText("هزینه")}: ${money(expense)}",color=MaterialTheme.colorScheme.error,fontWeight=FontWeight.Bold);Text("${uiText("خالص")}: ${money(income-expense)}",fontWeight=FontWeight.Bold)
             }}
         }},
@@ -2599,18 +2599,18 @@ fun VsoftPremiumPageHero(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
                     "VSOFT  /  PERSONAL FINANCE",
-                    color = Color.White.copy(alpha = .72f),
+                    color = Color.White.copy(alpha = 0.72f),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.1.sp
                 )
                 Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = Color.White.copy(alpha = .82f), fontSize = 11.sp)
+                Text(subtitle, color = Color.White.copy(alpha = 0.82f), fontSize = 11.sp)
             }
             Spacer(Modifier.width(12.dp))
             Box(
                 Modifier.size(52.dp).clip(RoundedCornerShape(17.dp))
-                    .background(Color.White.copy(alpha = .15f)),
+                    .background(Color.White.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(27.dp))
@@ -2631,7 +2631,7 @@ fun VsoftFormSectionLabel(
     ) {
         Box(
             Modifier.size(34.dp).clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
@@ -2666,7 +2666,7 @@ fun VsoftFormHeader(
         ) {
             Box(
                 Modifier.size(45.dp).clip(RoundedCornerShape(15.dp))
-                    .background(Color.White.copy(alpha = .15f)),
+                    .background(Color.White.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, null, tint = Color.White, modifier = Modifier.size(23.dp))
@@ -2676,16 +2676,16 @@ fun VsoftFormHeader(
                 Text(
                     "VSOFT  /  ENTRY",
                     fontSize = 9.sp,
-                    color = Color.White.copy(alpha = .72f),
+                    color = Color.White.copy(alpha = 0.72f),
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
                 Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(subtitle, fontSize = 10.sp, color = Color.White.copy(alpha = .82f))
+                Text(subtitle, fontSize = 10.sp, color = Color.White.copy(alpha = 0.82f))
             }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(alpha = .12f))
+                modifier = Modifier.size(34.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f))
             ) {
                 Icon(Icons.Default.Close, contentDescription = uiText("بستن"), tint = Color.White, modifier = Modifier.size(18.dp))
             }
@@ -2728,12 +2728,12 @@ fun SettingsPage(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text("VSOFT  /  CONTROL CENTER", fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = Color.White.copy(alpha = .68f))
+                            Text("VSOFT  /  CONTROL CENTER", fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = Color.White.copy(alpha = 0.68f))
                             Text("تنظیمات برنامه", fontSize = 25.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("همه‌چیز رو مطابق سلیقه‌ات تنظیم کن", fontSize = 12.sp, color = Color.White.copy(alpha = .82f))
+                            Text("همه‌چیز رو مطابق سلیقه‌ات تنظیم کن", fontSize = 12.sp, color = Color.White.copy(alpha = 0.82f))
                         }
                         Box(
-                            Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .14f)),
+                            Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.14f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Default.Tune, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
@@ -2741,27 +2741,27 @@ fun SettingsPage(
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Column(
-                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 11.dp),
                             verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Icon(Icons.Default.Language, null, tint = Color.White.copy(alpha = .9f), modifier = Modifier.size(17.dp))
-                            Text("زبان", fontSize = 10.sp, color = Color.White.copy(alpha = .7f))
+                            Icon(Icons.Default.Language, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(17.dp))
+                            Text("زبان", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                             Text(when (language) { "en" -> "English"; "ar" -> "العربية"; else -> "فارسی" }, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                         Column(
-                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 11.dp),
                             verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Icon(Icons.Default.Palette, null, tint = Color.White.copy(alpha = .9f), modifier = Modifier.size(17.dp))
-                            Text("پوسته", fontSize = 10.sp, color = Color.White.copy(alpha = .7f))
+                            Icon(Icons.Default.Palette, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(17.dp))
+                            Text("پوسته", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                             Text(when (theme) { "light" -> "روشن"; "dark" -> "تاریک"; else -> "سیستم" }, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                         Column(
-                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .12f)).padding(horizontal = 10.dp, vertical = 11.dp),
+                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 11.dp),
                             verticalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Icon(Icons.Default.Sms, null, tint = Color.White.copy(alpha = .9f), modifier = Modifier.size(17.dp))
-                            Text("پیامک بانکی", fontSize = 10.sp, color = Color.White.copy(alpha = .7f))
+                            Icon(Icons.Default.Sms, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(17.dp))
+                            Text("پیامک بانکی", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                             Text(if (smsEnabled) "فعال" else "غیرفعال", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                     }
@@ -2912,7 +2912,7 @@ fun SettingsPage(
                         ListItem(
                             headlineContent = { Text(date, fontWeight = FontWeight.SemiBold) },
                             supportingContent = {
-                                Text((if (automatic) "خودکار" else "دستی") + " • " + String.format(Locale.getDefault(), "%.1f KB", file.length() / 1024.0))
+                                Text((if (automatic) "خودکار" else "دستی") + " • " + String.format(Locale.getDefault(), "%0.1f KB", file.length() / 1024.0))
                             },
                             leadingContent = { Icon(if (automatic) Icons.Default.Schedule else Icons.Default.Save, null) },
                             trailingContent = {
@@ -2999,7 +2999,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                     colors = CardDefaults.cardColors(
                         containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.07f))
                 ) {
                     Row(
                         Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
@@ -3007,7 +3007,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                     ) {
                         Box(
                             Modifier.size(50.dp).clip(RoundedCornerShape(17.dp))
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .11f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.11f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Default.AccountBalanceWallet, null,
@@ -3070,7 +3070,7 @@ fun CardsPage(cards: List<BankCard>, transactions: List<Transaction>, workDays: 
                         ) {
                             Box(
                                 Modifier.size(66.dp).clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Default.CreditCard, null,
@@ -3197,7 +3197,7 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                             colors = CardDefaults.cardColors(
                                 containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
                             ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.07f))
                         ) {
                             Row(
                                 Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -3205,7 +3205,7 @@ fun WorkplacesPage(workplaces: List<Workplace>, onWorkplacesChange: (MutableList
                             ) {
                                 Box(
                                     Modifier.size(50.dp).clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .11f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.11f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(25.dp))
@@ -3253,7 +3253,7 @@ fun EditWorkplaceDialog(place: Workplace, onDismiss: () -> Unit, onSave: (Workpl
     var name by remember(place.id) { mutableStateOf(place.name) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp), shape = RoundedCornerShape(30.dp),
-            color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = .94f) else MaterialTheme.colorScheme.surface,
+            color = if (LocalVsoftGlass.current) MaterialTheme.colorScheme.surface.copy(alpha = 0.94f) else MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp, shadowElevation = 18.dp) {
             Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 VsoftFormHeader(
@@ -3367,7 +3367,7 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
             Modifier.fillMaxWidth().padding(8.dp),
             shape = RoundedCornerShape(30.dp),
             color = if (LocalVsoftGlass.current)
-                MaterialTheme.colorScheme.surface.copy(alpha = .94f)
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
             else MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp,
             shadowElevation = 18.dp
@@ -3389,14 +3389,14 @@ fun EditPersonDialog(person: Person, onDismiss: () -> Unit, onSave: (Person) -> 
                 Row(
                     Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = .08f))
+                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f))
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         Modifier.size(46.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = .14f)),
+                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -3509,7 +3509,7 @@ fun SettingsSection(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier.size(34.dp).clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(19.dp))
@@ -3675,7 +3675,7 @@ fun CardItem(
             containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
         ),
         border = if (LocalVsoftGlass.current)
-            BorderStroke(1.dp, Color.White.copy(alpha = .20f)) else null,
+            BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)) else null,
         elevation = CardDefaults.cardElevation(defaultElevation = if (LocalVsoftGlass.current) 10.dp else 6.dp)
     ) {
         Box(
@@ -3684,9 +3684,9 @@ fun CardItem(
                 .background(
                     Brush.linearGradient(
                         listOf(
-                            startColor.copy(alpha = if (LocalVsoftGlass.current) .62f else if (!isSystemInDarkTheme()) .94f else .72f),
-                            Color.White.copy(alpha = if (LocalVsoftGlass.current) .10f else .03f),
-                            endColor.copy(alpha = if (LocalVsoftGlass.current) .46f else if (!isSystemInDarkTheme()) .76f else .52f)
+                            startColor.copy(alpha = if (LocalVsoftGlass.current) 0.62f else if (!isSystemInDarkTheme()) 0.94f else 0.72f),
+                            Color.White.copy(alpha = if (LocalVsoftGlass.current) 0.10f else 0.03f),
+                            endColor.copy(alpha = if (LocalVsoftGlass.current) 0.46f else if (!isSystemInDarkTheme()) 0.76f else 0.52f)
                         )
                     )
                 )
@@ -3698,7 +3698,7 @@ fun CardItem(
                         Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = .18f)),
+                            .background(Color.White.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -3719,7 +3719,7 @@ fun CardItem(
                         Text(
                             card.name,
                             fontSize = 12.sp,
-                            color = Color.White.copy(alpha = .78f)
+                            color = Color.White.copy(alpha = 0.78f)
                         )
                     }
                     IconButton(onClick = { reveal = !reveal }) {
@@ -3733,7 +3733,7 @@ fun CardItem(
                         Icon(
                             Icons.Default.DeleteOutline,
                             null,
-                            tint = Color.White.copy(alpha = .92f)
+                            tint = Color.White.copy(alpha = 0.92f)
                         )
                     }
                 }
@@ -3769,7 +3769,7 @@ fun CardItem(
                         Text(
                             uiText("موجودی فعلی"),
                             fontSize = 11.sp,
-                            color = Color.White.copy(alpha = .72f)
+                            color = Color.White.copy(alpha = 0.72f)
                         )
                         Text(
                             money(animatedBalance.toLong()),
@@ -3781,7 +3781,7 @@ fun CardItem(
                     Text(
                         uiText("برای ویرایش ضربه بزنید"),
                         fontSize = 11.sp,
-                        color = Color.White.copy(alpha = .72f)
+                        color = Color.White.copy(alpha = 0.72f)
                     )
                 }
             }
@@ -3792,7 +3792,7 @@ fun CardItem(
 @Composable
 fun AddCardDialog(onDismiss:()->Unit,onSave:(BankCard)->Unit){
  var bank by remember{mutableStateOf("")};var name by remember{mutableStateOf("")};var cardNumber by remember{mutableStateOf("")};var balance by remember{mutableStateOf("")}
- Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
+ Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=0.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=660.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
    VsoftFormHeader(
        title = uiText("کارت بانکی جدید"),
@@ -3801,7 +3801,7 @@ fun AddCardDialog(onDismiss:()->Unit,onSave:(BankCard)->Unit){
        accent = Color(0xFF3D71D9),
        onDismiss = onDismiss
    )
-   AnimatedVisibility(cardNumber.isNotBlank()){val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=.92f),c.second.copy(alpha=.88f)))).padding(16.dp)){Column{Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.Bold);Spacer(Modifier.height(13.dp));Text(if(cardNumber.length>=4)"••••  ••••  ••••  "+cardNumber.takeLast(4)else cardNumber,color=Color.White,fontSize=14.sp,letterSpacing=1.5.sp);Spacer(Modifier.height(7.dp));Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=.72f),fontSize=11.sp)}}}
+   AnimatedVisibility(cardNumber.isNotBlank()){val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=0.92f),c.second.copy(alpha=0.88f)))).padding(16.dp)){Column{Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.Bold);Spacer(Modifier.height(13.dp));Text(if(cardNumber.length>=4)"••••  ••••  ••••  "+cardNumber.takeLast(4)else cardNumber,color=Color.White,fontSize=14.sp,letterSpacing=1.5.sp);Spacer(Modifier.height(7.dp));Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=0.72f),fontSize=11.sp)}}}
    OutlinedTextField(bank,{bank=it},label={Text(uiText("نام بانک"))},leadingIcon={Icon(Icons.Default.AccountBalance,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(name,{name=it},label={Text(uiText("عنوان کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},placeholder={Text(if(LocalVsoftLanguage.current=="en")"e.g. Personal card" else "مثلاً کارت شخصی")},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(cardNumber,{cardNumber=normalizeDigits(it).filter(Char::isDigit).take(16)},label={Text(uiText("شماره کامل کارت"))},leadingIcon={Icon(Icons.Default.Numbers,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,supportingText={Text(cardNumber.length.toString()+" / 16")},shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
@@ -3814,7 +3814,7 @@ fun AddCardDialog(onDismiss:()->Unit,onSave:(BankCard)->Unit){
 @Composable
 fun EditCardDialog(card:BankCard,onDismiss:()->Unit,onSave:(BankCard)->Unit){
  var bank by remember(card.id){mutableStateOf(card.bank)};var name by remember(card.id){mutableStateOf(card.name)};var num by remember(card.id){mutableStateOf(card.cardNumber)};var balance by remember(card.id){mutableStateOf(card.openingBalance.toString())}
- Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
+ Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=0.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=650.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
    VsoftFormHeader(
        title = uiText("ویرایش کارت"),
@@ -3823,7 +3823,7 @@ fun EditCardDialog(card:BankCard,onDismiss:()->Unit,onSave:(BankCard)->Unit){
        accent = Color(0xFF3D71D9),
        onDismiss = onDismiss
    )
-   val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=.92f),c.second.copy(alpha=.88f)))).padding(15.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.CreditCard,null,tint=Color.White);Spacer(Modifier.width(9.dp));Column(Modifier.weight(1f)){Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.Bold);Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=.72f),fontSize=11.sp)};Text("•••• "+num.filter(Char::isDigit).takeLast(4),color=Color.White,fontSize=12.sp)}}
+   val c=bankCardColors(bank);Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c.first.copy(alpha=0.92f),c.second.copy(alpha=0.88f)))).padding(15.dp)){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Default.CreditCard,null,tint=Color.White);Spacer(Modifier.width(9.dp));Column(Modifier.weight(1f)){Text(bank.ifBlank{uiText("کارت")},color=Color.White,fontWeight=FontWeight.Bold);Text(name.ifBlank{"VSOFT"},color=Color.White.copy(alpha=0.72f),fontSize=11.sp)};Text("•••• "+num.filter(Char::isDigit).takeLast(4),color=Color.White,fontSize=12.sp)}}
    OutlinedTextField(bank,{bank=it},label={Text(uiText("بانک"))},leadingIcon={Icon(Icons.Default.AccountBalance,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(name,{name=it},label={Text(uiText("نام کارت"))},leadingIcon={Icon(Icons.Default.CreditCard,null)},singleLine=true,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
    OutlinedTextField(num,{num=normalizeDigits(it).filter(Char::isDigit).take(16)},label={Text(uiText("شماره کامل کارت"))},leadingIcon={Icon(Icons.Default.Numbers,null)},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true,supportingText={Text(num.length.toString()+" / 16")},shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth())
@@ -3836,7 +3836,7 @@ fun EditCardDialog(card:BankCard,onDismiss:()->Unit,onSave:(BankCard)->Unit){
 @Composable
 fun AddWorkplaceDialog(onDismiss:()->Unit,onSave:(Workplace)->Unit){
  var name by remember{mutableStateOf("")}
- Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
+ Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=0.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
    VsoftFormHeader(
        title = uiText("محل کار جدید"),
@@ -3869,7 +3869,7 @@ fun PersonItem(
         colors = CardDefaults.cardColors(
             containerColor = if (LocalVsoftGlass.current) Color.Transparent else MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .07f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.07f))
     ) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
@@ -3878,7 +3878,7 @@ fun PersonItem(
             val avatarColor = MaterialTheme.colorScheme.primary
             Box(
                 Modifier.size(52.dp).clip(CircleShape)
-                    .background(avatarColor.copy(alpha = .12f)),
+                    .background(avatarColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -3926,7 +3926,7 @@ fun PersonItem(
 @Composable
 fun AddPersonDialog(onDismiss:()->Unit,onSave:(Person)->Unit){
  var name by remember{mutableStateOf("")};var phone by remember{mutableStateOf("")};var job by remember{mutableStateOf("")};var note by remember{mutableStateOf("")}
- Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
+ Dialog(onDismissRequest=onDismiss){Surface(Modifier.fillMaxWidth().padding(8.dp),shape=RoundedCornerShape(30.dp),color=if(LocalVsoftGlass.current)MaterialTheme.colorScheme.surface.copy(alpha=0.94f)else MaterialTheme.colorScheme.surface,tonalElevation=8.dp,shadowElevation=18.dp){
   Column(Modifier.padding(22.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(11.dp)){
    VsoftFormHeader(
        title = uiText("شخص جدید"),
@@ -4099,7 +4099,7 @@ fun InfoCard(title: String, value: String, icon: androidx.compose.ui.graphics.ve
     ) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(46.dp).clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                 contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
             }
