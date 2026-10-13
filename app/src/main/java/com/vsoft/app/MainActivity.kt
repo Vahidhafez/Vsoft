@@ -2555,7 +2555,7 @@ fun ReceiptBuilderDialog(transactions:List<Transaction>,workDays:List<WorkDay>,c
                 Text("${uiText("تعداد تراکنش‌ها")}: ${filtered.size}",fontWeight=FontWeight.SemiBold);Text("${uiText("درآمد")}: ${money(income)}",color=MaterialTheme.colorScheme.primary,fontWeight=FontWeight.Bold);Text("${uiText("هزینه")}: ${money(expense)}",color=MaterialTheme.colorScheme.error,fontWeight=FontWeight.Bold);Text("${uiText("خالص")}: ${money(income-expense)}",fontWeight=FontWeight.Bold)
             }}
         }},
-        confirmButton={Button(onClick={shareVsoftReceipt(context,filtered,workFiltered,start,end,receiptTitle(mode));onDismiss()},enabled=filtered.isNotEmpty()||workFiltered.isNotEmpty()){Icon(Icons.Default.Image,null);Spacer(Modifier.width(6.dp));Text(uiText("ساخت عکس"))}},
+        confirmButton={Button(onClick={shareVsoftReceipt(context,filtered,workFiltered,start,end,when(mode){"daily"->"گزارش روزانه";"weekly"->"گزارش هفتگی";"monthly"->"گزارش ماهانه";else->"گزارش بازه دلخواه"});onDismiss()},enabled=filtered.isNotEmpty()||workFiltered.isNotEmpty()){Icon(Icons.Default.Image,null);Spacer(Modifier.width(6.dp));Text(uiText("ساخت عکس"))}},
         dismissButton={TextButton(onClick=onDismiss){Text(uiText("لغو"))}})
     if(dateOpen==1)JalaliDatePickerDialog(start,{dateOpen=0}){start=it;mode="custom";dateOpen=0}
     if(dateOpen==2)JalaliDatePickerDialog(end,{dateOpen=0}){end=it;mode="custom";dateOpen=0}
@@ -2702,7 +2702,7 @@ fun shareVsoftReceipt(context:Context,transactions:List<Transaction>,workDays:Li
     } catch(_:Exception) {
         context.contentResolver.delete(uri,null,null)
     } finally { bitmap.recycle() }
-}}
+}
 // ---------------- SETTINGS ----------------
 
 @Composable
