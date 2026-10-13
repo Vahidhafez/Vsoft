@@ -2584,36 +2584,36 @@ fun VsoftPremiumPageHero(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     accent: Color
 ) {
+    val colors = VsoftTheme.colors
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        shape = VsoftShapes.card,
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, colors.separator.copy(alpha = 0.65f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
-            Modifier.fillMaxWidth()
-                .background(Brush.linearGradient(listOf(accent, Color(0xFF243B73), Color(0xFF116F73))))
-                .padding(horizontal = 19.dp, vertical = 18.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 17.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
-                    "VSOFT  /  PERSONAL FINANCE",
-                    color = Color.White.copy(alpha = 0.72f),
-                    fontSize = 9.sp,
+                    "VSOFT",
+                    color = colors.labelTertiary,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.1.sp
                 )
-                Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = Color.White.copy(alpha = 0.82f), fontSize = 11.sp)
+                Text(title, color = colors.label, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = colors.labelSecondary, fontSize = 12.sp)
             }
             Spacer(Modifier.width(12.dp))
             Box(
-                Modifier.size(52.dp).clip(RoundedCornerShape(17.dp))
-                    .background(Color.White.copy(alpha = 0.15f)),
+                Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
+                    .background(accent.copy(alpha = if (colors.isDark) 0.22f else 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(27.dp))
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(25.dp))
             }
         }
     }
