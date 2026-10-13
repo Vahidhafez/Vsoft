@@ -104,7 +104,7 @@ fun VsoftToolsPage(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(title, color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(title, color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                             Text(subtitle, color = Color.White.copy(alpha = .78f), fontSize = 11.sp)
                         }
                         Box(
@@ -153,7 +153,7 @@ fun VsoftToolsPage(
                 }
             }
             item {
-                Text(smartToolsTitle, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                Text(smartToolsTitle, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(
                     if (isEnglish) "Open a tool in its own workspace." else if (isArabic) "افتح الأداة في صفحة مستقلة." else "هر ابزار در صفحه‌ای مستقل و مرتب باز می‌شود.",
                     fontSize = 12.sp,
@@ -203,7 +203,7 @@ fun VsoftToolsPage(
                             else -> toolsText(language, "insights")
                         },
                         fontSize = 21.sp,
-                        fontWeight = FontWeight.ExtraBold
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         if (isEnglish) "VSOFT SMART TOOLS" else "ابزارهای هوشمند VSOFT",
@@ -281,7 +281,7 @@ private fun MoreHubTile(
             ) {
                 Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
             }
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Icon(Icons.Default.ArrowForward, null, tint = accent, modifier = Modifier.size(17.dp))
@@ -307,7 +307,7 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
                 Column(Modifier.padding(14.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         TextButton(onClick = { month--; if (month < 1) { month = 12; year-- }; selectedDay = 1 }) { Text("‹ " + toolsText(language, "previous")) }
-                        Text(jalaliMonthName(month) + " " + year, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                        Text(jalaliMonthName(month) + " " + year, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         TextButton(onClick = { month++; if (month > 12) { month = 1; year++ }; selectedDay = 1 }) { Text(toolsText(language, "next") + " ›") }
                     }
                     val gregorian = jalaliToGregorian(year, month, 1)
@@ -336,7 +336,7 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
                                     Text(
                                         weekday,
                                         fontSize = if (language == "fa") 10.sp else 9.sp,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontWeight = FontWeight.Bold,
                                         color = if (isFriday) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         softWrap = false
@@ -406,7 +406,7 @@ private fun VsoftCalendarContent(language: String, transactions: List<Transactio
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             if (language == "en") "Daily summary" else if (language == "ar") "ملخص اليوم" else "خلاصه فعالیت روز",
-                            fontWeight = FontWeight.ExtraBold, fontSize = 15.sp
+                            fontWeight = FontWeight.Bold, fontSize = 15.sp
                         )
                         Text(
                             if (language == "en") "${dayTransactions.size} transactions • ${dayWork.size} work entries"
@@ -622,7 +622,7 @@ private fun ToolMetric(title: String, value: String, icon: androidx.compose.ui.g
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(value, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                Text(value, fontSize = 21.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
