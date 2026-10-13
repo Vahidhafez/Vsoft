@@ -1788,7 +1788,7 @@ fun AddTransactionDialog(
                     val colors = bankCardColors(selectedCard.bank)
                     Box(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                            .background(Brush.linearGradient(listOf(colors.first.copy(alpha = .94f), colors.second.copy(alpha = .90f))))
+                            .background(colors.first)
                             .padding(13.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2199,7 +2199,7 @@ fun AddWorkDialog(
                     title = if (existing == null) uiText("ثبت روز کاری") else uiText("ویرایش روز کاری"),
                     subtitle = uiText("زمان، درآمد و جزئیات کار"),
                     icon = Icons.Default.Work,
-                    accent = Color(0xFF0B9B83),
+                    accent = VsoftTheme.colors.accent,
                     onDismiss = onDismiss
                 )
                 VsoftFormSectionLabel(
@@ -2325,7 +2325,7 @@ fun AddWorkDialog(
                 if (selectedCard != null) {
                     val colors = bankCardColors(selectedCard.bank)
                     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                        .background(Brush.linearGradient(listOf(colors.first.copy(alpha = .94f), colors.second.copy(alpha = .90f)))).padding(13.dp)) {
+                        .background(colors.first).padding(13.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CreditCard, null, tint = Color.White, modifier = Modifier.size(21.dp)); Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
