@@ -122,14 +122,14 @@ fun VsoftToolsPage(
                         title = if (isEnglish) "People" else if (isArabic) "الأشخاص" else "افراد",
                         subtitle = if (isEnglish) "${people.size} contacts" else "${people.size} نفر ثبت‌شده",
                         icon = Icons.Default.PeopleAlt,
-                        accent = Color(0xFF7357D8),
+                        accent = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     ) { onNavigate(7) }
                     MoreHubTile(
                         title = if (isEnglish) "Workplaces" else if (isArabic) "أماكن العمل" else "محل‌های کار",
                         subtitle = if (isEnglish) "${workplaces.size} places" else "${workplaces.size} محل ثبت‌شده",
                         icon = Icons.Default.Place,
-                        accent = Color(0xFF0B9B83),
+                        accent = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     ) { onNavigate(6) }
                 }
@@ -140,7 +140,7 @@ fun VsoftToolsPage(
                         title = if (isEnglish) "Bank cards" else if (isArabic) "البطاقات" else "کارت‌های بانکی",
                         subtitle = if (isEnglish) "${cards.size} cards" else "${cards.size} کارت ثبت‌شده",
                         icon = Icons.Default.CreditCard,
-                        accent = Color(0xFF3D71D9),
+                        accent = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     ) { onNavigate(5) }
                     MoreHubTile(
@@ -166,21 +166,21 @@ fun VsoftToolsPage(
                         title = toolsText(language, "calendar"),
                         subtitle = if (isEnglish) "Browse activity by date" else if (isArabic) "تصفح النشاط حسب التاريخ" else "بررسی تراکنش‌ها و روزهای کاری بر اساس تاریخ",
                         icon = Icons.Default.CalendarMonth,
-                        accent = Color(0xFF3D71D9),
+                        accent = MaterialTheme.colorScheme.primary,
                         onClick = { mode = 0 }
                     )
                     SmartToolRow(
                         title = toolsText(language, "search"),
                         subtitle = if (isEnglish) "Find transactions, work and contacts" else if (isArabic) "ابحث عن المعاملات والعمل وجهات الاتصال" else "پیداکردن سریع تراکنش‌ها، کارها و افراد",
                         icon = Icons.Default.Search,
-                        accent = Color(0xFF0B9B83),
+                        accent = MaterialTheme.colorScheme.secondary,
                         onClick = { mode = 1 }
                     )
                     SmartToolRow(
                         title = toolsText(language, "insights"),
                         subtitle = if (isEnglish) "Review your financial overview" else if (isArabic) "راجع ملخصك المالي" else "مرور خلاصه عملکرد مالی و کاری",
                         icon = Icons.Default.AutoGraph,
-                        accent = Color(0xFF7357D8),
+                        accent = MaterialTheme.colorScheme.tertiary,
                         onClick = { mode = 2 }
                     )
                 }
