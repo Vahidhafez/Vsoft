@@ -98,7 +98,7 @@ fun VsoftToolsPage(
                     Row(
                         Modifier.fillMaxWidth().background(
                             androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(Color(0xFF172B59), Color(0xFF3659B8), Color(0xFF147E83))
+                                listOf(Color(0xFF172746), Color(0xFF3155A3), Color(0xFF147C78))
                             )
                         ).padding(horizontal = 18.dp, vertical = 17.dp),
                         verticalAlignment = Alignment.CenterVertically
