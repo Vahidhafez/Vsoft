@@ -1840,142 +1840,102 @@ fun DashboardPage(
     val workIncome = workDays.sumOf { it.income }
     val balance = cards.sumOf { it.openingBalance } + income + workIncome - expense
     val totalHours = workDays.sumOf { calculateHours(it.start, it.end) }
-    val currentJalali = today()
-    val monthPrefix = currentJalali.substringBeforeLast("/") + "/"
+    val monthPrefix = today().substringBeforeLast("/") + "/"
     val monthWorkDays = workDays.filter { it.date.startsWith(monthPrefix) }
     val monthWorkIncome = monthWorkDays.sumOf { it.income }
     val monthExpenses = transactions.filter { it.type == "expense" && it.date.startsWith(monthPrefix) }.sumOf { it.amount }
     val monthIncome = transactions.filter { it.type == "income" && it.date.startsWith(monthPrefix) }.sumOf { it.amount }
     val monthNet = monthWorkIncome + monthIncome - monthExpenses
-    val recent = transactions.sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending { it.id }).take(4)
+    val recent = transactions.sortedWith(compareByDescending<Transaction> { it.date }.thenByDescending { it.id }).take(5)
+    var balanceVisible by rememberSaveable { mutableStateOf(true) }
+    val monthInflow = monthIncome + monthWorkIncome
+    val expenseShare = if (monthInflow > 0L) (monthExpenses.toFloat() / monthInflow.toFloat()).coerceIn(0f, 1f) else 0f
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 30.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 34.dp),
+        verticalArrangement = Arrangement.spacedBy(15.dp)
     ) {
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("سلام، خوش اومدی", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("مدیریت مالی تو", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-                    Text(today(), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier.size(48.dp).clip(RoundedCornerShape(17.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+                        .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))),
                     contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Wallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(25.dp))
+                ) { Icon(Icons.Default.Wallet, null, tint = Color.White, modifier = Modifier.size(25.dp)) }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(if (LocalVsoftLanguage.current == "en") "YOUR OVERVIEW" else "نمای کلی حساب و کار", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.1.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(if (LocalVsoftLanguage.current == "en") "Good to see you" else "همه‌چیز مرتب و یک‌جا", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(today(), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(onClick = { onNavigate(4) }, modifier = Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)) {
+                    Icon(Icons.Default.Tune, contentDescription = strings.settings, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { onNavigate(3) },
-                shape = RoundedCornerShape(30.dp),
+                modifier = Modifier.fillMaxWidth().pressScale(0.99f).clickable { onNavigate(3) },
+                shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Box(
-                    Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF172746), Color(0xFF263F73), Color(0xFF176E70)))).padding(22.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("موجودی کل حساب‌ها", color = Color.White.copy(alpha = .78f), fontSize = 13.sp)
-                                Spacer(Modifier.height(7.dp))
-                                Text(money(balance), color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                            }
-                            Box(
-                                Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
-                                    .background(Color.White.copy(alpha = .14f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.AccountBalanceWallet, null, tint = Color.White, modifier = Modifier.size(25.dp))
-                            }
+                Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF172746), Color(0xFF254C79), Color(0xFF147C78)))).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(if (LocalVsoftLanguage.current == "en") "TOTAL AVAILABLE BALANCE" else "موجودی فعلی همه حساب‌ها", color = Color.White.copy(alpha = .76f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text(if (balanceVisible) money(balance) else "••••••••", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                            Text(if (LocalVsoftLanguage.current == "en") "Tap to open your financial report" else "برای مشاهده جزئیات، گزارش مالی را باز کن", color = Color.White.copy(alpha = .67f), fontSize = 10.sp)
                         }
-                        HorizontalDivider(color = Color.White.copy(alpha = .18f))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.ArrowDownward, null, tint = Color(0xFF8DF0CD), modifier = Modifier.size(15.dp))
-                                    Spacer(Modifier.width(5.dp))
-                                    Text("درآمد", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                Text(money(income + workIncome), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        IconButton(onClick = { balanceVisible = !balanceVisible }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = .13f))) {
+                            Icon(if (balanceVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = if (balanceVisible) "پنهان کردن موجودی" else "نمایش موجودی", tint = Color.White)
+                        }
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = .18f))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.SouthWest, null, tint = Color(0xFF8DF0CD), modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text(if (LocalVsoftLanguage.current == "en") "Income" else "درآمد ثبت‌شده", color = Color.White.copy(alpha = .76f), fontSize = 11.sp)
                             }
-                            Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.ArrowUpward, null, tint = Color(0xFFFFC3B9), modifier = Modifier.size(15.dp))
-                                    Spacer(Modifier.width(5.dp))
-                                    Text("هزینه", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                Text(money(expense), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(if (balanceVisible) money(income + workIncome) else "••••••", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                        Box(Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = .2f)))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.NorthEast, null, tint = Color(0xFFFFC3B9), modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text(if (LocalVsoftLanguage.current == "en") "Expenses" else "هزینه ثبت‌شده", color = Color.White.copy(alpha = .76f), fontSize = 11.sp)
                             }
+                            Text(if (balanceVisible) money(expense) else "••••••", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                     }
                 }
             }
         }
-
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DashboardMetric("تراکنش‌ها", transactions.size.toString(), Icons.Default.ReceiptLong, MaterialTheme.colorScheme.primary, Modifier.weight(1f).clickable { onNavigate(1) })
-                DashboardMetric("ساعت کاری", String.format(Locale.US, "%.1f", totalHours), Icons.Default.AccessTime, MaterialTheme.colorScheme.secondary, Modifier.weight(1f).clickable { onNavigate(2) })
-            }
-        }
-
-        if (cards.isNotEmpty()) {
-            item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("کارت‌های بانکی", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("موجودی فعلی هر کارت", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    TextButton(onClick = { onNavigate(5) }) {
-                        Text("مدیریت کارت‌ها")
-                        Spacer(Modifier.width(4.dp))
-                        Icon(Icons.Default.ArrowBack, null, modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-            item {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(end = 2.dp, start = 2.dp)
-                ) {
-                    items(cards, key = { it.id }) { card ->
-                        MiniBankCard(
-                            card = card,
-                            balance = cardCurrentBalance(card, transactions, workDays),
-                            onClick = { onNavigate(5) }
-                        )
-                    }
-                }
-            }
-        }
-
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("دسترسی سریع", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("بخش موردنظرت رو انتخاب کن", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (LocalVsoftLanguage.current == "en") "Quick actions" else "کارهای پرکاربرد", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { onNavigate(8) }) {
+                    Text(if (LocalVsoftLanguage.current == "en") "All tools" else "همه ابزارها", fontSize = 12.sp)
+                    Icon(Icons.Default.ArrowBack, null, modifier = Modifier.size(15.dp))
                 }
             }
         }
-
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DashboardQuickAction("تراکنش جدید", Icons.Default.AddCard, MaterialTheme.colorScheme.primary, Modifier.weight(1f)) { onNavigate(1) }
-                DashboardQuickAction("ثبت روز کاری", Icons.Default.WorkHistory, MaterialTheme.colorScheme.secondary, Modifier.weight(1f)) { onNavigate(2) }
-                DashboardQuickAction("گزارش مالی", Icons.Default.QueryStats, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)) { onNavigate(3) }
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    DashboardQuickAction("ثبت تراکنش", Icons.Default.AddCard, MaterialTheme.colorScheme.primary, Modifier.weight(1f)) { onNavigate(1) }
+                    DashboardQuickAction("ثبت روز کاری", Icons.Default.WorkHistory, MaterialTheme.colorScheme.secondary, Modifier.weight(1f)) { onNavigate(2) }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    DashboardQuickAction("گزارش مالی", Icons.Default.QueryStats, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f)) { onNavigate(3) }
+                    DashboardQuickAction("کارت‌های بانکی", Icons.Default.CreditCard, MaterialTheme.colorScheme.primary, Modifier.weight(1f)) { onNavigate(5) }
+                }
             }
         }
-
         item {
             Card(
                 modifier = Modifier.fillMaxWidth().clickable { onNavigate(3) },
@@ -1983,40 +1943,72 @@ fun DashboardPage(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .08f))
             ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("خلاصهٔ این ماه", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                            Text("درآمد و هزینهٔ ثبت‌شده", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(if (LocalVsoftLanguage.current == "en") "This month" else "وضعیت این ماه", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(if (LocalVsoftLanguage.current == "en") "Money in vs. money out" else "مقایسه درآمد و هزینه", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Box(
-                            Modifier.clip(RoundedCornerShape(13.dp))
-                                .background((if (monthNet >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error).copy(alpha = .12f))
-                                .padding(horizontal = 11.dp, vertical = 8.dp)
-                        ) {
-                            Text(money(monthNet), color = if (monthNet >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Surface(shape = RoundedCornerShape(13.dp), color = (if (monthNet >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error).copy(alpha = .12f)) {
+                            Text((if (monthNet >= 0) "+" else "−") + money(kotlin.math.abs(monthNet)), modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), color = if (monthNet >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, maxLines = 1)
                         }
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        DashboardMiniStat("درآمد", money(monthIncome + monthWorkIncome), Icons.Default.TrendingUp, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                        DashboardMiniStat("هزینه", money(monthExpenses), Icons.Default.TrendingDown, MaterialTheme.colorScheme.error, Modifier.weight(1f))
-                        DashboardMiniStat("روز کاری", monthWorkDays.size.toString(), Icons.Default.EventAvailable, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.secondary.copy(alpha = .09f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(if (LocalVsoftLanguage.current == "en") "Income" else "درآمد", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (balanceVisible) money(monthInflow) else "••••••", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, color = MaterialTheme.colorScheme.secondary)
+                        }
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.error.copy(alpha = .07f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(if (LocalVsoftLanguage.current == "en") "Expenses" else "هزینه", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (balanceVisible) money(monthExpenses) else "••••••", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (LocalVsoftLanguage.current == "en") "Expenses / income" else "سهم هزینه از درآمد", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                            Text("${(expenseShare * 100).toInt()}%", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        LinearProgressIndicator(progress = { expenseShare }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(10.dp)), color = if (expenseShare >= 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, trackColor = MaterialTheme.colorScheme.surfaceVariant)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DashboardMiniStat("روزهای کاری", monthWorkDays.size.toString(), Icons.Default.EventAvailable, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                        DashboardMiniStat("ساعت کاری", String.format(Locale.US, "%.1f", totalHours), Icons.Default.Schedule, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
                     }
                 }
             }
         }
-
+        if (cards.isNotEmpty()) {
+            item {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(if (LocalVsoftLanguage.current == "en") "Your cards" else "کارت‌های بانکی", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(if (LocalVsoftLanguage.current == "en") "Tap a card to manage it" else "برای مدیریت کارت لمس کن", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = { onNavigate(5) }) { Text(if (LocalVsoftLanguage.current == "en") "Manage" else "مدیریت") }
+                }
+            }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(11.dp), contentPadding = PaddingValues(horizontal = 1.dp)) {
+                    items(cards, key = { it.id }) { card ->
+                        MiniBankCard(card = card, balance = cardCurrentBalance(card, transactions, workDays), onClick = { onNavigate(5) })
+                    }
+                }
+            }
+        }
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("آخرین تراکنش‌ها", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
-                TextButton(onClick = { onNavigate(1) }) { Text("مشاهده همه") }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(if (LocalVsoftLanguage.current == "en") "Recent transactions" else "تراکنش‌های اخیر", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(if (LocalVsoftLanguage.current == "en") "Latest recorded activity" else "آخرین فعالیت‌های ثبت‌شده", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                TextButton(onClick = { onNavigate(1) }) { Text(if (LocalVsoftLanguage.current == "en") "View all" else "مشاهده همه") }
             }
         }
         if (recent.isEmpty()) {
-            item { EmptyState("هنوز تراکنشی ثبت نشده", Icons.Default.ReceiptLong) }
+            item { EmptyState(if (LocalVsoftLanguage.current == "en") "No transactions yet" else "هنوز تراکنشی ثبت نشده", Icons.Default.ReceiptLong) }
         } else {
             items(recent, key = { it.id }) { transaction ->
-                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).clickable { onNavigate(1) }) {
+                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { onNavigate(1) }) {
                     TransactionCard(transaction, onDelete = {}, showActions = false)
                 }
             }
