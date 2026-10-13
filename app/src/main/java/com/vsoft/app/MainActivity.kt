@@ -1164,47 +1164,47 @@ fun VsoftApp() {
 
         val colors = if (darkTheme) {
             darkColorScheme(
-                primary = Color(0xFF9DBBFF),
+                primary = Color(0xFF91AAFF),
                 onPrimary = Color(0xFF07111F),
-                secondary = Color(0xFF7EE2C4),
+                secondary = Color(0xFF65D9BB),
                 onSecondary = Color(0xFF062018),
-                tertiary = Color(0xFFFFC078),
+                tertiary = Color(0xFFFFC477),
                 onTertiary = Color(0xFF2A1600),
-                background = Color(0xFF070B12),
+                background = Color(0xFF0B1018),
                 onBackground = Color(0xFFF2F6FC),
-                surface = Color(0xFF111824),
+                surface = Color(0xFF141B26),
                 onSurface = Color(0xFFF2F6FC),
-                surfaceVariant = Color(0xFF202A38),
+                surfaceVariant = Color(0xFF202B3B),
                 onSurfaceVariant = Color(0xFFC3CDDB),
-                outline = Color(0xFF66758A)
+                outline = Color(0xFF536177)
             )
         } else {
             lightColorScheme(
-                primary = Color(0xFF315EFB),
+                primary = Color(0xFF365DDE),
                 onPrimary = Color.White,
-                secondary = Color(0xFF087F68),
+                secondary = Color(0xFF0E8878),
                 onSecondary = Color.White,
-                tertiary = Color(0xFFC96F12),
+                tertiary = Color(0xFFC17A2D),
                 onTertiary = Color.White,
-                background = Color(0xFFF5F7FB),
-                onBackground = Color(0xFF101828),
+                background = Color(0xFFF4F6FA),
+                onBackground = Color(0xFF172033),
                 surface = Color.White,
-                onSurface = Color(0xFF101828),
-                surfaceVariant = Color(0xFFEDF1F7),
+                onSurface = Color(0xFF172033),
+                surfaceVariant = Color(0xFFE9EDF4),
                 onSurfaceVariant = Color(0xFF596579),
-                outline = Color(0xFF7A8799)
+                outline = Color(0xFF8995A8)
             )
         }
 
         val themedColors = if (glass) {
             if (darkTheme) colors.copy(
-                background = Color(0xFF070B12),
-                surface = Color(0xCC18212C),
-                surfaceVariant = Color(0x661F2B38)
+                background = Color(0xFF0B1018),
+                surface = Color(0xCC171F2C),
+                surfaceVariant = Color(0x66232E3E)
             ) else colors.copy(
-                background = Color(0xFFF1F5FC),
-                surface = Color(0xBFFFFFFF),
-                surfaceVariant = Color(0x88FFFFFF)
+                background = Color(0xFFF0F3F9),
+                surface = Color(0xEFFFFFFF),
+                surfaceVariant = Color(0xBFFFFFFF)
             )
         } else colors
 
@@ -1581,14 +1581,14 @@ fun MainScreen(
                         dampingRatio = 0.9f,
                         stiffness = 520f
                     ),
-                    initialOffsetX = { direction * it / 3 }
+                    initialOffsetX = { direction * it / 5 }
                 ) + fadeIn(tween(180)) + scaleIn(
                     animationSpec = spring(dampingRatio = 0.9f, stiffness = 520f),
                     initialScale = 0.985f
                 )) togetherWith
                 (slideOutHorizontally(
                     animationSpec = tween(170, easing = FastOutSlowInEasing),
-                    targetOffsetX = { -direction * it / 8 }
+                    targetOffsetX = { -direction * it / 12 }
                 ) + fadeOut(tween(120)) + scaleOut(
                     animationSpec = tween(160, easing = FastOutSlowInEasing),
                     targetScale = 0.99f
@@ -1879,7 +1879,7 @@ fun DashboardPage(
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Box(
-                    Modifier.fillMaxWidth().background(Color(0xFF172844)).padding(22.dp)
+                    Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF172746), Color(0xFF263F73), Color(0xFF176E70)))).padding(22.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -3137,7 +3137,7 @@ fun WorkPage(
                     ) {
                         Column(
                             Modifier.fillMaxWidth().background(
-                                Brush.linearGradient(listOf(Color(0xFF0D665F), Color(0xFF128C83), Color(0xFF3A9E9A)))
+                                Brush.linearGradient(listOf(Color(0xFF17365B), Color(0xFF245B82), Color(0xFF147C78)))
                             ).padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
