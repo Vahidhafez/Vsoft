@@ -204,9 +204,13 @@ fun ConstructionTasksPage(
 
 @Composable
 private fun ProjectMetric(title: String, value: String, modifier: Modifier) {
-    Column(modifier.clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = .13f)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, color = Color.White.copy(alpha = .75f), fontSize = 10.sp, maxLines = 1)
-        Text(value, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+    val c = VsoftTheme.colors
+    Column(
+        modifier.clip(RoundedCornerShape(12.dp)).background(c.fieldBackground).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(title, color = c.labelSecondary, fontSize = 10.sp, maxLines = 1)
+        Text(value, color = c.label, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
