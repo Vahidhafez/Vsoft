@@ -1593,7 +1593,7 @@ fun DashboardPage(strings:AppStrings,transactions:List<Transaction>,workDays:Lis
 @Composable fun FinancePage(strings:AppStrings,transactions:List<Transaction>,cards:List<BankCard>,people:List<Person>,onTransactionsChange:(MutableList<Transaction>)->Unit){
  val c=VsoftTheme.colors;var show by remember{mutableStateOf(false)};var edit by remember{mutableStateOf<Transaction?>(null)};var receipt by remember{mutableStateOf<Transaction?>(null)};var actions by remember{mutableStateOf<Transaction?>(null)};var search by remember{mutableStateOf("")};var filter by remember{mutableStateOf("all")};VsoftRegisterAddAction{edit=null;show=true}
  val q=normalizeVsoftSearch(search);val list=transactions.filter{(filter=="all"||it.type==filter)&&(q.isBlank()||listOf(it.description,it.category,it.person,it.card,it.date).any{v->normalizeVsoftSearch(v).contains(q)})}.sortedWith(compareByDescending<Transaction>{it.date}.thenByDescending{it.id});val groups=list.groupBy{it.date};val inc=transactions.filter{it.type=="income"}.sumOf{it.amount};val exp=transactions.filter{it.type=="expense"}.sumOf{it.amount};val snack=remember{SnackbarHostState()};val scope=rememberCoroutineScope()
- fun delete(t:Transaction){val rest=transactions.filterNot{it.id==t.id}.toMutableList();onTransactionsChange(rest);scope.launch{if(snack.showSnackbar(vsoftT("تراکنش حذف شد","Transaction deleted","تم حذف المعاملة"),vsoftT("بازگردانی","Undo","تراجع"),duration=SnackbarDuration.Short)==SnackbarResult.ActionPerformed)onTransactionsChange((rest+t).sortedWith(compareByDescending<Transaction>{it.date}.thenByDescending{it.id}).toMutableList())}}
+ fun delete(t:Transaction){val rest=transactions.filterNot{it.id==t.id}.toMutableList();onTransactionsChange(rest);scope.launch{if(snack.showSnackbar("تراکنش حذف شد","بازگردانی",duration=SnackbarDuration.Short)==SnackbarResult.ActionPerformed)onTransactionsChange((rest+t).sortedWith(compareByDescending<Transaction>{it.date}.thenByDescending{it.id}).toMutableList())}}
  Box(Modifier.fillMaxSize()){LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,end=16.dp,top=4.dp,bottom=24.dp)){
  item{VsoftCardSurface{Row(Modifier.padding(16.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){FinanceStat(strings.income,inc,c.income,Modifier.weight(1f));FinanceStat(strings.expense,exp,c.expense,Modifier.weight(1f));FinanceStat(vsoftT("خالص","Net","الصافي"),inc-exp,if(inc>=exp)c.income else c.expense,Modifier.weight(1f))}}}
  item{Column(Modifier.padding(top=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){VsoftSearchField(search,{search=it},strings.search);VsoftSegmentedControl(options=listOf(vsoftT("همه","All","الكل"),strings.income,strings.expense),selectedIndex=when(filter){"income"->1;"expense"->2;else->0},onSelect={index->filter=when(index){1->"income";2->"expense";else->"all"}})}}
@@ -4083,6 +4083,42 @@ fun JalaliDatePickerDialog(
             }
         }
     )
+}
+
+// Compatibility components retained for legacy screens during the UI migration.
+@Composable
+fun DashboardMetric(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyState(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    VsoftEmptyState(title = title, icon = icon)
 }
 
 // ---------------- COMMON UI ----------------
