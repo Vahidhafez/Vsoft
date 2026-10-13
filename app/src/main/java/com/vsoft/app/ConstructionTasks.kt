@@ -100,39 +100,33 @@ fun ConstructionTasksPage(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Card(shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
-                    Column(
-                        Modifier.fillMaxWidth().background(
-                            androidx.compose.ui.graphics.Brush.linearGradient(
-                                listOf(Color(0xFF125C55), Color(0xFF16877B), Color(0xFF51A69B))
-                            )
-                        ).padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                val c = VsoftTheme.colors
+                Card(
+                    shape = VsoftShapes.card,
+                    colors = CardDefaults.cardColors(containerColor = c.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, c.separator.copy(alpha = 0.7f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(if (LocalVsoftLanguage.current == "en") "CONSTRUCTION PROJECT" else "پروژه ساختمانی", color = Color.White.copy(alpha = .75f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Text(workplace.name, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                                Text(if (LocalVsoftLanguage.current == "en") "$completeCount of ${tasks.size} tasks completed" else "${tasks.size} فعالیت • $completeCount تکمیل‌شده", color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
+                                Text(if (LocalVsoftLanguage.current == "en") "CONSTRUCTION PROJECT" else "پروژه ساختمانی", color = c.labelTertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(workplace.name, color = c.label, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+                                Text(if (LocalVsoftLanguage.current == "en") "$completeCount of ${tasks.size} tasks completed" else "${tasks.size} فعالیت • $completeCount تکمیل‌شده", color = c.labelSecondary, fontSize = 12.sp)
                             }
-                            Icon(Icons.Default.Apartment, null, tint = Color.White, modifier = Modifier.size(34.dp))
+                            Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(c.accent.copy(alpha = if (c.isDark) 0.22f else 0.11f)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Apartment, null, tint = c.accent, modifier = Modifier.size(25.dp))
+                            }
                         }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             ProjectMetric(if (LocalVsoftLanguage.current == "en") "Overall progress" else "پیشرفت کلی", "$progress%", Modifier.weight(1f))
                             ProjectMetric(if (LocalVsoftLanguage.current == "en") "Work days" else "روز کاری", "$totalDays", Modifier.weight(1f))
                             ProjectMetric(if (LocalVsoftLanguage.current == "en") "Total hours" else "مجموع ساعت", String.format(Locale.US, "%.1f", totalMinutes / 60.0), Modifier.weight(1f))
                         }
-                        LinearProgressIndicator(
-                            progress = { progress / 100f },
-                            modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(8.dp)),
-                            color = Color.White,
-                            trackColor = Color.White.copy(alpha = .22f)
-                        )
-                        Text(
-                            if (LocalVsoftLanguage.current == "en") "Project progress is the average of its activities." else "پیشرفت کلی، میانگین درصد پیشرفت فعالیت‌های این پروژه است.",
-                            color = Color.White.copy(alpha = .78f), fontSize = 11.sp
-                        )
+                        LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(8.dp)), color = c.accent, trackColor = c.fill)
+                        Text(if (LocalVsoftLanguage.current == "en") "Project progress is the average of its activities." else "پیشرفت کلی، میانگین درصد پیشرفت فعالیت‌های این پروژه است.", color = c.labelSecondary, fontSize = 11.sp)
                     }
+                }
                 }
             }
             item {
