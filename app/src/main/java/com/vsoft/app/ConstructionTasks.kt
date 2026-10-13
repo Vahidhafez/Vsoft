@@ -127,7 +127,6 @@ fun ConstructionTasksPage(
                         Text(if (LocalVsoftLanguage.current == "en") "Project progress is the average of its activities." else "پیشرفت کلی، میانگین درصد پیشرفت فعالیت‌های این پروژه است.", color = c.labelSecondary, fontSize = 11.sp)
                     }
                 }
-                }
             }
             item {
                 Text(if (LocalVsoftLanguage.current == "en") "Construction activities" else "فعالیت‌های ساختمانی", fontSize = 18.sp, fontWeight = FontWeight.Bold)
