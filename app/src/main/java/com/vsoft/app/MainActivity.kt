@@ -1472,38 +1472,34 @@ fun MainScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Surface(
-                color = MaterialTheme.colorScheme.background,
-                tonalElevation = 0.dp
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 20.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("VSOFT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.primary)
-                        AnimatedContent(
-                            targetState = pages[selectedPage],
-                            transitionSpec = {
-                                (fadeIn(tween(160)) + slideInHorizontally(tween(200)) { it / 8 }) togetherWith
-                                    (fadeOut(tween(100)) + slideOutHorizontally(tween(140)) { -it / 10 })
-                            },
-                            label = "redesign_page_title"
-                        ) { title ->
-                            Text(title, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+            if (selectedPage != 0) {
+                Surface(color = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 20.dp, end = 14.dp, top = 10.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("VSOFT", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.primary)
+                            AnimatedContent(
+                                targetState = pages[selectedPage],
+                                transitionSpec = {
+                                    (fadeIn(tween(140)) + slideInHorizontally(tween(170)) { it / 10 }) togetherWith
+                                        (fadeOut(tween(90)) + slideOutHorizontally(tween(110)) { -it / 12 })
+                                },
+                                label = "redesign_page_title"
+                            ) { title ->
+                                Text(title, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                            }
                         }
-                    }
-                    if (selectedPage == 10 || selectedPage == 11) {
-                        IconButton(
-                            onClick = { selectedPage = 2 },
-                            modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.surface)
-                        ) {
-                            Icon(Icons.Default.ArrowForward, contentDescription = "بازگشت به کار", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (selectedPage == 10 || selectedPage == 11) {
+                            IconButton(onClick = { selectedPage = 2 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface)) {
+                                Icon(Icons.Default.ArrowForward, contentDescription = "بازگشت به کار", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(Modifier.width(7.dp))
                         }
-                        Spacer(Modifier.width(7.dp))
-                    }
-                    IconButton(onClick = { selectedPage = 4 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(15.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = .12f))) {
-                        Icon(Icons.Default.Settings, contentDescription = strings.settings, tint = MaterialTheme.colorScheme.primary)
+                        IconButton(onClick = { selectedPage = 4 }, modifier = Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = .12f))) {
+                            Icon(Icons.Default.Settings, contentDescription = strings.settings, tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             }
@@ -1535,34 +1531,7 @@ fun MainScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(selectedPage) {
-                    var dragDistance = 0f
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { _, dragAmount ->
-                            dragDistance += dragAmount
-                        },
-                        onDragEnd = {
-                            // Match swipe direction to reading direction: RTL advances on right-swipe; LTR on left-swipe.
-                            // Density-aware threshold keeps behavior consistent on phones.
-                            val threshold = 72f * density
-                            if (kotlin.math.abs(dragDistance) >= threshold) {
-                                val swipePages = listOf(0, 1, 2, 3, 8, 9, 10)
-                                val currentIndex = swipePages.indexOf(selectedPage)
-                                if (currentIndex >= 0) {
-                                    val goNext = if (language == "en") dragDistance < 0f else dragDistance > 0f
-                                    val nextIndex = if (goNext) {
-                                        (currentIndex + 1).coerceAtMost(swipePages.lastIndex)
-                                    } else {
-                                        (currentIndex - 1).coerceAtLeast(0)
-                                    }
-                                    selectedPage = swipePages[nextIndex]
-                                }
-                            }
-                            dragDistance = 0f
-                        },
-                        onDragCancel = { dragDistance = 0f }
-                    )
-                }
+
         ) {
         AnimatedContent(
             targetState = selectedPage,
